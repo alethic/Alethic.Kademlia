@@ -14,6 +14,11 @@
         /// <returns></returns>
         public static int CountLeadingZeros(this uint n)
         {
+#if NETCOREAPP3_0
+            if (System.Runtime.Intrinsics.X86.Lzcnt.IsSupported)
+                return (int)System.Runtime.Intrinsics.X86.Lzcnt.LeadingZeroCount(n);
+#endif
+
             if (n == 0)
                 return 32;
 
