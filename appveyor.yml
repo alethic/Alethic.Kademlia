@@ -4,6 +4,7 @@ platform: Any CPU
 
 install:
   - choco install gitversion.portable -pre -y
+  - nuget sources add -Name github -Source %nuget_github_feed% -UserName %nuget_github_user% -Password %nuget_github_pass%
 
 before_build:
   - ps: gitversion /l console /output buildserver
@@ -25,10 +26,10 @@ artifacts:
 
 deploy:
   provider: NuGet
-  server: https://nuget.pkg.github.com/wasabii/index.json
-  username: wasabii
-  api_key:
-    secure: xrFuWmVqekabWUvYce7mOmKS4ToqdtFJOGgiLYyrDRVZJhMSMvpOUVxf0mhzwGiH
+  server: $(nuget_github_feed)
+  username: $(nuget_github_user)
+  api_key: $(nuget_github_pass)
   skip_symbols: false
   symbol_server:
   artifact: /.*\.nupkg/
+
