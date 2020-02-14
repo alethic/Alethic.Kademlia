@@ -1,0 +1,13 @@
+<Project>
+    <PropertyGroup>
+        <Authors>Jerome Haltom</Authors>
+        <Company>Jerome Haltom</Company>
+        <RepositoryUrl>https://github.com/wasabii/Cogito.Kademlia</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseUrl></PackageLicenseUrl>
+        <PackageProjectUrl>https://github.com/wasabii/Cogito.Kademlia</PackageProjectUrl>
+        <PackageIconUrl>https://cloverluxussc.blob.core.windows.net/public/cogito-nuget-icon.png</PackageIconUrl>
+        <PackageTags>kademlia</PackageTags>
+        <LangVersion>8.0</LangVersion>
+    </PropertyGroup>
+</Project>

@@ -1,0 +1,34 @@
+image: Visual Studio 2019
+configuration: Release
+platform: Any CPU
+
+install:
+  - choco install gitversion.portable -pre -y
+
+before_build:
+  - ps: gitversion /l console /output buildserver
+  - ps: $env:PackageVersion=$env:GitVersion_NuGetVersion
+  - ps: $env:AssemblyVersion=$env:GitVersion_AssemblySemVer
+  - ps: $env:FileVersion=$env:GitVersion_MajorMinorPatch.0
+  - ps: $env:InformationalVersion=$env:GitVersion_InformationalVersion
+  - ps: $env:PackageOutputPath="$env:APPVEYOR_BUILD_FOLDER\pkg"
+  - nuget restore
+  - dotnet restore
+
+build:
+  verbosity: minimal
+  project: Cogito.Kademlia.sln
+
+artifacts:
+  - path: pkg\*.nupkg
+    name: Cogito.Kademlia
+
+deploy:
+  provider: NuGet
+  server: https://nuget.pkg.github.com/wasabii/index.json
+  username: wasabii
+  api_key:
+    secure: xrFuWmVqekabWUvYce7mOmKS4ToqdtFJOGgiLYyrDRVZJhMSMvpOUVxf0mhzwGiH
+  skip_symbols: false
+  symbol_server:
+  artifact: /.*\.nupkg/
