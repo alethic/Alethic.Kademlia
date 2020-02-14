@@ -178,6 +178,56 @@ namespace Cogito.Kademlia.Tests
             await Task.WhenAll(l);
         }
 
+        [TestMethod]
+        public async Task Can_randomly_populate_int160()
+        {
+            var s = new KNodeId160(0, 0, 0);
+            var t = new KFixedRoutingTable<KNodeId160, object>(s, new FakeNetwork<KNodeId160, object>());
+
+            var r = new Random();
+            for (int i = 0; i < 262144 * 8; i++)
+                await t.TouchAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null);
+        }
+
+        [TestMethod]
+        public async Task Can_randomly_populate_int160_mt()
+        {
+            var s = new KNodeId160(0, 0, 0);
+            var t = new KFixedRoutingTable<KNodeId160, object>(s, new FakeSlowNetwork<KNodeId160, object>());
+
+            var r = new Random();
+            var l = new List<Task>();
+            for (int i = 0; i < 1024; i++)
+                l.Add(t.TouchAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null).AsTask());
+
+            await Task.WhenAll(l);
+        }
+
+        [TestMethod]
+        public async Task Can_randomly_populate_int256()
+        {
+            var s = new KNodeId256(0, 0, 0, 0);
+            var t = new KFixedRoutingTable<KNodeId256, object>(s, new FakeNetwork<KNodeId256, object>());
+
+            var r = new Random();
+            for (int i = 0; i < 262144 * 8; i++)
+                await t.TouchAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null);
+        }
+
+        [TestMethod]
+        public async Task Can_randomly_populate_int256_mt()
+        {
+            var s = new KNodeId256(0, 0, 0, 0);
+            var t = new KFixedRoutingTable<KNodeId256, object>(s, new FakeSlowNetwork<KNodeId256, object>());
+
+            var r = new Random();
+            var l = new List<Task>();
+            for (int i = 0; i < 1024; i++)
+                l.Add(t.TouchAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null).AsTask());
+
+            await Task.WhenAll(l);
+        }
+
     }
 
 }

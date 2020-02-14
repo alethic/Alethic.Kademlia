@@ -17,7 +17,7 @@
             if (n == 0)
                 return 16;
 
-            return ((uint)n).CountLeadingZeros() - 8;
+            return ((uint)n).CountLeadingZeros() - 16;
         }
 
     }

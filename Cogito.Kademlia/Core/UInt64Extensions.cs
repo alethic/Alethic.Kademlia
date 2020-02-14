@@ -1,4 +1,8 @@
-﻿namespace Cogito.Kademlia.Core
+﻿#if NETCOREAPP3_0
+using System.Runtime.Intrinsics.X86;
+#endif
+
+namespace Cogito.Kademlia.Core
 {
 
     /// <summary>
@@ -15,8 +19,8 @@
         public static int CountLeadingZeros(this ulong n)
         {
 #if NETCOREAPP3_0
-            if (System.Runtime.Intrinsics.X86.Lzcnt.X64.IsSupported)
-                return (int)System.Runtime.Intrinsics.X86.Lzcnt.X64.LeadingZeroCount(n);
+            if (Lzcnt.X64.IsSupported)
+                return (int)Lzcnt.X64.LeadingZeroCount(n);
 #endif
 
             if (n == 0)

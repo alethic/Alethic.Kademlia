@@ -17,17 +17,7 @@
             if (n == 0)
                 return 8;
 
-            var t = 0;
-
-            for (var i = 0; i < 8; i++)
-            {
-                if (((n << i) & (1 << 7)) != 0)
-                    break;
-
-                t++;
-            }
-
-            return t;
+            return ((ushort)n).CountLeadingZeros() - 8;
         }
 
     }
