@@ -9,7 +9,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKNodeData"></typeparam>
-    public interface IKTable<TKNodeId, TKNodeData>
+    public interface IKRoutingTable<TKNodeId, TKNodeData>
         where TKNodeId : struct, IKNodeId<TKNodeId>
     {
 

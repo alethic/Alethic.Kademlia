@@ -12,7 +12,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKNodeData"></typeparam>
-    public class KFixedTable<TKNodeId, TKNodeData> : KTable, IKTable<TKNodeId, TKNodeData>
+    public class KFixedRoutingTable<TKNodeId, TKNodeData> : KTable, IKRoutingTable<TKNodeId, TKNodeData>
         where TKNodeId : struct, IKNodeId<TKNodeId>
     {
 
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia
         /// <param name="self"></param>
         /// <param name="protocol"></param>
         /// <param name="k"></param>
-        public KFixedTable(TKNodeId self, IKNodeProtocol<TKNodeId, TKNodeData> protocol, int k = 20)
+        public KFixedRoutingTable(TKNodeId self, IKNodeProtocol<TKNodeId, TKNodeData> protocol, int k = 20)
         {
             this.self = self;
             this.protocol = protocol;

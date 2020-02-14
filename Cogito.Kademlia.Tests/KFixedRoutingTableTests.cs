@@ -13,7 +13,7 @@ namespace Cogito.Kademlia.Tests
 {
 
     [TestClass]
-    public class KFixedTableTests
+    public class KFixedRoutingTableTests
     {
 
         class FakeNetwork<TKNodeId, TKNodeData> : IKNodeProtocol<TKNodeId, TKNodeData>
@@ -109,7 +109,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedTable<KNodeId32, object>(s, new FakeNetwork<KNodeId32, object>());
+            var t = new KFixedRoutingTable<KNodeId32, object>(s, new FakeNetwork<KNodeId32, object>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -120,7 +120,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_mt()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedTable<KNodeId32, object>(s, new FakeSlowNetwork<KNodeId32, object>());
+            var t = new KFixedRoutingTable<KNodeId32, object>(s, new FakeSlowNetwork<KNodeId32, object>());
 
             var r = new Random();
             var l = new List<Task>();
@@ -134,7 +134,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedTable<KNodeId64, object>(s, new FakeNetwork<KNodeId64, object>());
+            var t = new KFixedRoutingTable<KNodeId64, object>(s, new FakeNetwork<KNodeId64, object>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -145,7 +145,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64_mt()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedTable<KNodeId64, object>(s, new FakeSlowNetwork<KNodeId64, object>());
+            var t = new KFixedRoutingTable<KNodeId64, object>(s, new FakeSlowNetwork<KNodeId64, object>());
 
             var r = new Random();
             var l = new List<Task>();
@@ -159,7 +159,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedTable<KNodeId128, object>(s, new FakeNetwork<KNodeId128, object>());
+            var t = new KFixedRoutingTable<KNodeId128, object>(s, new FakeNetwork<KNodeId128, object>());
 
             for (int i = 0; i < 262144 * 8; i++)
                 await t.TouchAsync(new KNodeId128(Guid.NewGuid()), null);
@@ -169,7 +169,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128_mt()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedTable<KNodeId128, object>(s, new FakeSlowNetwork<KNodeId128, object>());
+            var t = new KFixedRoutingTable<KNodeId128, object>(s, new FakeSlowNetwork<KNodeId128, object>());
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
