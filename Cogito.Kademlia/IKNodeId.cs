@@ -11,17 +11,17 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
-        /// Gets the length of the distance value in bits.
+        /// Gets the size of the node ID in bits.
         /// </summary>
-        int DistanceSize { get; }
+        int Size { get; }
 
         /// <summary>
-        /// Calculates the distance between this node ID and the other node ID and outputs it to the specified destination in most signficant byte order.
+        /// Writes the value of this node ID to the specified binary output.
         /// </summary>
         /// <param name="other"></param>
         /// <param name="output"></param>
         /// <returns></returns>
-        void CalculateDistance(TKNodeId other, Span<byte> output);
+        void WriteTo(Span<byte> output);
 
     }
 

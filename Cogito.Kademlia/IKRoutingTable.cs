@@ -8,8 +8,8 @@ namespace Cogito.Kademlia
     /// Describes a Kademlia routing table.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKNodeData"></typeparam>
-    public interface IKRoutingTable<TKNodeId, TKNodeData>
+    /// <typeparam name="TKPeerData"></typeparam>
+    public interface IKRoutingTable<TKNodeId, TKPeerData>
         where TKNodeId : struct, IKNodeId<TKNodeId>
     {
 
@@ -21,7 +21,7 @@ namespace Cogito.Kademlia
         /// <param name="nodeEvents"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask TouchAsync(TKNodeId nodeId, TKNodeData nodeData = default, IKNodeEvents nodeEvents = null, CancellationToken cancellationToken = default);
+        ValueTask TouchAsync(TKNodeId nodeId, TKPeerData nodeData = default, IKPeerEvents nodeEvents = null, CancellationToken cancellationToken = default);
 
     }
 

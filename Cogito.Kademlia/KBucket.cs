@@ -11,14 +11,14 @@ namespace Cogito.Kademlia
     /// Represents a set of items within a <see cref="KTable{TKNodeId, TKBucketItem}"/>.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKNodeData"></typeparam>
-    class KBucket<TKNodeId, TKNodeData>
+    /// <typeparam name="TKPeerData"></typeparam>
+    class KBucket<TKNodeId, TKPeerData>
         where TKNodeId : struct, IKNodeId<TKNodeId>
     {
 
         readonly int k;
         readonly ReaderWriterLockSlim rw = new ReaderWriterLockSlim();
-        readonly LinkedList<KBucketItem<TKNodeId, TKNodeData>> l;
+        readonly LinkedList<KBucketItem<TKNodeId, TKPeerData>> l;
 
         /// <summary>
         /// Initializes a new instance.
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia
         {
             this.k = k;
 
-            l = new LinkedList<KBucketItem<TKNodeId, TKNodeData>>();
+            l = new LinkedList<KBucketItem<TKNodeId, TKPeerData>>();
         }
 
         /// <summary>
@@ -36,11 +36,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <typeparam name="TKNetwork"></typeparam>
         /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
-        /// <param name="nodeEvents"></param>
+        /// <param name="peerData"></param>
+        /// <param name="peerEvents"></param>
         /// <param name="protocol"></param>
         /// <param name="cancellationToken"></param>
-        internal async ValueTask TouchAsync(TKNodeId nodeId, TKNodeData nodeData, IKNodeEvents nodeEvents, IKNodeProtocol<TKNodeId, TKNodeData> protocol, CancellationToken cancellationToken)
+        internal async ValueTask TouchAsync(TKNodeId nodeId, TKPeerData peerData, IKPeerEvents peerEvents, IKProtocol<TKNodeId, TKPeerData> protocol, CancellationToken cancellationToken)
         {
             var lk = rw.BeginUpgradableReadLock();
 
@@ -61,7 +61,7 @@ namespace Cogito.Kademlia
                     using (rw.BeginWriteLock())
                     {
                         // item does not exist, but bucket has room, insert at tail
-                        l.AddLast(new KBucketItem<TKNodeId, TKNodeData>(nodeId, nodeData, nodeEvents));
+                        l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, peerData, peerEvents));
                     }
                 }
                 else
@@ -107,7 +107,7 @@ namespace Cogito.Kademlia
                         {
                             // first entry had no response, remove, insert new at tail
                             l.Remove(n);
-                            l.AddLast(new KBucketItem<TKNodeId, TKNodeData>(nodeId, nodeData, nodeEvents));
+                            l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, peerData, peerEvents));
                         }
                     }
                 }
@@ -123,7 +123,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="nodeId"></param>
         /// <returns></returns>
-        LinkedListNode<KBucketItem<TKNodeId, TKNodeData>> GetNode(TKNodeId nodeId)
+        LinkedListNode<KBucketItem<TKNodeId, TKPeerData>> GetNode(TKNodeId nodeId)
         {
             for (var i = l.First; i != null; i = i.Next)
                 if (nodeId.Equals(i.Value.Id))

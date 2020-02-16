@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cogito.Kademlia.Core;
-
 using FluentAssertions;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,7 +14,7 @@ namespace Cogito.Kademlia.Tests
     public class KFixedRoutingTableTests
     {
 
-        class FakeNetwork<TKNodeId, TKNodeData> : IKNodeProtocol<TKNodeId, TKNodeData>
+        class FakeNetwork<TKNodeId, TKNodeData> : IKProtocol<TKNodeId, TKNodeData>
             where TKNodeId : struct, IKNodeId<TKNodeId>
         {
 
@@ -42,7 +40,7 @@ namespace Cogito.Kademlia.Tests
 
         }
 
-        class FakeSlowNetwork<TKNodeId, TKNodeData> : IKNodeProtocol<TKNodeId, TKNodeData>
+        class FakeSlowNetwork<TKNodeId, TKNodeData> : IKProtocol<TKNodeId, TKNodeData>
             where TKNodeId : struct, IKNodeId<TKNodeId>
         {
 
@@ -72,28 +70,6 @@ namespace Cogito.Kademlia.Tests
                 return (new KNodeFindValueResponse(KNodeResponseStatus.OK));
             }
 
-        }
-
-        [TestMethod]
-        public void Should_calculate_proper_distance_offset_for_int32()
-        {
-            var a = new KNodeId32(0);
-            var b = new KNodeId32(1);
-            var o = new byte[a.DistanceSize / 8];
-            var s = (ReadOnlySpan<byte>)o;
-            a.CalculateDistance(b, o);
-            s.CountLeadingZeros().Should().Be(31);
-        }
-
-        [TestMethod]
-        public void Should_calculate_proper_distance_offset_for_int64()
-        {
-            var a = new KNodeId64(0);
-            var b = new KNodeId64(1);
-            var o = new byte[a.DistanceSize / 8];
-            var s = (ReadOnlySpan<byte>)o;
-            a.CalculateDistance(b, o);
-            s.CountLeadingZeros().Should().Be(63);
         }
 
         [TestMethod]

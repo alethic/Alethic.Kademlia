@@ -70,7 +70,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the length of the node ID.
         /// </summary>
-        public int DistanceSize => 256;
+        public int Size => 256;
 
         /// <summary>
         /// Compares this node ID to another node ID.
@@ -83,17 +83,15 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Calculates the distance between this node ID and the other node ID and outputs it to the specified destination in most signficant byte order.
+        /// Writes the value of this node ID to the specified binary output.
         /// </summary>
-        /// <param name="other"></param>
-        /// <param name="output"></param>
         /// <returns></returns>
-        public void CalculateDistance(KNodeId256 other, Span<byte> output)
+        public void WriteTo(Span<byte> output)
         {
-            BinaryPrimitives.WriteUInt64BigEndian(output, a ^ other.a);
-            BinaryPrimitives.WriteUInt64BigEndian(output.Slice(sizeof(ulong)), b ^ other.b);
-            BinaryPrimitives.WriteUInt64BigEndian(output.Slice(sizeof(ulong)), c ^ other.c);
-            BinaryPrimitives.WriteUInt64BigEndian(output.Slice(sizeof(ulong)), d ^ other.d);
+            BinaryPrimitives.WriteUInt64BigEndian(output, a);
+            BinaryPrimitives.WriteUInt64BigEndian(output = output.Slice(sizeof(ulong)), b);
+            BinaryPrimitives.WriteUInt64BigEndian(output = output.Slice(sizeof(ulong)), c);
+            BinaryPrimitives.WriteUInt64BigEndian(output.Slice(sizeof(ulong)), d);
         }
 
     }

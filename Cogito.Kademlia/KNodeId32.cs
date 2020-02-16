@@ -34,7 +34,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the length of the node ID.
         /// </summary>
-        public int DistanceSize => 32;
+        public int Size => 32;
 
         /// <summary>
         /// Compares this node ID to another node ID.
@@ -47,13 +47,12 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Returns the distance between this node ID and the other node ID as a series of unsigned integers.
+        /// Writes the value of this node ID to the specified binary output.
         /// </summary>
-        /// <param name="other"></param>
         /// <returns></returns>
-        public void CalculateDistance(KNodeId32 other, Span<byte> output)
+        public void WriteTo(Span<byte> output)
         {
-            BinaryPrimitives.WriteUInt32BigEndian(output, a ^ other.a);
+            BinaryPrimitives.WriteUInt32BigEndian(output, a);
         }
 
     }
