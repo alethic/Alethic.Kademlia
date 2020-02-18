@@ -26,24 +26,28 @@ namespace Cogito.Kademlia.Tests
                 this.self = self;
             }
 
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public Guid Id => Guid.Empty;
+
+            public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
+
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(target, self, new KPingResponse<TKNodeId>()));
+                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, new KPingResponse<TKNodeId>()));
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(target, self, new KStoreResponse<TKNodeId>(request.Key)));
+                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, new KStoreResponse<TKNodeId>(request.Key)));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(target, self, new KFindNodeResponse<TKNodeId>(request.NodeId)));
+                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.NodeId)));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(target, self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8])));
+                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8])));
             }
 
         }
@@ -59,48 +63,52 @@ namespace Cogito.Kademlia.Tests
                 this.self = self;
             }
 
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public Guid Id => Guid.Empty;
+
+            public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
+
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return PingAsync(target, endpoint, request, cancellationToken);
+                return PingAsync(endpoint, request, cancellationToken);
             }
 
-            async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+            async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(target, self, new KPingResponse<TKNodeId>());
+                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, new KPingResponse<TKNodeId>());
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return StoreAsync(target, endpoint, request, cancellationToken);
+                return StoreAsync(endpoint, request, cancellationToken);
             }
 
-            async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                await Task.Delay(100);
-                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(target, self, new KStoreResponse<TKNodeId>(request.Key));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return FindNodeAsync(target, endpoint, request, cancellationToken);
-            }
-
-            async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(target, self, new KFindNodeResponse<TKNodeId>(request.NodeId));
+                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, new KStoreResponse<TKNodeId>(request.Key));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return FindValueAsync(target, endpoint, request, cancellationToken);
+                return FindNodeAsync(endpoint, request, cancellationToken);
             }
 
-            async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(target, self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8]));
+                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.NodeId));
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                return FindValueAsync(endpoint, request, cancellationToken);
+            }
+
+            async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                await Task.Delay(100);
+                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8]));
             }
 
         }

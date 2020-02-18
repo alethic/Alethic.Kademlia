@@ -72,13 +72,8 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public IPAddress ToIPAddress()
         {
-#if NETSTANDARD2_0 || NET47
             fixed (byte* ptr = data)
-                return new IPAddress(new ReadOnlySpan<byte>(ptr, 4).ToArray());
-#else
-            fixed (byte* ptr = data)
-                return new IPAddress(new ReadOnlySpan<byte>(ptr, 4));
-#endif
+                return new IPAddress(BinaryPrimitives.ReadUInt32BigEndian(new ReadOnlySpan<byte>(ptr, 4)));
         }
 
         /// <summary>

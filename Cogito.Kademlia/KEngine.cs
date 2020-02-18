@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +12,7 @@ namespace Cogito.Kademlia
     /// </summary>
     public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
         readonly IKRouter<TKNodeId, TKPeerData> router;
@@ -48,9 +50,22 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> IKEngine<TKNodeId>.OnPingAsync(in TKNodeId source, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask<KPingResponse<TKNodeId>> IKEngine<TKNodeId>.OnPingAsync(in TKNodeId source, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return OnPingAsync(source, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming PING requests.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KPingResponse<TKNodeId>> OnPingAsync(TKNodeId source, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(source, request.Endpoints.ToArray(), cancellationToken);
+            return new KPingResponse<TKNodeId>(SelfData.Endpoints.ToArray());
         }
 
         /// <summary>
@@ -60,7 +75,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> IKEngine<TKNodeId>.OnStoreAsync(in TKNodeId source, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask<KStoreResponse<TKNodeId>> IKEngine<TKNodeId>.OnStoreAsync(in TKNodeId source, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
@@ -72,7 +87,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> IKEngine<TKNodeId>.OnFindNodeAsync(in TKNodeId source, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask<KFindNodeResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindNodeAsync(in TKNodeId source, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
@@ -84,7 +99,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> IKEngine<TKNodeId>.OnFindValueAsync(in TKNodeId source, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask<KFindValueResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindValueAsync(in TKNodeId source, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Cogito.Kademlia.Core;
 
@@ -16,6 +18,18 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
     {
 
         /// <summary>
+        /// Reads a series of <see cref="KIpEndpoint"/> records from the sequence.
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <returns></returns>
+        public static ReadOnlySpan<KIpEndpoint> ReadIpEndpoints(ref ReadOnlySequence<byte> sequence)
+        {
+            var l = sequence.AdvanceOver(sizeof(uint), BinaryPrimitives.ReadUInt32BigEndian);
+            var v = sequence.AdvanceOver((int)l * Unsafe.SizeOf<KIpEndpoint>(), (ReadOnlyMemory<byte> m) => m);
+            return MemoryMarshal.Cast<byte, KIpEndpoint>(v.Span);
+        }
+
+        /// <summary>
         /// Reads the header from the sequence.
         /// </summary>
         /// <param name="sequence"></param>
@@ -23,10 +37,9 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         public static KPacketHeader<TKNodeId> ReadHeader(ref ReadOnlySequence<byte> sequence)
         {
             KNodeId.Read<TKNodeId>(ref sequence, out var sender);
-            KNodeId.Read<TKNodeId>(ref sequence, out var target);
             var magic = sequence.AdvanceOver(sizeof(uint), BinaryPrimitives.ReadUInt32BigEndian);
             var type = sequence.AdvanceOver(sizeof(sbyte), _ => (KPacketType)_[0]);
-            return new KPacketHeader<TKNodeId>(sender, target, magic, type);
+            return new KPacketHeader<TKNodeId>(sender, magic, type);
         }
 
         /// <summary>
@@ -36,7 +49,8 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <returns></returns>
         public static KPingRequestBody<TKNodeId> ReadPingRequest(ref ReadOnlySequence<byte> sequence)
         {
-            return new KPingRequestBody<TKNodeId>();
+            var endpoints = ReadIpEndpoints(ref sequence);
+            return new KPingRequestBody<TKNodeId>(endpoints);
         }
 
         /// <summary>
@@ -46,7 +60,8 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <returns></returns>
         public static KPingResponseBody<TKNodeId> ReadPingResponse(ref ReadOnlySequence<byte> sequence)
         {
-            return new KPingResponseBody<TKNodeId>();
+            var endpoints = ReadIpEndpoints(ref sequence);
+            return new KPingResponseBody<TKNodeId>(endpoints);
         }
 
         /// <summary>

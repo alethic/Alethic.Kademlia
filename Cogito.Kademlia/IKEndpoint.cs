@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -11,6 +12,11 @@ namespace Cogito.Kademlia
     public interface IKEndpoint<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
+
+        /// <summary>
+        /// Gets a unique identifier of the protocol available over this endpoint.
+        /// </summary>
+        Guid ProtocolId { get; }
 
         /// <summary>
         /// Initiates a PING operation to the remote node and returns its result.

@@ -9,7 +9,7 @@ namespace Cogito.Kademlia.Network
     /// Provides a simple IP endpoint connected to a protocol.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public struct KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
+    public readonly struct KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -36,6 +36,11 @@ namespace Cogito.Kademlia.Network
         public IKProtocol<TKNodeId> Protocol => protocol;
 
         /// <summary>
+        /// Gets the unique identifier of the protocol available over this endpoint.
+        /// </summary>
+        public Guid ProtocolId => protocol.Id;
+
+        /// <summary>
         /// Gets the endpoint.
         /// </summary>
         public KIpEndpoint Endpoint => endpoint;
@@ -48,7 +53,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            return protocol.PingAsync(nodeId, this, request, cancellationToken);
+            return protocol.PingAsync(this, request, cancellationToken);
         }
 
         /// <summary>
@@ -60,7 +65,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            return protocol.StoreAsync(nodeId, this, request, cancellationToken);
+            return protocol.StoreAsync(this, request, cancellationToken);
         }
 
         /// <summary>
@@ -71,7 +76,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            return protocol.FindNodeAsync(nodeId, this, request, cancellationToken);
+            return protocol.FindNodeAsync(this, request, cancellationToken);
         }
 
         /// <summary>
@@ -82,7 +87,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            return protocol.FindValueAsync(nodeId, this, request, cancellationToken);
+            return protocol.FindValueAsync(this, request, cancellationToken);
         }
 
         /// <summary>

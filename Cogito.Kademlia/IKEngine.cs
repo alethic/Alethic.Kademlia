@@ -9,7 +9,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public interface IKEngine<TKNodeId, out TKPeerData> : IKEngine<TKNodeId>
+    public interface IKEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -17,6 +17,11 @@ namespace Cogito.Kademlia
         /// Gets the peer data of the node itself.
         /// </summary>
         TKPeerData SelfData { get; }
+
+        /// <summary>
+        /// Gets the router configured on the engine.
+        /// </summary>
+        IKRouter<TKNodeId, TKPeerData> Router { get; }
 
     }
 
@@ -40,7 +45,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> OnPingAsync(in TKNodeId sender, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KPingResponse<TKNodeId>> OnPingAsync(in TKNodeId sender, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming STORE requests.
@@ -49,7 +54,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> OnStoreAsync(in TKNodeId sender, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(in TKNodeId sender, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming FIND_NODE requests.
@@ -58,7 +63,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> OnFindNodeAsync(in TKNodeId sender, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(in TKNodeId sender, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming FIND_VALUE requests.
@@ -67,7 +72,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> OnFindValueAsync(in TKNodeId sender, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(in TKNodeId sender, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
 
     }
 
