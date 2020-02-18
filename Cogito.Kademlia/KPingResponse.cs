@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -9,7 +11,21 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
+        readonly ReadOnlyMemory<IKEndpoint<TKNodeId>> endpoints;
 
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        public KPingResponse(ReadOnlyMemory<IKEndpoint<TKNodeId>> endpoints)
+        {
+            this.endpoints = endpoints;
+        }
+
+        /// <summary>
+        /// Gets the set of endpoints to return to the ping requester.
+        /// </summary>
+        public ReadOnlyMemory<IKEndpoint<TKNodeId>> Endpoints => endpoints;
 
     }
 

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cogito.Collections;
 using Cogito.Threading;
 
 namespace Cogito.Kademlia
@@ -14,7 +16,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKPeerData"></typeparam>
     class KBucket<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
-        where TKPeerData : IKEndpointProvider<TKNodeId>
+        where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
         readonly int k;
@@ -38,27 +40,76 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<bool> TryPingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        async ValueTask<IEnumerable<IKEndpoint<TKNodeId>>> TryPingAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken)
         {
-            foreach (var endpoint in endpoints)
+            try
             {
                 var r = await endpoint.PingAsync(new KPingRequest<TKNodeId>(), cancellationToken);
-                if (r.Status == KResponseStatus.OK)
-                    return true;
+                if (r.Body.Endpoints.Length > 0)
+                    return r.Body.Endpoints.ToArray();
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
             }
 
-            return false;
+            return null;
         }
 
         /// <summary>
-        /// Updates the position of the node in the bucket.
+        /// Attempts to ping all of the provided endpoints and returns <c>true</c> if any are reachable.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<IEnumerable<IKEndpoint<TKNodeId>>> TryPingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        {
+            foreach (var endpoint in endpoints)
+                if (await TryPingAsync(endpoint, cancellationToken) is IEnumerable<IKEndpoint<TKNodeId>> e)
+                    return e;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="peerData"></param>
-        /// <param name="peerEvents"></param>
+        /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
-        internal async ValueTask TouchAsync(TKNodeId nodeId, TKPeerData peerData, CancellationToken cancellationToken)
+        /// <returns></returns>
+        internal ValueTask<TKPeerData> GetPeerAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
         {
+            var n = GetNode(nodeId);
+            if (n != null)
+                return new ValueTask<TKPeerData>(n.Value.Data);
+            else
+                return default;
+        }
+
+        /// <summary>
+        /// Updates the given node with the newly available endpoints.
+        /// </summary>
+        /// <param name="nodeId"></param>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        {
+            return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+        }
+
+        /// <summary>
+        /// Updates the given node with the newly available endpoints.
+        /// </summary>
+        /// <param name="nodeId"></param>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        {
+            if (endpoints is null)
+                throw new ArgumentNullException(nameof(endpoints));
+
             var lk = rw.BeginUpgradableReadLock();
 
             try
@@ -70,15 +121,24 @@ namespace Cogito.Kademlia
                     {
                         // item already exists, move to tail
                         l.Remove(i);
-                        l.AddLast(i.Value);
+                        l.AddLast(i);
+
+                        // update endpoints
+                        if (endpoints != null)
+                            i.Value.Data.Endpoints.AddRange(endpoints);
                     }
                 }
                 else if (l.Count < k)
                 {
                     using (rw.BeginWriteLock())
                     {
+                        // generate new peer entry
+                        var p = new TKPeerData();
+                        if (endpoints != null)
+                            p.Endpoints.AddRange(endpoints);
+
                         // item does not exist, but bucket has room, insert at tail
-                        l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, peerData));
+                        l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                     }
                 }
                 else
@@ -87,7 +147,7 @@ namespace Cogito.Kademlia
                     var n = l.First;
 
                     // start ping, check for async completion
-                    var r = false;
+                    var r = (IEnumerable<IKEndpoint<TKNodeId>>)null;
                     var t = TryPingAsync(n.Value.Data.Endpoints, cancellationToken);
 
                     // completed synchronously (or immediately)
@@ -102,7 +162,7 @@ namespace Cogito.Kademlia
                     }
 
                     // was able to successfully ping the node
-                    if (r)
+                    if (r != null)
                     {
                         // entry had response, move to tail, discard new entry
                         if (l.Count > 1)
@@ -124,7 +184,9 @@ namespace Cogito.Kademlia
                         {
                             // first entry had no response, remove, insert new at tail
                             l.Remove(n);
-                            l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, peerData));
+                            var p = new TKPeerData();
+                            p.Endpoints.AddRange(endpoints);
+                            l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                         }
                     }
                 }
@@ -140,13 +202,25 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="nodeId"></param>
         /// <returns></returns>
-        LinkedListNode<KBucketItem<TKNodeId, TKPeerData>> GetNode(TKNodeId nodeId)
+        LinkedListNode<KBucketItem<TKNodeId, TKPeerData>> GetNode(in TKNodeId nodeId)
         {
             for (var i = l.First; i != null; i = i.Next)
                 if (nodeId.Equals(i.Value.Id))
                     return i;
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns the number of items within the bucket.
+        /// </summary>
+        internal int Count
+        {
+            get
+            {
+                using (rw.BeginReadLock())
+                    return l.Count;
+            }
         }
 
     }

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -11,7 +12,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     public interface IKRouter<TKNodeId, TKPeerData>
-        where TKNodeId : IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
         /// <summary>
@@ -25,13 +26,26 @@ namespace Cogito.Kademlia
         TKPeerData SelfData { get; }
 
         /// <summary>
-        /// Updates the reference to the node within the table.
+        /// Gets the stored peer data within the router.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="peerData"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask TouchAsync(in TKNodeId nodeId, in TKPeerData peerData, CancellationToken cancellationToken = default);
+        ValueTask<TKPeerData> GetPeerAsync(in TKNodeId nodeId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Updates the endpoints of the node within the router.
+        /// </summary>
+        /// <param name="nodeId"></param>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the number of peers known by the router.
+        /// </summary>
+        int Count { get; }
 
     }
 

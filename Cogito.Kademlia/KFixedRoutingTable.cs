@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,7 +51,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKPeerData"></typeparam>
     public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedRoutingTable, IKRouter<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
-        where TKPeerData : IKEndpointProvider<TKNodeId>
+        where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
         readonly TKNodeId selfId;
@@ -100,16 +102,35 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Updates the reference to the node within the table.
+        /// Gets the data for the peer within the table.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="peerData"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask TouchAsync(in TKNodeId nodeId, in TKPeerData peerData, CancellationToken cancellationToken = default)
+        public ValueTask<TKPeerData> GetPeerAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
         {
-            return GetBucket(nodeId).TouchAsync(nodeId, peerData, cancellationToken);
+            return GetBucket(nodeId).GetPeerAsync(nodeId, cancellationToken);
         }
+
+        /// <summary>
+        /// Updates the endpoints for the peer within the table.
+        /// </summary>
+        /// <param name="nodeId"></param>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
+        {
+            if (endpoints is null)
+                throw new ArgumentNullException(nameof(endpoints));
+
+            return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the number of peers known by the table.
+        /// </summary>
+        public int Count => buckets.Sum(i => i.Count);
 
     }
 

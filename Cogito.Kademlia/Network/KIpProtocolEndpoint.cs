@@ -9,7 +9,7 @@ namespace Cogito.Kademlia.Network
     /// Provides a simple IP endpoint connected to a protocol.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public struct KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>
+    public struct KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -83,6 +83,39 @@ namespace Cogito.Kademlia.Network
         public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             return protocol.FindValueAsync(nodeId, this, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if this instance matches the specified instance.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return obj is KIpProtocolEndpoint<TKNodeId> other && Equals(other);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if this instance matches the specified instance.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public bool Equals(KIpProtocolEndpoint<TKNodeId> other)
+        {
+            return ReferenceEquals(protocol, other.protocol) && nodeId.Equals(other.nodeId) && endpoint.Equals(other.endpoint);
+        }
+
+        /// <summary>
+        /// Gets a unique hash code for this instance.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            var h = new HashCode();
+            h.Add(protocol);
+            h.Add(nodeId);
+            h.Add(endpoint);
+            return h.ToHashCode();
         }
 
         /// <summary>

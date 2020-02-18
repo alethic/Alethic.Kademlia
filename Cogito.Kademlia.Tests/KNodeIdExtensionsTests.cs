@@ -20,7 +20,7 @@ namespace Cogito.Kademlia.Tests
             var b = new KNodeId32(1);
             var o = (Span<byte>)new byte[4];
             var s = (ReadOnlySpan<byte>)o;
-            KNodeId<KNodeId32>.CalculateDistance(ref a, ref b, o);
+            KNodeId.CalculateDistance(a, b, o);
             s.CountLeadingZeros().Should().Be(31);
         }
 
@@ -31,7 +31,7 @@ namespace Cogito.Kademlia.Tests
             var b = new KNodeId64(1);
             var o = (Span<byte>)new byte[8];
             var s = (ReadOnlySpan<byte>)o;
-            KNodeId<KNodeId64>.CalculateDistance(ref a, ref b, o);
+            KNodeId.CalculateDistance(a, b, o);
             s.CountLeadingZeros().Should().Be(63);
         }
 
@@ -42,7 +42,7 @@ namespace Cogito.Kademlia.Tests
             var b = new KNodeId128(0, 1);
             var o = (Span<byte>)new byte[16];
             var s = (ReadOnlySpan<byte>)o;
-            KNodeId<KNodeId128>.CalculateDistance(ref a, ref b, o);
+            KNodeId.CalculateDistance(a, b, o);
             s.CountLeadingZeros().Should().Be(127);
         }
 
@@ -53,7 +53,7 @@ namespace Cogito.Kademlia.Tests
             var b = new KNodeId160(0, 0, 1);
             var o = (Span<byte>)new byte[20];
             var s = (ReadOnlySpan<byte>)o;
-            KNodeId<KNodeId160>.CalculateDistance(ref a, ref b, o);
+            KNodeId.CalculateDistance(a, b, o);
             s.CountLeadingZeros().Should().Be(159);
         }
 
@@ -64,7 +64,7 @@ namespace Cogito.Kademlia.Tests
             var b = new KNodeId256(0, 0, 0, 1);
             var o = (Span<byte>)new byte[32];
             var s = (ReadOnlySpan<byte>)o;
-            KNodeId<KNodeId256>.CalculateDistance(ref a, ref b, o);
+            KNodeId.CalculateDistance(a, b, o);
             s.CountLeadingZeros().Should().Be(255);
         }
 
