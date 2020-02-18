@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 
 namespace Cogito.Kademlia
 {
@@ -7,13 +8,14 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Represents a generic 256-bit Node ID.
     /// </summary>
-    public readonly struct KNodeId256 : IKNodeId<KNodeId256>
+    [StructLayout(LayoutKind.Explicit)]
+    public unsafe struct KNodeId256 : IKNodeId<KNodeId256>
     {
 
-        readonly ulong a;
-        readonly ulong b;
-        readonly ulong c;
-        readonly ulong d;
+        const int SIZE = 32;
+
+        [FieldOffset(0)]
+        fixed byte data[SIZE];
 
         /// <summary>
         /// Initializes a new instance.
@@ -24,10 +26,14 @@ namespace Cogito.Kademlia
         /// <param name="d"></param>
         public KNodeId256(ulong a, ulong b, ulong c, ulong d)
         {
-            this.a = a;
-            this.b = b;
-            this.c = c;
-            this.d = d;
+            fixed (byte* ptr = data)
+            {
+                var s = new Span<byte>(ptr, SIZE);
+                BinaryPrimitives.WriteUInt64BigEndian(s, a);
+                BinaryPrimitives.WriteUInt64BigEndian(s = s.Slice(sizeof(ulong)), b);
+                BinaryPrimitives.WriteUInt64BigEndian(s = s.Slice(sizeof(ulong)), c);
+                BinaryPrimitives.WriteUInt64BigEndian(s.Slice(sizeof(ulong)), d);
+            }
         }
 
         /// <summary>
@@ -51,6 +57,16 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
+        public KNodeId256(ReadOnlySpan<byte> id)
+        {
+            fixed (byte* d = data)
+                id.CopyTo(new Span<byte>(d, SIZE));
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="id"></param>
         public KNodeId256(ReadOnlySpan<ulong> id) :
             this(id[0], id[1], id[2], id[3])
         {
@@ -68,30 +84,18 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Gets the length of the node ID.
-        /// </summary>
-        public int Size => 256;
-
-        /// <summary>
         /// Compares this node ID to another node ID.
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
         public bool Equals(KNodeId256 other)
         {
-            return a == other.a && b == other.b && c == other.c && d == other.d;
-        }
-
-        /// <summary>
-        /// Writes the value of this node ID to the specified binary output.
-        /// </summary>
-        /// <returns></returns>
-        public void WriteTo(Span<byte> output)
-        {
-            BinaryPrimitives.WriteUInt64BigEndian(output, a);
-            BinaryPrimitives.WriteUInt64BigEndian(output = output.Slice(sizeof(ulong)), b);
-            BinaryPrimitives.WriteUInt64BigEndian(output = output.Slice(sizeof(ulong)), c);
-            BinaryPrimitives.WriteUInt64BigEndian(output.Slice(sizeof(ulong)), d);
+            fixed (byte* lptr = data)
+            {
+                var l = new ReadOnlySpan<byte>(lptr, SIZE);
+                var r = new ReadOnlySpan<byte>(other.data, SIZE);
+                return l.SequenceEqual(r);
+            }
         }
 
     }

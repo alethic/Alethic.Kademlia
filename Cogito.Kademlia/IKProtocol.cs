@@ -7,47 +7,49 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Provides required operations for node communication within Kademlia.
     /// </summary>
-    public interface IKProtocol<TKNodeId, TKPeerData>
-        where TKNodeId : struct, IKNodeId<TKNodeId>
+    public interface IKProtocol<TKNodeId>
+        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
         /// <summary>
         /// Initiates a PING operation to the remote node and returns its result.
         /// </summary>
-        /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
+        /// <param name="target"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KNodePingResponse> PingAsync(TKNodeId nodeId, TKPeerData nodeData, CancellationToken cancellationToken);
+        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Initiates a STORE operation to the remote node and returns its result.
         /// </summary>
-        /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
+        /// <param name="target"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KNodeStoreResponse> StoreAsync(TKNodeId nodeId, TKPeerData nodeData, TKNodeId key, CancellationToken cancellationToken);
+        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Initiates a FIND_NODE operation to the remote node and returns its result.
         /// </summary>
-        /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
-        /// <param name="key"></param>
+        /// <param name="target"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KNodeFindNodeResponse> FindNodeAsync(TKNodeId nodeId, TKPeerData nodeData, TKNodeId key, CancellationToken cancellationToken);
+        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Initiates a FIND_VALUE operation to the remote node and returns its result.
         /// </summary>
-        /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
-        /// <param name="key"></param>
+        /// <param name="target"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KNodeFindValueResponse> FindValueAsync(TKNodeId nodeId, TKPeerData nodeData, TKNodeId key, CancellationToken cancellationToken);
+        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
 
     }
 

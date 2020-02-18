@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Net;
+using System.Net.Sockets;
 
 namespace Cogito.Kademlia.Network
 {
@@ -7,10 +9,10 @@ namespace Cogito.Kademlia.Network
     /// <summary>
     /// Describes an IPv4 address.
     /// </summary>
-    public readonly struct KIp4Address
+    public unsafe struct KIp4Address : IEquatable<KIp4Address>
     {
 
-        readonly uint a;
+        fixed byte data[4];
 
         /// <summary>
         /// Initializes a new instance.
@@ -18,7 +20,11 @@ namespace Cogito.Kademlia.Network
         /// <param name="a"></param>
         public KIp4Address(uint a)
         {
-            this.a = a;
+            fixed (byte* ptr = data)
+            {
+                var s = new Span<byte>(ptr, 4);
+                BinaryPrimitives.WriteUInt32BigEndian(s, a);
+            }
         }
 
         /// <summary>
@@ -28,29 +34,97 @@ namespace Cogito.Kademlia.Network
         /// <param name="b"></param>
         /// <param name="c"></param>
         /// <param name="d"></param>
-        public KIp4Address(byte a, byte b, byte c, byte d) :
-            this(((uint)a << 24) | ((uint)b << 16) | ((uint)c << 8) | (uint)d)
+        public KIp4Address(byte a, byte b, byte c, byte d)
         {
-
+            fixed (byte* ptr = data)
+            {
+                var s = new Span<byte>(ptr, 4);
+                s[0] = a;
+                s[1] = b;
+                s[2] = c;
+                s[3] = d;
+            }
         }
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="input"></param>
-        public KIp4Address(ReadOnlySpan<byte> input) :
-            this(BinaryPrimitives.ReadUInt32BigEndian(input))
+        public KIp4Address(ReadOnlySpan<byte> input)
+        {
+            fixed (byte* ptr = data)
+                input.CopyTo(new Span<byte>(ptr, 4));
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="address"></param>
+        public KIp4Address(IPAddress address) :
+            this(address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes() : throw new ArgumentException())
         {
 
         }
 
         /// <summary>
-        /// Writes the address to the target in big endian format.
+        /// Returns a <see cref="IPAddress"/> instance for this instance.
         /// </summary>
-        /// <param name="target"></param>
-        public void WriteTo(Span<byte> target)
+        /// <returns></returns>
+        public IPAddress ToIPAddress()
         {
-            BinaryPrimitives.WriteUInt32BigEndian(target, a);
+#if NETSTANDARD2_0 || NET47
+            fixed (byte* ptr = data)
+                return new IPAddress(new ReadOnlySpan<byte>(ptr, 4).ToArray());
+#else
+            fixed (byte* ptr = data)
+                return new IPAddress(new ReadOnlySpan<byte>(ptr, 4));
+#endif
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the two instances are equal to each other.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return obj is KIp4Address addr && Equals(addr);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the two instances are equal to each other.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(KIp4Address other)
+        {
+            fixed (byte* ptr = data)
+                return new ReadOnlySpan<byte>(ptr, 4).SequenceEqual(new ReadOnlySpan<byte>(other.data, 4));
+        }
+
+        /// <summary>
+        /// Gets a unique hash code identifying this instance.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            fixed (byte* ptr = data)
+            {
+                var h = new HashCode();
+                var s = new ReadOnlySpan<byte>(ptr, 4);
+                for (var i = 0; i < s.Length; i++)
+                    h.Add(s[i]);
+                return h.ToHashCode();
+            }
+        }
+
+        /// <summary>
+        /// Returns a string representation of this IP address.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return $"{(uint)data[0]}.{(uint)data[1]}.{(uint)data[2]}.{(uint)data[3]}";
         }
 
     }

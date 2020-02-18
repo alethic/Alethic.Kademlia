@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 
 namespace Cogito.Kademlia
 {
@@ -7,10 +8,14 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Represents a generic 32-bit Node ID.
     /// </summary>
-    public readonly struct KNodeId32 : IKNodeId<KNodeId32>
+    [StructLayout(LayoutKind.Explicit)]
+    public unsafe struct KNodeId32 : IKNodeId<KNodeId32>
     {
 
-        readonly uint a;
+        const int SIZE = 4;
+
+        [FieldOffset(0)]
+        fixed byte data[SIZE];
 
         /// <summary>
         /// Initializes a new instance.
@@ -18,7 +23,21 @@ namespace Cogito.Kademlia
         /// <param name="a"></param>
         public KNodeId32(uint a)
         {
-            this.a = a;
+            fixed (byte* ptr = data)
+            {
+                var s = new Span<byte>(ptr, SIZE);
+                BinaryPrimitives.WriteUInt32BigEndian(s, a);
+            }
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="id"></param>
+        public KNodeId32(ReadOnlySpan<byte> id)
+        {
+            fixed (byte* d = data)
+                id.CopyTo(new Span<byte>(d, SIZE));
         }
 
         /// <summary>
@@ -32,27 +51,18 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Gets the length of the node ID.
-        /// </summary>
-        public int Size => 32;
-
-        /// <summary>
         /// Compares this node ID to another node ID.
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
         public bool Equals(KNodeId32 other)
         {
-            return a == other.a;
-        }
-
-        /// <summary>
-        /// Writes the value of this node ID to the specified binary output.
-        /// </summary>
-        /// <returns></returns>
-        public void WriteTo(Span<byte> output)
-        {
-            BinaryPrimitives.WriteUInt32BigEndian(output, a);
+            fixed (byte* lptr = data)
+            {
+                var l = new ReadOnlySpan<byte>(lptr, SIZE);
+                var r = new ReadOnlySpan<byte>(other.data, SIZE);
+                return l.SequenceEqual(r);
+            }
         }
 
     }

@@ -14,60 +14,92 @@ namespace Cogito.Kademlia.Tests
     public class KFixedRoutingTableTests
     {
 
-        class FakeNetwork<TKNodeId, TKNodeData> : IKProtocol<TKNodeId, TKNodeData>
-            where TKNodeId : struct, IKNodeId<TKNodeId>
+        class FakeNetwork<TKNodeId> : IKProtocol<TKNodeId>
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         {
 
-            public ValueTask<KNodePingResponse> PingAsync(TKNodeId nodeId, TKNodeData nodeData, CancellationToken cancellationToken)
+            readonly TKNodeId self;
+
+            public FakeNetwork(in TKNodeId self)
             {
-                return new ValueTask<KNodePingResponse>(new KNodePingResponse(KNodeResponseStatus.OK));
+                this.self = self;
             }
 
-            public ValueTask<KNodeStoreResponse> StoreAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KNodeStoreResponse>(new KNodeStoreResponse(KNodeResponseStatus.OK));
+                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(target, self, new KPingResponse<TKNodeId>()));
             }
 
-            public ValueTask<KNodeFindNodeResponse> FindNodeAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KNodeFindNodeResponse>(new KNodeFindNodeResponse(KNodeResponseStatus.OK));
+                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(target, self, new KStoreResponse<TKNodeId>(request.Key)));
             }
 
-            public ValueTask<KNodeFindValueResponse> FindValueAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KNodeFindValueResponse>(new KNodeFindValueResponse(KNodeResponseStatus.OK));
+                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(target, self, new KFindNodeResponse<TKNodeId>(request.NodeId)));
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(target, self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8])));
             }
 
         }
 
-        class FakeSlowNetwork<TKNodeId, TKNodeData> : IKProtocol<TKNodeId, TKNodeData>
-            where TKNodeId : struct, IKNodeId<TKNodeId>
+        class FakeSlowNetwork<TKNodeId> : IKProtocol<TKNodeId>
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         {
 
-            readonly static Random r = new Random();
+            readonly TKNodeId self;
 
-            public async ValueTask<KNodePingResponse> PingAsync(TKNodeId nodeId, TKNodeData nodeData, CancellationToken cancellationToken)
+            public FakeSlowNetwork(in TKNodeId self)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(r.Next(0, 100)));
-                return (new KNodePingResponse(KNodeResponseStatus.OK));
+                this.self = self;
             }
 
-            public async ValueTask<KNodeStoreResponse> StoreAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(r.Next(0, 100)));
-                return (new KNodeStoreResponse(KNodeResponseStatus.OK));
+                return PingAsync(target, endpoint, request, cancellationToken);
             }
 
-            public async ValueTask<KNodeFindNodeResponse> FindNodeAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(r.Next(0, 100)));
-                return (new KNodeFindNodeResponse(KNodeResponseStatus.OK));
+                await Task.Delay(100);
+                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(target, self, new KPingResponse<TKNodeId>());
             }
 
-            public async ValueTask<KNodeFindValueResponse> FindValueAsync(TKNodeId nodeId, TKNodeData nodeData, TKNodeId key, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(r.Next(0, 100)));
-                return (new KNodeFindValueResponse(KNodeResponseStatus.OK));
+                return StoreAsync(target, endpoint, request, cancellationToken);
+            }
+
+            async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                await Task.Delay(100);
+                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(target, self, new KStoreResponse<TKNodeId>(request.Key));
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                return FindNodeAsync(target, endpoint, request, cancellationToken);
+            }
+
+            async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                await Task.Delay(100);
+                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(target, self, new KFindNodeResponse<TKNodeId>(request.NodeId));
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId target, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                return FindValueAsync(target, endpoint, request, cancellationToken);
+            }
+
+            async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(TKNodeId target, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            {
+                await Task.Delay(100);
+                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(target, self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8]));
             }
 
         }
@@ -76,16 +108,16 @@ namespace Cogito.Kademlia.Tests
         public void Should_find_proper_bucket_for_int32()
         {
             var s = new KNodeId32(0);
-            KTable.GetBucketIndex(s, new KNodeId32(1)).Should().Be(0);
-            KTable.GetBucketIndex(s, new KNodeId32(2)).Should().Be(1);
-            KTable.GetBucketIndex(s, new KNodeId32(2147483648)).Should().Be(31);
+            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(1)).Should().Be(0);
+            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(2)).Should().Be(1);
+            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(2147483648)).Should().Be(31);
         }
 
         [TestMethod]
         public async Task Can_randomly_populate_int32()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedRoutingTable<KNodeId32, object>(s, new FakeNetwork<KNodeId32, object>());
+            var t = new KFixedRoutingTable<KNodeId32>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -96,7 +128,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_mt()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedRoutingTable<KNodeId32, object>(s, new FakeSlowNetwork<KNodeId32, object>());
+            var t = new KFixedRoutingTable<KNodeId32>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -110,7 +142,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedRoutingTable<KNodeId64, object>(s, new FakeNetwork<KNodeId64, object>());
+            var t = new KFixedRoutingTable<KNodeId64>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -121,7 +153,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64_mt()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedRoutingTable<KNodeId64, object>(s, new FakeSlowNetwork<KNodeId64, object>());
+            var t = new KFixedRoutingTable<KNodeId64>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -135,7 +167,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedRoutingTable<KNodeId128, object>(s, new FakeNetwork<KNodeId128, object>());
+            var t = new KFixedRoutingTable<KNodeId128>(s);
 
             for (int i = 0; i < 262144 * 8; i++)
                 await t.TouchAsync(new KNodeId128(Guid.NewGuid()), null);
@@ -145,7 +177,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128_mt()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedRoutingTable<KNodeId128, object>(s, new FakeSlowNetwork<KNodeId128, object>());
+            var t = new KFixedRoutingTable<KNodeId128>(s);
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
@@ -158,7 +190,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId160, object>(s, new FakeNetwork<KNodeId160, object>());
+            var t = new KFixedRoutingTable<KNodeId160>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -169,7 +201,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160_mt()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId160, object>(s, new FakeSlowNetwork<KNodeId160, object>());
+            var t = new KFixedRoutingTable<KNodeId160>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -183,7 +215,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId256, object>(s, new FakeNetwork<KNodeId256, object>());
+            var t = new KFixedRoutingTable<KNodeId256>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -194,7 +226,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256_mt()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId256, object>(s, new FakeSlowNetwork<KNodeId256, object>());
+            var t = new KFixedRoutingTable<KNodeId256>(s);
 
             var r = new Random();
             var l = new List<Task>();

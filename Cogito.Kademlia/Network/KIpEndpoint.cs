@@ -1,4 +1,7 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
 
 namespace Cogito.Kademlia.Network
 {
@@ -7,8 +10,18 @@ namespace Cogito.Kademlia.Network
     /// Describes an IP endpoint of a particular protocol.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
-    public readonly struct KIpEndpoint
+    public readonly struct KIpEndpoint : IEquatable<KIpEndpoint>
     {
+
+        public static implicit operator IPEndPoint(KIpEndpoint ep)
+        {
+            return ep.ToIPEndPoint();
+        }
+
+        public static implicit operator KIpEndpoint(IPEndPoint ep)
+        {
+            return new KIpEndpoint(ep);
+        }
 
         [FieldOffset(0)]
         readonly KIpProtocol protocol;
@@ -23,7 +36,7 @@ namespace Cogito.Kademlia.Network
         /// Initializes a new instance.
         /// </summary>
         /// <param name="v4"></param>
-        public KIpEndpoint(KIp4Endpoint v4)
+        public KIpEndpoint(in KIp4Endpoint v4)
         {
             this.protocol = KIpProtocol.IPv4;
             this.v6 = new KIp6Endpoint();
@@ -34,11 +47,34 @@ namespace Cogito.Kademlia.Network
         /// Initializes a new instance.
         /// </summary>
         /// <param name="v6"></param>
-        public KIpEndpoint(KIp6Endpoint v6)
+        public KIpEndpoint(in KIp6Endpoint v6)
         {
             this.protocol = KIpProtocol.IPv6;
             this.v4 = new KIp4Endpoint();
             this.v6 = v6;
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="ep"></param>
+        public KIpEndpoint(IPEndPoint ep)
+        {
+            switch (ep.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    this.protocol = KIpProtocol.IPv4;
+                    this.v6 = default;
+                    this.v4 = new KIp4Endpoint(ep);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    this.protocol = KIpProtocol.IPv6;
+                    this.v4 = default;
+                    this.v6 = new KIp6Endpoint(ep);
+                    break;
+                default:
+                    throw new ArgumentException();
+            }
         }
 
         /// <summary>
@@ -49,12 +85,89 @@ namespace Cogito.Kademlia.Network
         /// <summary>
         /// Gets the IPv4 version of the endpoint.
         /// </summary>
-        public KIp4Endpoint V4 => v4;
+        public KIp4Endpoint V4 => protocol == KIpProtocol.IPv4 ? v4 : throw new InvalidOperationException();
 
         /// <summary>
         /// Gets the IPv6 version of the endpoint.
         /// </summary>
-        public KIp6Endpoint V6 => v6;
+        public KIp6Endpoint V6 => protocol == KIpProtocol.IPv6 ? v6 : throw new InvalidOperationException();
+
+        /// <summary>
+        /// Returns this endpoint as an <see cref="IPEndPoint"/>.
+        /// </summary>
+        /// <returns></returns>
+        public IPEndPoint ToIPEndPoint()
+        {
+            return protocol switch
+            {
+                KIpProtocol.IPv4 => v4.ToIPEndPoint(),
+                KIpProtocol.IPv6 => v6.ToIPEndPoint(),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the two instances are equal to each other.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return obj is KIpEndpoint ep && Equals(ep);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the two instances are equal to each other.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(KIpEndpoint other)
+        {
+            return protocol switch
+            {
+                KIpProtocol.IPv4 => other.Protocol == KIpProtocol.IPv4 && v4.Equals(other.v4),
+                KIpProtocol.IPv6 => other.Protocol == KIpProtocol.IPv6 && v6.Equals(other.v6),
+                _ => false,
+            };
+        }
+
+        /// <summary>
+        /// Gets a unique hash code identifying this instance.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            var h = new HashCode();
+            h.Add(protocol);
+
+            switch (protocol)
+            {
+                case KIpProtocol.IPv4:
+                    h.Add(v4);
+                    break;
+                case KIpProtocol.IPv6:
+                    h.Add(v6);
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            };
+
+            return h.ToHashCode();
+        }
+
+        /// <summary>
+        /// Returns a string representation of this IP endpoint.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return protocol switch
+            {
+                KIpProtocol.IPv4 => v4.ToString(),
+                KIpProtocol.IPv6 => v6.ToString(),
+                _ => null,
+            };
+        }
 
     }
 

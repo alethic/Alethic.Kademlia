@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,38 +9,79 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
+    /// Implements a fixed Kademlia routing table with the default peer data type.
+    /// </summary>
+    /// <typeparam name="TKNodeId"></typeparam>
+    public class KFixedRoutingTable<TKNodeId> : KFixedRoutingTable<TKNodeId, KPeerData<TKNodeId>>
+        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+    {
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="selfId"></param>
+        /// <param name="selfData"></param>
+        /// <param name="k"></param>
+        public KFixedRoutingTable(in TKNodeId selfId, int k = 20) :
+            base(selfId, new KPeerData<TKNodeId>(), k)
+        {
+
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="selfId"></param>
+        /// <param name="selfData"></param>
+        /// <param name="k"></param>
+        public KFixedRoutingTable(in TKNodeId selfId, in KPeerData<TKNodeId> selfData, int k = 20) :
+            base(selfId, selfData, k)
+        {
+
+        }
+
+    }
+
+    /// <summary>
     /// Implements a fixed Kademlia routing table.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KTable, IKRoutingTable<TKNodeId, TKPeerData>
-        where TKNodeId : struct, IKNodeId<TKNodeId>
+    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedRoutingTable, IKRouter<TKNodeId, TKPeerData>
+        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        readonly TKNodeId self;
-        readonly IKProtocol<TKNodeId, TKPeerData> protocol;
+        readonly TKNodeId selfId;
+        readonly TKPeerData selfData;
         readonly int k;
         readonly KBucket<TKNodeId, TKPeerData>[] buckets;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="self"></param>
-        /// <param name="protocol"></param>
+        /// <param name="selfId"></param>
         /// <param name="k"></param>
-        public KFixedRoutingTable(TKNodeId self, IKProtocol<TKNodeId, TKPeerData> protocol, int k = 20)
+        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, int k = 20)
         {
-            this.self = self;
-            this.protocol = protocol;
+            this.selfId = selfId;
+            this.selfData = selfData;
             this.k = k;
 
-            if (self.Size % 8 != 0)
-                throw new ArgumentException("NodeId must have a distance size which is a multiple of 8.");
-
-            buckets = new KBucket<TKNodeId, TKPeerData>[self.Size];
+            buckets = new KBucket<TKNodeId, TKPeerData>[Unsafe.SizeOf<TKNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
                 buckets[i] = new KBucket<TKNodeId, TKPeerData>(k);
         }
+
+        /// <summary>
+        /// Gets the ID of the node itself.
+        /// </summary>
+        public TKNodeId SelfId => selfId;
+
+        /// <summary>
+        /// Gets the data of the node itself.
+        /// </summary>
+        public TKPeerData SelfData => selfData;
 
         /// <summary>
         /// Gets the fixed size of the routing table buckets.
@@ -51,22 +93,22 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="nodeId"></param>
         /// <returns></returns>
-        internal KBucket<TKNodeId, TKPeerData> GetBucket(TKNodeId nodeId)
+        internal KBucket<TKNodeId, TKPeerData> GetBucket(in TKNodeId nodeId)
         {
-            return buckets[GetBucketIndex(self, nodeId)];
+            var i = GetBucketIndex(selfId, nodeId);
+            return buckets[i];
         }
 
         /// <summary>
         /// Updates the reference to the node within the table.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="nodeData"></param>
-        /// <param name="nodeEvents"></param>
+        /// <param name="peerData"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask TouchAsync(TKNodeId nodeId, TKPeerData nodeData = default, IKPeerEvents nodeEvents = null, CancellationToken cancellationToken = default)
+        public ValueTask TouchAsync(in TKNodeId nodeId, in TKPeerData peerData, CancellationToken cancellationToken = default)
         {
-            return GetBucket(nodeId).TouchAsync(nodeId, nodeData, nodeEvents, protocol, cancellationToken);
+            return GetBucket(nodeId).TouchAsync(nodeId, peerData, cancellationToken);
         }
 
     }
@@ -74,29 +116,29 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a Kademlia routing table.
     /// </summary>
-    public abstract class KTable
+    public abstract class KFixedRoutingTable
     {
 
         /// <summary>
-        /// Calculates the bucket index that should be used for the <paramref name="r"/> node in a table owned by <paramref name="l"/>.
+        /// Calculates the bucket index that should be used for the <paramref name="other"/> node in a table owned by <paramref name="self"/>.
         /// </summary>
         /// <typeparam name="TKNodeId"></typeparam>
-        /// <param name="l"></param>
-        /// <param name="r"></param>
+        /// <param name="self"></param>
+        /// <param name="other"></param>
         /// <returns></returns>
-        internal static int GetBucketIndex<TKNodeId>(TKNodeId l, TKNodeId r)
-            where TKNodeId : struct, IKNodeId<TKNodeId>
+        internal static int GetBucketIndex<TKNodeId>(in TKNodeId self, in TKNodeId other)
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         {
-            if (l.Equals(r))
+            if (self.Equals(other))
                 throw new ArgumentException("Cannot get bucket for own node.");
 
             // calculate distance between nodes
-            var o = (Span<byte>)stackalloc byte[l.Size / 8];
-            KNodeIdExtensions.CalculateDistance(l, r, o);
+            var o = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
+            KNodeId.CalculateDistance(self, other, o);
 
             // leading zeros is our bucket position
             var z = ((ReadOnlySpan<byte>)o).CountLeadingZeros();
-            return r.Size - z - 1;
+            return o.Length * 8 - z - 1;
         }
 
     }

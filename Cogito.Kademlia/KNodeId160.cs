@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
 
 namespace Cogito.Kademlia
 {
@@ -7,12 +8,14 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Represents a generic 160-bit Node ID.
     /// </summary>
-    public readonly struct KNodeId160 : IKNodeId<KNodeId160>
+    [StructLayout(LayoutKind.Explicit)]
+    public unsafe struct KNodeId160 : IKNodeId<KNodeId160>
     {
 
-        readonly ulong a;
-        readonly ulong b;
-        readonly uint c;
+        const int SIZE = 20;
+
+        [FieldOffset(0)]
+        fixed byte data[SIZE];
 
         /// <summary>
         /// Initializes a new instance.
@@ -22,9 +25,13 @@ namespace Cogito.Kademlia
         /// <param name="c"></param>
         public KNodeId160(ulong a, ulong b, uint c)
         {
-            this.a = a;
-            this.b = b;
-            this.c = c;
+            fixed (byte* ptr = data)
+            {
+                var s = new Span<byte>(ptr, SIZE);
+                BinaryPrimitives.WriteUInt64BigEndian(s, a);
+                BinaryPrimitives.WriteUInt64BigEndian(s = s.Slice(sizeof(ulong)), b);
+                BinaryPrimitives.WriteUInt32BigEndian(s.Slice(sizeof(ulong)), c);
+            }
         }
 
         /// <summary>
@@ -45,16 +52,21 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
+        public KNodeId160(ReadOnlySpan<byte> id)
+        {
+            fixed (byte* d = data)
+                id.CopyTo(new Span<byte>(d, SIZE));
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="id"></param>
         public KNodeId160(ReadOnlySpan<uint> id) :
             this(id[0], id[1], id[2], id[3], id[4])
         {
 
         }
-
-        /// <summary>
-        /// Gets the length of the node ID.
-        /// </summary>
-        public int Size => 160;
 
         /// <summary>
         /// Compares this node ID to another node ID.
@@ -63,18 +75,12 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool Equals(KNodeId160 other)
         {
-            return a == other.a && b == other.b && c == other.c;
-        }
-
-        /// <summary>
-        /// Writes the value of this node ID to the specified binary output.
-        /// </summary>
-        /// <returns></returns>
-        public void WriteTo(Span<byte> output)
-        {
-            BinaryPrimitives.WriteUInt64BigEndian(output, a);
-            BinaryPrimitives.WriteUInt64BigEndian(output = output.Slice(sizeof(ulong)), b);
-            BinaryPrimitives.WriteUInt32BigEndian(output.Slice(sizeof(ulong)), c);
+            fixed (byte* lptr = data)
+            {
+                var l = new ReadOnlySpan<byte>(lptr, SIZE);
+                var r = new ReadOnlySpan<byte>(other.data, SIZE);
+                return l.SequenceEqual(r);
+            }
         }
 
     }
