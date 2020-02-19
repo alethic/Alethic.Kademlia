@@ -2,6 +2,8 @@
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
+using Cogito.Kademlia.Core;
+
 namespace Cogito.Kademlia
 {
 
@@ -81,6 +83,16 @@ namespace Cogito.Kademlia
                 var r = new ReadOnlySpan<byte>(other.data, SIZE);
                 return l.SequenceEqual(r);
             }
+        }
+
+        /// <summary>
+        /// Returns a string representation of this node ID.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            fixed (byte* lptr = data)
+                return new ReadOnlySpan<byte>(lptr, SIZE).ToHexString();
         }
 
     }

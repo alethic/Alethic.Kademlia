@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+﻿using System;
 
 namespace Cogito.Kademlia.Network.Protocol.Datagram
 {
@@ -10,22 +10,29 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly TKNodeId nodeId;
+        readonly TKNodeId key;
+        readonly ReadOnlyMemory<KIpPeer<TKNodeId>> peers;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="magic"></param>
-        /// <param name="nodeId"></param>
-        public KFindNodeResponseBody(in TKNodeId nodeId)
+        /// <param name="key"></param>
+        /// <param name="peers"></param>
+        public KFindNodeResponseBody(in TKNodeId key, ReadOnlyMemory<KIpPeer<TKNodeId>> peers)
         {
-            this.nodeId = nodeId;
+            this.key = key;
+            this.peers = peers;
         }
 
         /// <summary>
-        /// Gets or sets the node ID to be located.
+        /// Gets the node ID that was searched for.
         /// </summary>
-        public TKNodeId NodeId => nodeId;
+        public TKNodeId Key => key;
+
+        /// <summary>
+        /// Gets the peers that were returned from the search.
+        /// </summary>
+        public ReadOnlyMemory<KIpPeer<TKNodeId>> Endpoints => peers;
 
     }
 

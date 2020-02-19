@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Cogito.Kademlia
 {
@@ -20,12 +22,10 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="self"></param>
-        /// <param name="protocol"></param>
         /// <param name="router"></param>
         public KEngine(IKRouter<TKNodeId, TKPeerData> router)
         {
-            this.router = router;
+            this.router = router ?? throw new ArgumentNullException(nameof(router));
         }
 
         /// <summary>
@@ -42,6 +42,105 @@ namespace Cogito.Kademlia
         /// Gets the router associated with the engine.
         /// </summary>
         public IKRouter<TKNodeId, TKPeerData> Router => router;
+
+        /// <summary>
+        /// Initiates a connection to the specified endpoint.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <returns></returns>
+        public async ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken = default)
+        {
+            if (endpoint.Protocol.Engine != this)
+                throw new ArgumentException("Endpoint originates from different engine.");
+
+            var r = await endpoint.PingAsync(new KPingRequest<TKNodeId>(SelfData.Endpoints.ToArray()), cancellationToken);
+            await router.UpdatePeerAsync(r.Sender, r.Body.Endpoints.ToArray(), cancellationToken);
+            var p = router.GetPeerAsync(r.Sender, cancellationToken);
+            await LookupAsync(SelfId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the value for the specified key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<ReadOnlyMemory<byte>> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Sets the value for the specified key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask SetValueAsync(in TKNodeId key, ReadOnlySpan<byte> value, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Begins a search process for the specified node.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask LookupAsync(in TKNodeId target, CancellationToken cancellationToken)
+        {
+            return LookupAsync(target, cancellationToken);
+        }
+
+        /// <summary>
+        /// Begins a search process for the specified node.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask LookupAsync(TKNodeId key, CancellationToken cancellationToken)
+        {
+            var l = await router.GetPeersAsync(key, 3, cancellationToken);
+            var t = l.ToArray().Select(i => FindNodeAsync(i, key, cancellationToken).AsTask()).ToList();
+            var f = new SortedSet<TKNodeId>(new KNodeIdDistanceComparer<TKNodeId>(key));
+
+            while (true)
+            {
+                // wait for first finished task
+                var r = await Task.WhenAny(t);
+                t.Remove(r);
+                var z = await r;
+
+                //f.Add(z.ToArray().Select(i => i.NodeId)
+            }
+        }
+
+        /// <summary>
+        /// Issues a FIND_NODE request to the target, looking for the specified key, and returns the resolved peers and their endpoints.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> FindNodeAsync(TKNodeId target, TKNodeId key, CancellationToken cancellationToken)
+        {
+            foreach (var endpoint in (await router.GetPeerAsync(target, cancellationToken)).Endpoints)
+            {
+                try
+                {
+                    var l = await endpoint.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken);
+                    if (l.Success)
+                        return l.Body.Endpoints;
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
+            }
+
+            return Enumerable.Empty<KPeerEndpoints<TKNodeId>>();
+        }
 
         /// <summary>
         /// Invoked to handle incoming PING requests.
@@ -77,7 +176,20 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         ValueTask<KStoreResponse<TKNodeId>> IKEngine<TKNodeId>.OnStoreAsync(in TKNodeId source, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return OnStoreAsync(source, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming STORE requests.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(TKNodeId source, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(source, Enumerable.Empty<IKEndpoint<TKNodeId>>(), cancellationToken);
+            return new KStoreResponse<TKNodeId>(request.Key);
         }
 
         /// <summary>
@@ -89,7 +201,20 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         ValueTask<KFindNodeResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindNodeAsync(in TKNodeId source, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return OnFindNodeAsync(source, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_NODE requests.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(TKNodeId source, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(source, Enumerable.Empty<IKEndpoint<TKNodeId>>(), cancellationToken);
+            return new KFindNodeResponse<TKNodeId>(request.Key, await router.GetPeersAsync(request.Key, 3, cancellationToken));
         }
 
         /// <summary>
@@ -101,7 +226,20 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         ValueTask<KFindValueResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindValueAsync(in TKNodeId source, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return OnFindValueAsync(source, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_VALUE requests.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId source, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(source, Enumerable.Empty<IKEndpoint<TKNodeId>>(), cancellationToken);
+            return new KFindValueResponse<TKNodeId>(request.Key, new byte[0]);
         }
 
     }

@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 using Cogito.Kademlia.Core;
 
@@ -14,16 +15,35 @@ namespace Cogito.Kademlia
     public static class KNodeId
     {
 
+        static readonly RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
+
+        /// <summary>
+        /// Creates a new random node ID.
+        /// </summary>
+        /// <typeparam name="TKNodeId"></typeparam>
+        /// <returns></returns>
+        public static TKNodeId CreateNodeId<TKNodeId>()
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        {
+#if NET47 || NETSTANDARD2_0
+            var b = new byte[Unsafe.SizeOf<TKNodeId>()];
+#else
+            var b = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
+#endif
+            rng.GetBytes(b);
+            return MemoryMarshal.Read<TKNodeId>(b);
+        }
+
         /// <summary>
         /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="writer"></param>
-        public static unsafe void WriteTo<TKNodeId>(this TKNodeId self, IBufferWriter<byte> writer)
+        public static unsafe void Write<TKNodeId>(this TKNodeId self, IBufferWriter<byte> writer)
             where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         {
             var s = Unsafe.SizeOf<TKNodeId>();
-            WriteTo(self, writer.GetSpan(s));
+            Write(self, writer.GetSpan(s));
             writer.Advance(s);
         }
 
@@ -32,21 +52,10 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="self"></param>
         /// <param name="target"></param>
-        public static unsafe void WriteTo<TKNodeId>(this TKNodeId self, Span<byte> target)
+        public static unsafe void Write<TKNodeId>(this TKNodeId self, Span<byte> target)
             where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         {
-            var s = Unsafe.SizeOf<TKNodeId>();
-
-#if NETCOREAPP3_0 || NETSTANDARD2_1
-            // get binary representation of structure
-            var a = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref self, 1));
-#else
-            var at = (Span<byte>)stackalloc byte[s];
-            MemoryMarshal.Write(at, ref self);
-            var a = (ReadOnlySpan<byte>)at;
-#endif
-
-            a.CopyTo(target);
+            MemoryMarshal.Write(target, ref self);
         }
 
         /// <summary>

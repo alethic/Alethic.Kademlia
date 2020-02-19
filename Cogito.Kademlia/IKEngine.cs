@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -37,6 +38,23 @@ namespace Cogito.Kademlia
         /// Gets the Node ID of the node itself.
         /// </summary>
         TKNodeId SelfId { get; }
+
+        /// <summary>
+        /// Gets the value for the specified key.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<ReadOnlyMemory<byte>> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Sets the given key to the specified value.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask SetValueAsync(in TKNodeId key, ReadOnlySpan<byte> value, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Invoked to handle incoming PING requests.

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +16,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    class KBucket<TKNodeId, TKPeerData>
+    class KBucket<TKNodeId, TKPeerData> : IEnumerable<KBucketItem<TKNodeId, TKPeerData>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
@@ -204,9 +206,10 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         LinkedListNode<KBucketItem<TKNodeId, TKPeerData>> GetNode(in TKNodeId nodeId)
         {
-            for (var i = l.First; i != null; i = i.Next)
-                if (nodeId.Equals(i.Value.Id))
-                    return i;
+            using (rw.BeginReadLock())
+                for (var i = l.First; i != null; i = i.Next)
+                    if (nodeId.Equals(i.Value.Id))
+                        return i;
 
             return null;
         }
@@ -214,13 +217,32 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Returns the number of items within the bucket.
         /// </summary>
-        internal int Count
+        public int Count
         {
             get
             {
                 using (rw.BeginReadLock())
                     return l.Count;
             }
+        }
+
+        /// <summary>
+        /// Gets an iterator that covers a snapshot of the bucket items.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<KBucketItem<TKNodeId, TKPeerData>> GetEnumerator()
+        {
+            using (rw.BeginReadLock())
+                return l.ToList().GetEnumerator();
+        }
+
+        /// <summary>
+        /// Gets an iterator that covers a snapshot of the bucket items.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
 
     }

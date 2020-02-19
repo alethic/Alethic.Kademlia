@@ -41,7 +41,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="writer"></param>
         public unsafe void WriteTo(IBufferWriter<byte> writer)
         {
-            key.WriteTo(writer);
+            key.Write(writer);
             writer.Write(value);
         }
 

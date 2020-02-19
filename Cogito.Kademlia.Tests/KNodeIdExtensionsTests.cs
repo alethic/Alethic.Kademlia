@@ -14,6 +14,36 @@ namespace Cogito.Kademlia.Tests
     {
 
         [TestMethod]
+        public void Should_generate_random_nodeid_for_32()
+        {
+            var kid1 = KNodeId.CreateNodeId<KNodeId32>();
+        }
+
+        [TestMethod]
+        public void Should_generate_random_nodeid_for_64()
+        {
+            var kid1 = KNodeId.CreateNodeId<KNodeId64>();
+        }
+
+        [TestMethod]
+        public void Should_generate_random_nodeid_for_128()
+        {
+            var kid1 = KNodeId.CreateNodeId<KNodeId128>();
+        }
+
+        [TestMethod]
+        public void Should_generate_random_nodeid_for_160()
+        {
+            var kid1 = KNodeId.CreateNodeId<KNodeId160>();
+        }
+
+        [TestMethod]
+        public void Should_generate_random_nodeid_for_256()
+        {
+            var kid1 = KNodeId.CreateNodeId<KNodeId256>();
+        }
+
+        [TestMethod]
         public void Should_calculate_proper_distance_offset_for_int32()
         {
             var a = new KNodeId32(0);

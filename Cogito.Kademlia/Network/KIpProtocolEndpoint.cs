@@ -14,19 +14,16 @@ namespace Cogito.Kademlia.Network
     {
 
         readonly IKProtocol<TKNodeId> protocol;
-        readonly TKNodeId nodeId;
         readonly KIpEndpoint endpoint;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="protocol"></param>
-        /// <param name="nodeId"></param>
         /// <param name="endpoint"></param>
-        public KIpProtocolEndpoint(IKProtocol<TKNodeId> protocol, in TKNodeId nodeId, in KIpEndpoint endpoint)
+        public KIpProtocolEndpoint(IKProtocol<TKNodeId> protocol, in KIpEndpoint endpoint)
         {
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
-            this.nodeId = nodeId;
             this.endpoint = endpoint;
         }
 
@@ -107,7 +104,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public bool Equals(KIpProtocolEndpoint<TKNodeId> other)
         {
-            return ReferenceEquals(protocol, other.protocol) && nodeId.Equals(other.nodeId) && endpoint.Equals(other.endpoint);
+            return ReferenceEquals(protocol, other.protocol) && endpoint.Equals(other.endpoint);
         }
 
         /// <summary>
@@ -118,7 +115,6 @@ namespace Cogito.Kademlia.Network
         {
             var h = new HashCode();
             h.Add(protocol);
-            h.Add(nodeId);
             h.Add(endpoint);
             return h.ToHashCode();
         }

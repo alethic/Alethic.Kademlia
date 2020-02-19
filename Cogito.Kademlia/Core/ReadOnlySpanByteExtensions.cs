@@ -15,6 +15,44 @@ namespace Cogito.Kademlia.Core
     internal static class ReadOnlySpanByteExtensions
     {
 
+        static readonly uint[] hexLookupTable = CreateHexLookup();
+
+        /// <summary>
+        /// Creates a lookup table for byte values to hex character points.
+        /// </summary>
+        /// <returns></returns>
+        static uint[] CreateHexLookup()
+        {
+            var r = new uint[256];
+
+            for (var i = 0; i < 256; i++)
+            {
+                var s = i.ToString("x2");
+                r[i] = s[0] + ((uint)s[1] << 16);
+            }
+
+            return r;
+        }
+
+        /// <summary>
+        /// Converts the given byte span to a hexadecimal string.
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns></returns>
+        public unsafe static string ToHexString(this ReadOnlySpan<byte> bytes)
+        {
+            var r = stackalloc char[bytes.Length * 2];
+
+            for (var i = 0; i < bytes.Length; i++)
+            {
+                var val = hexLookupTable[bytes[i]];
+                r[2 * i] = (char)val;
+                r[2 * i + 1] = (char)(val >> 16);
+            }
+
+            return new string(r, 0, bytes.Length * 2);
+        }
+
         /// <summary>
         /// Performs an XOR operation against two <see cref="ReadOnlySpan{byte}"/>.
         /// </summary>

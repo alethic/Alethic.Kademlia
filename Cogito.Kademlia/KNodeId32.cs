@@ -2,6 +2,8 @@
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
+using Cogito.Kademlia.Core;
+
 namespace Cogito.Kademlia
 {
 
@@ -36,8 +38,8 @@ namespace Cogito.Kademlia
         /// <param name="id"></param>
         public KNodeId32(ReadOnlySpan<byte> id)
         {
-            fixed (byte* d = data)
-                id.CopyTo(new Span<byte>(d, SIZE));
+            fixed (byte* ptr = data)
+                id.CopyTo(new Span<byte>(ptr, SIZE));
         }
 
         /// <summary>
@@ -57,12 +59,22 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool Equals(KNodeId32 other)
         {
-            fixed (byte* lptr = data)
+            fixed (byte* ptr = data)
             {
-                var l = new ReadOnlySpan<byte>(lptr, SIZE);
+                var l = new ReadOnlySpan<byte>(ptr, SIZE);
                 var r = new ReadOnlySpan<byte>(other.data, SIZE);
                 return l.SequenceEqual(r);
             }
+        }
+
+        /// <summary>
+        /// Returns a string representation of this node ID.
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            fixed (byte* ptr = data)
+                return new ReadOnlySpan<byte>(ptr, SIZE).ToHexString();
         }
 
     }

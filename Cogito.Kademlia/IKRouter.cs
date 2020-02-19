@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Buffers;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,6 +42,15 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Returns the <paramref name="k"/> closest peers to the specified target key.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> GetPeersAsync(in TKNodeId target, int k, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the number of peers known by the router.

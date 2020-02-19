@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 using FluentAssertions;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -20,11 +19,15 @@ namespace Cogito.Kademlia.Tests
         {
 
             readonly TKNodeId self;
+            readonly IKEngine<TKNodeId> engine;
 
-            public FakeNetwork(in TKNodeId self)
+            public FakeNetwork(in TKNodeId self, IKEngine<TKNodeId> engine)
             {
                 this.self = self;
+                this.engine = engine;
             }
+
+            public IKEngine<TKNodeId> Engine => engine;
 
             public Guid Id => Guid.Empty;
 
@@ -42,7 +45,7 @@ namespace Cogito.Kademlia.Tests
 
             public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.NodeId)));
+                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.Key)));
             }
 
             public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
@@ -57,11 +60,15 @@ namespace Cogito.Kademlia.Tests
         {
 
             readonly TKNodeId self;
+            readonly IKEngine<TKNodeId> engine;
 
-            public FakeSlowNetwork(in TKNodeId self)
+            public FakeSlowNetwork(in TKNodeId self, IKEngine<TKNodeId> engine)
             {
                 this.self = self;
+                this.engine = engine;
             }
+
+            public IKEngine<TKNodeId> Engine => engine;
 
             public Guid Id => Guid.Empty;
 
@@ -97,7 +104,7 @@ namespace Cogito.Kademlia.Tests
             async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.NodeId));
+                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.Key));
             }
 
             public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)

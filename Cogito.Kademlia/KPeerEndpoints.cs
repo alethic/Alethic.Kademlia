@@ -1,27 +1,29 @@
-﻿namespace Cogito.Kademlia
+﻿using System.Collections.Generic;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Represents an item within a bucket.
+    /// Describes a peer and its associated endpoints.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public readonly struct KBucketItem<TKNodeId, TKPeerData>
-        where TKNodeId :  IKNodeId<TKNodeId>
+    public readonly struct KPeerEndpoints<TKNodeId>
+        where TKNodeId :  unmanaged, IKNodeId<TKNodeId>
     {
 
         readonly TKNodeId id;
-        readonly TKPeerData data;
+        readonly IEnumerable<IKEndpoint<TKNodeId>> endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KBucketItem(in TKNodeId id, in TKPeerData data)
+        public KPeerEndpoints(in TKNodeId id, IEnumerable<IKEndpoint<TKNodeId>> endpoints)
         {
             this.id = id;
-            this.data = data;
+            this.endpoints = endpoints;
         }
 
         /// <summary>
@@ -32,7 +34,7 @@
         /// <summary>
         /// Gets the set of known endpoints of the peer.
         /// </summary>
-        public TKPeerData Data => data;
+        public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => endpoints;
 
     }
 

@@ -29,6 +29,11 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
             return MemoryMarshal.Cast<byte, KIpEndpoint>(v.Span);
         }
 
+        public static ReadOnlySpan<KIpPeer<TKNodeId>> ReadIpPeer(ref ReadOnlySequence<byte> sequence)
+        {
+
+        }
+
         /// <summary>
         /// Reads the header from the sequence.
         /// </summary>
@@ -104,10 +109,10 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// </summary>
         /// <param name="sequence"></param>
         /// <returns></returns>
-        public static KFindNodeResponseBody<TKNodeId> ReadFindNodeResponse(ref ReadOnlySequence<byte> sequence)
+        public static KFindNodeResponse<TKNodeId> ReadFindNodeResponse(ref ReadOnlySequence<byte> sequence)
         {
-            KNodeId.Read<TKNodeId>(ref sequence, out var nodeId);
-            return new KFindNodeResponseBody<TKNodeId>(nodeId);
+            KNodeId.Read<TKNodeId>(ref sequence, out var key);
+            return new KFindNodeResponse<TKNodeId>(key);
         }
 
         /// <summary>

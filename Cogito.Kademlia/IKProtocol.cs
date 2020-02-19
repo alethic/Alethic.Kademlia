@@ -14,6 +14,11 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
+        /// Gets the engine associated with this protocol.
+        /// </summary>
+        IKEngine<TKNodeId> Engine { get; }
+
+        /// <summary>
         /// Gets the unique identifier of this protocol format.
         /// </summary>
         Guid Id { get; }

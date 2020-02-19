@@ -9,21 +9,21 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly TKNodeId nodeId;
+        readonly TKNodeId key;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="nodeId"></param>
-        public KFindNodeRequest(in TKNodeId nodeId)
+        /// <param name="key"></param>
+        public KFindNodeRequest(in TKNodeId key)
         {
-            this.nodeId = nodeId;
+            this.key = key;
         }
 
         /// <summary>
         /// Specifies the node ID to be located.
         /// </summary>
-        public TKNodeId NodeId => nodeId;
+        public TKNodeId Key => key;
 
     }
 

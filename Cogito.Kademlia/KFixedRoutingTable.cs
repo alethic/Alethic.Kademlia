@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -125,6 +126,20 @@ namespace Cogito.Kademlia
                 throw new ArgumentNullException(nameof(endpoints));
 
             return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> GetPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
+        {
+            var c = new KNodeIdDistanceComparer<TKNodeId>(key);
+            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpoints<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
+            return new ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>>(l);
         }
 
         /// <summary>

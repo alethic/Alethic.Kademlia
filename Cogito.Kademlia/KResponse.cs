@@ -27,6 +27,7 @@
         where TKNodeId : IKNodeId<TKNodeId>
     {
 
+        readonly bool success;
         readonly TKNodeId sender;
         readonly TKResponseBody body;
 
@@ -37,9 +38,15 @@
         /// <param name="body"></param>
         public KResponse(TKNodeId sender, in TKResponseBody body)
         {
+            this.success = true;
             this.sender = sender;
             this.body = body;
         }
+
+        /// <summary>
+        /// Gets whether or not the request was a success.
+        /// </summary>
+        public bool Success => success;
 
         /// <summary>
         /// Gets the sender of this response.

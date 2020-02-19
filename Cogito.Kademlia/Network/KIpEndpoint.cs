@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Cogito.Kademlia.Network
@@ -12,6 +14,28 @@ namespace Cogito.Kademlia.Network
     [StructLayout(LayoutKind.Explicit)]
     public readonly struct KIpEndpoint : IEquatable<KIpEndpoint>
     {
+
+        /// <summary>
+        /// Writes the given <typeparamref name="KIpEndpoint"/> to the specified buffer writer.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="writer"></param>
+        public static unsafe void Write(KIpEndpoint self, IBufferWriter<byte> writer)
+        {
+            var s = Unsafe.SizeOf<KIpEndpoint>();
+            Write(self, writer.GetSpan(s));
+            writer.Advance(s);
+        }
+
+        /// <summary>
+        /// Writes the given <typeparamref name="KIpEndpoint"/> to the specified buffer writer.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="target"></param>
+        public static unsafe void Write(KIpEndpoint self, Span<byte> target)
+        {
+            MemoryMarshal.Write(target, ref self);
+        }
 
         public static implicit operator IPEndPoint(KIpEndpoint ep)
         {
@@ -167,6 +191,24 @@ namespace Cogito.Kademlia.Network
                 KIpProtocol.IPv6 => v6.ToString(),
                 _ => null,
             };
+        }
+
+        /// <summary>
+        /// Writes this <typeparamref name="KIpEndpoint"/> to the specified buffer writer.
+        /// </summary>
+        /// <param name="writer"></param>
+        public void Write(IBufferWriter<byte> writer)
+        {
+            Write(this, writer);
+        }
+
+        /// <summary>
+        /// Writes this <typeparamref name="KIpEndpoint"/> to the specified span.
+        /// </summary>
+        /// <param name="span"></param>
+        public void Write(Span<byte> span)
+        {
+            Write(this, span);
         }
 
     }

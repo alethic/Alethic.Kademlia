@@ -1,7 +1,7 @@
-﻿using System;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Buffers.Binary;
-using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Cogito.Kademlia.Network.Protocol.Datagram
 {
@@ -19,11 +19,22 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// </summary>
         /// <param name="writer"></param>
         /// <param name="endpoints"></param>
-        public static void WriteIpEndpoints(IBufferWriter<byte> writer, ReadOnlySpan<KIpEndpoint> endpoints)
+        public static void WriteIpEndpoint(IBufferWriter<byte> writer, in KIpEndpoint endpoint)
         {
-            BinaryPrimitives.WriteUInt32BigEndian(writer.GetMemory(sizeof(uint)).Span, (uint)endpoints.Length);
+            endpoint.Write(writer);
+        }
+
+        /// <summary>
+        /// Writes the endpoint to the buffer.
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="endpoints"></param>
+        public static void WriteIpEndpoints(IBufferWriter<byte> writer, IEnumerable<KIpEndpoint> endpoints)
+        {
+            BinaryPrimitives.WriteUInt32BigEndian(writer.GetMemory(sizeof(uint)).Span, (uint)endpoints.Count());
             writer.Advance(sizeof(uint));
-            writer.Write(MemoryMarshal.Cast<KIpEndpoint, byte>(endpoints));
+            foreach (var endpoint in endpoints)
+                WriteIpEndpoint(writer, endpoint);
         }
 
         /// <summary>
@@ -33,9 +44,14 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="header"></param>
         public static void WriteHeader(IBufferWriter<byte> writer, in KPacketHeader<TKNodeId> header)
         {
-            header.Sender.WriteTo(writer);
+            // writer Sender
+            header.Sender.Write(writer);
+
+            // write Magic
             BinaryPrimitives.WriteUInt32BigEndian(writer.GetMemory(sizeof(uint)).Span, header.Magic);
             writer.Advance(sizeof(uint));
+
+            // write Type
             writer.GetSpan(sizeof(byte))[0] = (byte)header.Type;
             writer.Advance(sizeof(byte));
         }
@@ -67,7 +83,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteStoreRequest(IBufferWriter<byte> writer, in KStoreRequestBody<TKNodeId> body)
         {
-            body.Key.WriteTo(writer);
+            body.Key.Write(writer);
             BinaryPrimitives.WriteUInt32BigEndian(writer.GetSpan(sizeof(uint)), (uint)body.Value.Length);
             writer.Advance(sizeof(uint));
             writer.Write(body.Value);
@@ -80,7 +96,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteStoreResponse(IBufferWriter<byte> writer, in KStoreResponseBody<TKNodeId> body)
         {
-            body.Key.WriteTo(writer);
+            body.Key.Write(writer);
         }
 
         /// <summary>
@@ -90,7 +106,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteFindNodeRequest(IBufferWriter<byte> writer, in KFindNodeRequestBody<TKNodeId> body)
         {
-            body.NodeId.WriteTo(writer);
+            body.NodeId.Write(writer);
         }
 
         /// <summary>
@@ -100,7 +116,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteFindNodeResponse(IBufferWriter<byte> writer, in KFindNodeResponseBody<TKNodeId> body)
         {
-            body.NodeId.WriteTo(writer);
+            body.Key.Write(writer);
         }
 
         /// <summary>
@@ -110,7 +126,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteFindValueRequest(IBufferWriter<byte> writer, in KFindValueRequestBody<TKNodeId> body)
         {
-            body.Key.WriteTo(writer);
+            body.Key.Write(writer);
         }
 
         /// <summary>
@@ -120,7 +136,7 @@ namespace Cogito.Kademlia.Network.Protocol.Datagram
         /// <param name="body"></param>
         public static void WriteFindValueResponse(IBufferWriter<byte> writer, in KFindValueResponseBody<TKNodeId> body)
         {
-            body.Key.WriteTo(writer);
+            body.Key.Write(writer);
         }
 
     }
