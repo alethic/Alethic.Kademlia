@@ -135,11 +135,11 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> GetPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
         {
             var c = new KNodeIdDistanceComparer<TKNodeId>(key);
-            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpoints<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
-            return new ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>>(l);
+            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
+            return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
         }
 
         /// <summary>
@@ -170,7 +170,7 @@ namespace Cogito.Kademlia
 
             // calculate distance between nodes
             var o = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
-            KNodeId.CalculateDistance(self, other, o);
+            KNodeId<TKNodeId>.CalculateDistance(self, other, o);
 
             // leading zeros is our bucket position
             var z = ((ReadOnlySpan<byte>)o).CountLeadingZeros();

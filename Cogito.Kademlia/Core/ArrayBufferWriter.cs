@@ -10,7 +10,7 @@ namespace Cogito.Kademlia.Core
     /// <summary>
     /// Private implementation of <see cref="ArrayBufferWriter"/> for down level frameworks.
     /// </summary>
-    sealed class ArrayBufferWriter<T> : IBufferWriter<T>
+    public sealed class ArrayBufferWriter<T> : IBufferWriter<T>
     {
 
         private T[] _buffer;

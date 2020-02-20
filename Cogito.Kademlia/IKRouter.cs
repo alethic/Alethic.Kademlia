@@ -50,7 +50,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> GetPeersAsync(in TKNodeId target, int k, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetPeersAsync(in TKNodeId target, int k, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the number of peers known by the router.

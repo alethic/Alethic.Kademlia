@@ -10,22 +10,23 @@ namespace Cogito.Kademlia.Network
     /// Manages correlations between outbound stateful calls with inbound response calls.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TResponse"></typeparam>
-    class KIpCompletionQueue<TKNodeId, TResponse>
+    /// <typeparam name="TResponseData"></typeparam>
+    class KIpResponseQueue<TKNodeId, TResponseData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TResponseData : struct, IKResponseData<TKNodeId>
     {
 
         readonly TimeSpan timeout;
-        readonly ConcurrentDictionary<(KIpEndpoint, uint), TaskCompletionSource<TResponse>> queue;
+        readonly ConcurrentDictionary<(KIpEndpoint, uint), TaskCompletionSource<KResponse<TKNodeId, TResponseData>>> queue;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public KIpCompletionQueue(TimeSpan timeout)
+        public KIpResponseQueue(TimeSpan timeout)
         {
             this.timeout = timeout;
 
-            queue = new ConcurrentDictionary<(KIpEndpoint, uint), TaskCompletionSource<TResponse>>();
+            queue = new ConcurrentDictionary<(KIpEndpoint, uint), TaskCompletionSource<KResponse<TKNodeId, TResponseData>>>();
         }
 
         /// <summary>
@@ -34,12 +35,12 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="magic"></param>
         /// <returns></returns>
-        public Task<TResponse> Enqueue(in KIpEndpoint endpoint, uint magic, CancellationToken cancellationToken)
+        public Task<KResponse<TKNodeId, TResponseData>> WaitAsync(in KIpEndpoint endpoint, uint magic, CancellationToken cancellationToken)
         {
             // generate a new task completion source hooked up with the given request information
             var tcs = queue.GetOrAdd((endpoint, magic), k =>
            {
-               var tcs = new TaskCompletionSource<TResponse>();
+               var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
                var cts = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(timeout).Token, cancellationToken);
                cts.Token.Register(() => { queue.TryRemove(k, out _); tcs.TrySetCanceled(); }, useSynchronizationContext: false);
                return tcs;
@@ -50,17 +51,17 @@ namespace Cogito.Kademlia.Network
         }
 
         /// <summary>
-        /// Releases a wait for an inbound operation with the specified signature with the specified response.
+        /// Releases a wait for an inbound operation with the specified signature with the specified data.
         /// </summary>
         /// <param name="endpoint"></param>
         /// <param name="magic"></param>
-        /// <param name="response"></param>
+        /// <param name="data"></param>
         /// <returns></returns>
-        public bool Release(in KIpEndpoint endpoint, uint magic, in TResponse response)
+        public bool Respond(in KIpEndpoint endpoint, uint magic, in KResponse<TKNodeId, TResponseData> data)
         {
             if (queue.TryRemove((endpoint, magic), out var tcs))
             {
-                tcs.SetResult(response);
+                tcs.SetResult(data);
                 return true;
             }
             else
@@ -76,7 +77,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="correlation"></param>
         /// <param name="exception"></param>
         /// <returns></returns>
-        public bool Release(in KIpEndpoint endpoint, uint correlation, Exception exception)
+        public bool Respond(in KIpEndpoint endpoint, uint correlation, Exception exception)
         {
             if (queue.TryRemove((endpoint, correlation), out var tcs))
             {

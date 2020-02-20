@@ -1,4 +1,4 @@
-﻿namespace Cogito.Kademlia.Network.Protocol.Datagram
+﻿namespace Cogito.Kademlia.Network.Datagram
 {
 
     /// <summary>

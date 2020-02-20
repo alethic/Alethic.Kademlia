@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Linq;
 using System.Buffers;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Cogito.Kademlia
 {
@@ -102,7 +102,7 @@ namespace Cogito.Kademlia
         async ValueTask LookupAsync(TKNodeId key, CancellationToken cancellationToken)
         {
             var l = await router.GetPeersAsync(key, 3, cancellationToken);
-            var t = l.ToArray().Select(i => FindNodeAsync(i, key, cancellationToken).AsTask()).ToList();
+            var t = l.ToArray().Select(i => FindNodeAsync(i.Id, key, cancellationToken).AsTask()).ToList();
             var f = new SortedSet<TKNodeId>(new KNodeIdDistanceComparer<TKNodeId>(key));
 
             while (true)
@@ -123,15 +123,15 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<IEnumerable<KPeerEndpoints<TKNodeId>>> FindNodeAsync(TKNodeId target, TKNodeId key, CancellationToken cancellationToken)
+        async ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> FindNodeAsync(TKNodeId target, TKNodeId key, CancellationToken cancellationToken)
         {
             foreach (var endpoint in (await router.GetPeerAsync(target, cancellationToken)).Endpoints)
             {
                 try
                 {
                     var l = await endpoint.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken);
-                    if (l.Success)
-                        return l.Body.Endpoints;
+                    if (l.Status == KResponseStatus.Success)
+                        return l.Body.Peers;
                 }
                 catch (OperationCanceledException)
                 {
@@ -139,7 +139,7 @@ namespace Cogito.Kademlia
                 }
             }
 
-            return Enumerable.Empty<KPeerEndpoints<TKNodeId>>();
+            return Enumerable.Empty<KPeerEndpointInfo<TKNodeId>>();
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace Cogito.Kademlia
         async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId source, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(source, Enumerable.Empty<IKEndpoint<TKNodeId>>(), cancellationToken);
-            return new KFindValueResponse<TKNodeId>(request.Key, new byte[0]);
+            return new KFindValueResponse<TKNodeId>(request.Key, null, new KPeerEndpointInfo<TKNodeId>[0]); // TODO respond with correct info
         }
 
     }

@@ -148,6 +148,17 @@ namespace Cogito.Kademlia.Network
                 return $"{a:x4}:{b:x4}:{c:x4}:{d:x4}:{e:x4}:{f:x4}:{g:x4}:{h:x4}";
             }
         }
+
+        /// <summary>
+        /// Writes the specified address.
+        /// </summary>
+        /// <param name="span"></param>
+        public void Write(Span<byte> span)
+        {
+            fixed (byte* ptr = data)
+                new ReadOnlySpan<byte>(ptr, 16).CopyTo(span);
+        }
+
     }
 
 }

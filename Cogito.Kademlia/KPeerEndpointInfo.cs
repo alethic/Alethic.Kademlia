@@ -1,26 +1,23 @@
-﻿using System.Collections.Generic;
-
-namespace Cogito.Kademlia
+﻿namespace Cogito.Kademlia
 {
 
     /// <summary>
     /// Describes a peer and its associated endpoints.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKPeerData"></typeparam>
-    public readonly struct KPeerEndpoints<TKNodeId>
+    public readonly struct KPeerEndpointInfo<TKNodeId>
         where TKNodeId :  unmanaged, IKNodeId<TKNodeId>
     {
 
         readonly TKNodeId id;
-        readonly IEnumerable<IKEndpoint<TKNodeId>> endpoints;
+        readonly IKEndpoint<TKNodeId>[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KPeerEndpoints(in TKNodeId id, IEnumerable<IKEndpoint<TKNodeId>> endpoints)
+        public KPeerEndpointInfo(in TKNodeId id, IKEndpoint<TKNodeId>[] endpoints)
         {
             this.id = id;
             this.endpoints = endpoints;
@@ -34,7 +31,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of known endpoints of the peer.
         /// </summary>
-        public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => endpoints;
+        public IKEndpoint<TKNodeId>[] Endpoints => endpoints;
 
     }
 

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Cogito.Kademlia
+﻿namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -11,18 +9,18 @@ namespace Cogito.Kademlia
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly ReadOnlyMemory<IKEndpoint<TKNodeId>> endpoints;
+        readonly IKEndpoint<TKNodeId>[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="endpoints"></param>
-        public KPingRequest(ReadOnlyMemory<IKEndpoint<TKNodeId>> endpoints)
+        public KPingRequest(IKEndpoint<TKNodeId>[] endpoints)
         {
             this.endpoints = endpoints;
         }
 
-        public ReadOnlyMemory<IKEndpoint<TKNodeId>> Endpoints => endpoints;
+        public IKEndpoint<TKNodeId>[] Endpoints => endpoints;
 
     }
 

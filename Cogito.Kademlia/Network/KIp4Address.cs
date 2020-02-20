@@ -122,6 +122,16 @@ namespace Cogito.Kademlia.Network
             return $"{(uint)data[0]}.{(uint)data[1]}.{(uint)data[2]}.{(uint)data[3]}";
         }
 
+        /// <summary>
+        /// Writes the specified address.
+        /// </summary>
+        /// <param name="span"></param>
+        public void Write(Span<byte> span)
+        {
+            fixed (byte* ptr = data)
+                new ReadOnlySpan<byte>(ptr, 4).CopyTo(span);
+        }
+
     }
 
 }

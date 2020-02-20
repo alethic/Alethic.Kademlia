@@ -16,11 +16,21 @@ namespace Cogito.Kademlia.Network
     {
 
         /// <summary>
+        /// Reads a <see cref="KIpEndpoint"/> from the given span.
+        /// </summary>
+        /// <param name="span"></param>
+        /// <returns></returns>
+        public static KIpEndpoint Read(ReadOnlySpan<byte> span)
+        {
+            return MemoryMarshal.Read<KIpEndpoint>(span);
+        }
+
+        /// <summary>
         /// Writes the given <typeparamref name="KIpEndpoint"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="writer"></param>
-        public static unsafe void Write(KIpEndpoint self, IBufferWriter<byte> writer)
+        public static void Write(KIpEndpoint self, IBufferWriter<byte> writer)
         {
             var s = Unsafe.SizeOf<KIpEndpoint>();
             Write(self, writer.GetSpan(s));
@@ -32,7 +42,7 @@ namespace Cogito.Kademlia.Network
         /// </summary>
         /// <param name="self"></param>
         /// <param name="target"></param>
-        public static unsafe void Write(KIpEndpoint self, Span<byte> target)
+        public static void Write(KIpEndpoint self, Span<byte> target)
         {
             MemoryMarshal.Write(target, ref self);
         }
@@ -50,32 +60,39 @@ namespace Cogito.Kademlia.Network
         [FieldOffset(0)]
         readonly KIpProtocol protocol;
 
-        [FieldOffset(sizeof(KIpProtocol))]
-        readonly KIp4Endpoint v4;
+        [FieldOffset(4)]
+        readonly KIp4Address ipv4;
 
-        [FieldOffset(sizeof(KIpProtocol))]
-        readonly KIp6Endpoint v6;
+        [FieldOffset(4)]
+        readonly KIp6Address ipv6;
+
+        [FieldOffset(20)]
+        readonly KIpPort port;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="v4"></param>
-        public KIpEndpoint(in KIp4Endpoint v4)
+        /// <param name="ipv4"></param>
+        /// <param name="port"></param>
+        public KIpEndpoint(in KIp4Address ipv4, in KIpPort port)
         {
             this.protocol = KIpProtocol.IPv4;
-            this.v6 = new KIp6Endpoint();
-            this.v4 = v4;
+            this.ipv6 = new KIp6Address();
+            this.ipv4 = ipv4;
+            this.port = port;
         }
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="v6"></param>
-        public KIpEndpoint(in KIp6Endpoint v6)
+        /// <param name="ipv6"></param>
+        /// <param name="port"></param>
+        public KIpEndpoint(in KIp6Address ipv6, in KIpPort port)
         {
             this.protocol = KIpProtocol.IPv6;
-            this.v4 = new KIp4Endpoint();
-            this.v6 = v6;
+            this.ipv4 = new KIp4Address();
+            this.ipv6 = ipv6;
+            this.port = port;
         }
 
         /// <summary>
@@ -87,14 +104,16 @@ namespace Cogito.Kademlia.Network
             switch (ep.AddressFamily)
             {
                 case AddressFamily.InterNetwork:
-                    this.protocol = KIpProtocol.IPv4;
-                    this.v6 = default;
-                    this.v4 = new KIp4Endpoint(ep);
+                    protocol = KIpProtocol.IPv4;
+                    ipv6 = default;
+                    ipv4 = new KIp4Address(ep.Address);
+                    port = ep.Port;
                     break;
                 case AddressFamily.InterNetworkV6:
-                    this.protocol = KIpProtocol.IPv6;
-                    this.v4 = default;
-                    this.v6 = new KIp6Endpoint(ep);
+                    protocol = KIpProtocol.IPv6;
+                    ipv4 = default;
+                    ipv6 = new KIp6Address(ep.Address);
+                    port = ep.Port;
                     break;
                 default:
                     throw new ArgumentException();
@@ -107,14 +126,19 @@ namespace Cogito.Kademlia.Network
         public KIpProtocol Protocol => protocol;
 
         /// <summary>
-        /// Gets the IPv4 version of the endpoint.
+        /// Gets the IPv4 version of the address.
         /// </summary>
-        public KIp4Endpoint V4 => protocol == KIpProtocol.IPv4 ? v4 : throw new InvalidOperationException();
+        public KIp4Address V4 => protocol == KIpProtocol.IPv4 ? ipv4 : throw new InvalidOperationException();
 
         /// <summary>
-        /// Gets the IPv6 version of the endpoint.
+        /// Gets the IPv6 version of the address.
         /// </summary>
-        public KIp6Endpoint V6 => protocol == KIpProtocol.IPv6 ? v6 : throw new InvalidOperationException();
+        public KIp6Address V6 => protocol == KIpProtocol.IPv6 ? ipv6 : throw new InvalidOperationException();
+
+        /// <summary>
+        /// Gets the port of the endpoint.
+        /// </summary>
+        public KIpPort Port => port;
 
         /// <summary>
         /// Returns this endpoint as an <see cref="IPEndPoint"/>.
@@ -124,8 +148,8 @@ namespace Cogito.Kademlia.Network
         {
             return protocol switch
             {
-                KIpProtocol.IPv4 => v4.ToIPEndPoint(),
-                KIpProtocol.IPv6 => v6.ToIPEndPoint(),
+                KIpProtocol.IPv4 => new IPEndPoint(ipv4.ToIPAddress(), port),
+                KIpProtocol.IPv6 => new IPEndPoint(ipv6.ToIPAddress(), port),
                 _ => throw new InvalidOperationException(),
             };
         }
@@ -149,8 +173,8 @@ namespace Cogito.Kademlia.Network
         {
             return protocol switch
             {
-                KIpProtocol.IPv4 => other.Protocol == KIpProtocol.IPv4 && v4.Equals(other.v4),
-                KIpProtocol.IPv6 => other.Protocol == KIpProtocol.IPv6 && v6.Equals(other.v6),
+                KIpProtocol.IPv4 => other.Protocol == KIpProtocol.IPv4 && ipv4.Equals(other.ipv4) && port.Equals(other.port),
+                KIpProtocol.IPv6 => other.Protocol == KIpProtocol.IPv6 && ipv6.Equals(other.ipv6) && port.Equals(other.port),
                 _ => false,
             };
         }
@@ -163,14 +187,15 @@ namespace Cogito.Kademlia.Network
         {
             var h = new HashCode();
             h.Add(protocol);
+            h.Add(port);
 
             switch (protocol)
             {
                 case KIpProtocol.IPv4:
-                    h.Add(v4);
+                    h.Add(ipv4);
                     break;
                 case KIpProtocol.IPv6:
-                    h.Add(v6);
+                    h.Add(ipv6);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -187,8 +212,8 @@ namespace Cogito.Kademlia.Network
         {
             return protocol switch
             {
-                KIpProtocol.IPv4 => v4.ToString(),
-                KIpProtocol.IPv6 => v6.ToString(),
+                KIpProtocol.IPv4 => ipv4.ToString() + ":" + port,
+                KIpProtocol.IPv6 => ipv6.ToString() + ":" + port,
                 _ => null,
             };
         }

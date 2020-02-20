@@ -32,11 +32,11 @@ namespace Cogito.Kademlia
 
             // distance from target to xss
             var a = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
-            KNodeId.CalculateDistance(n, x, a);
+            KNodeId<TKNodeId>.CalculateDistance(n, x, a);
 
             // distance from target to y
             var b = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
-            KNodeId.CalculateDistance(n, y, b);
+            KNodeId<TKNodeId>.CalculateDistance(n, y, b);
 
             // who is closest?
             return a.SequenceCompareTo(b);
