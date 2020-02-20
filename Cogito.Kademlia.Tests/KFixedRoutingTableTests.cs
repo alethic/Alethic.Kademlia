@@ -33,24 +33,24 @@ namespace Cogito.Kademlia.Tests
 
             public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
 
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, new KPingResponse<TKNodeId>()));
+                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, KResponseStatus.Success, new KPingResponse<TKNodeId>()));
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, new KStoreResponse<TKNodeId>(request.Key)));
+                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, KResponseStatus.Success, new KStoreResponse<TKNodeId>(request.Key)));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.Key)));
+                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindNodeResponse<TKNodeId>(request.Key, new KPeerEndpointInfo<TKNodeId>[0])));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8])));
+                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindValueResponse<TKNodeId>(request.Key, new byte[8], new KPeerEndpointInfo<TKNodeId>[0])));
             }
 
         }
@@ -74,7 +74,7 @@ namespace Cogito.Kademlia.Tests
 
             public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
 
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 return PingAsync(endpoint, request, cancellationToken);
             }
@@ -82,10 +82,10 @@ namespace Cogito.Kademlia.Tests
             async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, new KPingResponse<TKNodeId>());
+                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, KResponseStatus.Success, new KPingResponse<TKNodeId>());
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 return StoreAsync(endpoint, request, cancellationToken);
             }
@@ -93,10 +93,10 @@ namespace Cogito.Kademlia.Tests
             async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, new KStoreResponse<TKNodeId>(request.Key));
+                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, KResponseStatus.Success, new KStoreResponse<TKNodeId>(request.Key));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 return FindNodeAsync(endpoint, request, cancellationToken);
             }
@@ -104,10 +104,10 @@ namespace Cogito.Kademlia.Tests
             async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, new KFindNodeResponse<TKNodeId>(request.Key));
+                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindNodeResponse<TKNodeId>(request.Key, new KPeerEndpointInfo<TKNodeId>[0]));
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 return FindValueAsync(endpoint, request, cancellationToken);
             }
@@ -115,7 +115,7 @@ namespace Cogito.Kademlia.Tests
             async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
             {
                 await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, new KFindValueResponse<TKNodeId>(request.Key, new byte[8]));
+                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindValueResponse<TKNodeId>(request.Key, new byte[8], new KPeerEndpointInfo<TKNodeId>[0]));
             }
 
         }

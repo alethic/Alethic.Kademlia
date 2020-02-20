@@ -9,10 +9,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
+using Cogito.Kademlia.Network;
 using Cogito.Kademlia.Network.Datagram;
 using Cogito.Threading;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Protocols.Protobuf
 {
 
     /// <summary>
@@ -20,7 +21,7 @@ namespace Cogito.Kademlia.Network
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KSimpleUdpNetwork<TKNodeId, TKPeerData> : IKIpProtocol<TKNodeId>
+    public class KProtobufUdpProtocol<TKNodeId, TKPeerData> : IKIpProtocol<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
@@ -33,25 +34,40 @@ namespace Cogito.Kademlia.Network
         readonly ushort port;
         readonly AsyncLock sync = new AsyncLock();
 
+        readonly KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>> pingQueue = new KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>>(DEFAULT_TIMEOUT);
+        readonly KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>> storeQueue = new KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>>(DEFAULT_TIMEOUT);
+        readonly KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>> findNodeQueue = new KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>>(DEFAULT_TIMEOUT);
+        readonly KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>> findValueQueue = new KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>>(DEFAULT_TIMEOUT);
+
+        readonly Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>>();
+
         Socket socket;
         SocketAsyncEventArgs recvArgs;
         SocketAsyncEventArgs sendArgs;
-        Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>>();
-
-        KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>> pingQueue = new KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>>(DEFAULT_TIMEOUT);
-        KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>> storeQueue = new KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>>(DEFAULT_TIMEOUT);
-        KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>> findNodeQueue = new KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>>(DEFAULT_TIMEOUT);
-        KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>> findValueQueue = new KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>>(DEFAULT_TIMEOUT);
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="engine"></param>
         /// <param name="port"></param>
-        public KSimpleUdpNetwork(IKEngine<TKNodeId, TKPeerData> engine, ushort port = 0)
+        public KProtobufUdpProtocol(IKEngine<TKNodeId, TKPeerData> engine, ushort port = 0)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.port = port;
+
+            new Request()
+            {
+                Header = new Header()
+                {
+                    Sender = Google.Protobuf.ByteString.
+                    Magic = 123
+                },
+                Ping = new PingRequest()
+                {
+                
+                }
+            }
+
         }
 
         /// <summary>
@@ -88,7 +104,7 @@ namespace Cogito.Kademlia.Network
         /// Gets the next magic value.
         /// </summary>
         /// <returns></returns>
-        uint GetNextMagic()
+        uint NewMagic()
         {
             return (uint)rnd.Next(int.MinValue, int.MaxValue);
         }
@@ -99,12 +115,14 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         IEnumerable<IPAddress> GetLocalIpAddresses()
         {
+            var h = new HashSet<IPAddress>();
             if (NetworkInterface.GetIsNetworkAvailable())
                 foreach (var i in NetworkInterface.GetAllNetworkInterfaces())
                     if (i.OperationalStatus == OperationalStatus.Up)
                         foreach (var j in i.GetIPProperties().UnicastAddresses)
                             if (IPAddress.IsLoopback(j.Address) == false)
-                                yield return j.Address;
+                                if (h.Add(j.Address))
+                                    yield return j.Address;
         }
 
         /// <summary>
@@ -148,13 +166,9 @@ namespace Cogito.Kademlia.Network
                 foreach (var ip in GetLocalIpEndpoints(socket))
                     endpoints[ip] = CreateEndpoint(ip);
 
-                // remove any endpoints of ourselves
-                foreach (var ep in endpoints.Values)
-                    engine.SelfData.Endpoints.Remove(ep);
-
-                // add new endpoints to engine
-                foreach (var ep in endpoints.Values)
-                    engine.SelfData.Endpoints.Add(ep);
+                // remove protocol endpoints
+                engine.SelfData.Endpoints.ExceptWith(engine.SelfData.Endpoints.Where(i => i.Protocol == this).ToList());
+                engine.SelfData.Endpoints.UnionWith(endpoints.Values.Cast<IKEndpoint<TKNodeId>>());
 
                 recvArgs = new SocketAsyncEventArgs();
                 recvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
@@ -180,7 +194,7 @@ namespace Cogito.Kademlia.Network
                 return;
 
             var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-            var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.Count);
+            var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
             var o = MemoryPool<byte>.Shared.Rent(b.Length);
             var m = o.Memory.Slice(0, b.Length);
             b.CopyTo(m.Span);
@@ -198,7 +212,9 @@ namespace Cogito.Kademlia.Network
         /// <summary>
         /// Invoked when a datagram is received.
         /// </summary>
+        /// <param name="endpoint"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask OnReceiveAsync(in KIpEndpoint endpoint, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
@@ -208,7 +224,7 @@ namespace Cogito.Kademlia.Network
                 return new ValueTask(Task.CompletedTask);
 
             // read header and advance past
-            var header = new KPacketHeaderReadOnly<TKNodeId>(packet);
+            var header = new KMessageHeader<TKNodeId>(packet);
             packet = packet.Slice(KPacketHeaderInfo<TKNodeId>.Size);
 
             // route based on packet type
@@ -232,13 +248,14 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceivePingRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceivePingRequestAsync(endpoint, header, new KPacketPingRequest<TKNodeId>(packet), cancellationToken);
         }
 
-        ValueTask OnReceivePingRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask OnReceivePingRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             var endpoints = new IKEndpoint<TKNodeId>[request.Endpoints.Count];
             for (var i = 0; i < endpoints.Length; i++)
@@ -249,22 +266,15 @@ namespace Cogito.Kademlia.Network
 
         async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, TKNodeId sender, uint magic, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await OnPingReplyAsync(endpoint, sender, magic, await engine.OnPingAsync(sender, request, cancellationToken), cancellationToken);
+            await OnPingReplyAsync(endpoint, sender, magic, await engine.OnPingAsync(sender, CreateEndpoint(endpoint), request, cancellationToken), cancellationToken);
         }
 
         ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, in TKNodeId sender, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var b = new ArrayBufferWriter<byte>();
-            var h = new KPacketHeader<TKNodeId>(b.GetSpan(KPacketHeaderInfo<TKNodeId>.Size));
-            h.Version = 1;
-            h.Sender = engine.SelfId;
-            h.Magic = magic;
-            h.Type = KPacketType.PingResponse;
+            KMessageHeader<TKNodeId>.Write(b, 1, engine.SelfId, magic, KPacketType.PingResponse);
             KPacketPingResponse<TKNodeId>.Write(b, response);
-
-            var z = new byte[b.WrittenCount];
-            b.WrittenSpan.CopyTo(z);
-            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return SocketSendToAsync(b, endpoint);
         }
 
         /// <summary>
@@ -273,35 +283,29 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveStoreRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveStoreRequestAsync(endpoint, header, new KPacketStoreRequest<TKNodeId>(packet), cancellationToken);
         }
 
-        ValueTask OnReceiveStoreRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             return OnReceiveStoreRequestAsync(endpoint, header.Sender, header.Magic, new KStoreRequest<TKNodeId>(request.Key, request.Value.ToArray()), cancellationToken);
         }
 
         async ValueTask OnReceiveStoreRequestAsync(KIpEndpoint endpoint, TKNodeId sender, uint magic, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await OnStoreReplyAsync(endpoint, sender, magic, await engine.OnStoreAsync(sender, request, cancellationToken), cancellationToken);
+            await OnStoreReplyAsync(endpoint, sender, magic, await engine.OnStoreAsync(sender, CreateEndpoint(endpoint), request, cancellationToken), cancellationToken);
         }
 
         ValueTask OnStoreReplyAsync(in KIpEndpoint endpoint, in TKNodeId sender, uint magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var b = new ArrayBufferWriter<byte>();
-            var h = new KPacketHeader<TKNodeId>(b.GetSpan(KPacketHeaderInfo<TKNodeId>.Size));
-            h.Version = 1;
-            h.Sender = engine.SelfId;
-            h.Magic = magic;
-            h.Type = KPacketType.StoreResponse;
+            KMessageHeader<TKNodeId>.Write(b, 1, engine.SelfId, magic, KPacketType.StoreResponse);
             KPacketStoreResponse<TKNodeId>.Write(b, response);
-
-            var z = new byte[b.WrittenCount];
-            b.WrittenSpan.CopyTo(z);
-            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return SocketSendToAsync(b, endpoint);
         }
 
         /// <summary>
@@ -310,35 +314,29 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindNodeRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveFindNodeRequestAsync(endpoint, header, new KPacketFindNodeRequest<TKNodeId>(packet), cancellationToken);
         }
 
-        ValueTask OnReceiveFindNodeRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             return OnReceiveFindNodeRequestAsync(endpoint, header.Sender, header.Magic, new KFindNodeRequest<TKNodeId>(request.Key), cancellationToken);
         }
 
         async ValueTask OnReceiveFindNodeRequestAsync(KIpEndpoint endpoint, TKNodeId sender, uint magic, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await OnFindNodeReplyAsync(endpoint, sender, magic, await engine.OnFindNodeAsync(sender, request, cancellationToken), cancellationToken);
+            await OnFindNodeReplyAsync(endpoint, sender, magic, await engine.OnFindNodeAsync(sender, CreateEndpoint(endpoint), request, cancellationToken), cancellationToken);
         }
 
         ValueTask OnFindNodeReplyAsync(in KIpEndpoint endpoint, in TKNodeId sender, uint magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var b = new ArrayBufferWriter<byte>();
-            var h = new KPacketHeader<TKNodeId>(b.GetSpan(KPacketHeaderInfo<TKNodeId>.Size));
-            h.Version = 1;
-            h.Sender = engine.SelfId;
-            h.Magic = magic;
-            h.Type = KPacketType.FindNodeResponse;
+            KMessageHeader<TKNodeId>.Write(b, 1, engine.SelfId, magic, KPacketType.FindNodeResponse);
             KPacketFindNodeResponse<TKNodeId>.Write(b, response);
-
-            var z = new byte[b.WrittenCount];
-            b.WrittenSpan.CopyTo(z);
-            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return SocketSendToAsync(b, endpoint);
         }
 
         /// <summary>
@@ -347,35 +345,29 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindValueRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveFindValueRequestAsync(endpoint, header, new KPacketFindValueRequest<TKNodeId>(packet), cancellationToken);
         }
 
-        ValueTask OnReceiveFindValueRequestAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueRequestAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             return OnReceiveFindValueRequestAsync(endpoint, header.Sender, header.Magic, new KFindValueRequest<TKNodeId>(request.Key), cancellationToken);
         }
 
         async ValueTask OnReceiveFindValueRequestAsync(KIpEndpoint endpoint, TKNodeId sender, uint magic, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await OnFindValueReplyAsync(endpoint, sender, magic, await engine.OnFindValueAsync(sender, request, cancellationToken), cancellationToken);
+            await OnFindValueReplyAsync(endpoint, sender, magic, await engine.OnFindValueAsync(sender, CreateEndpoint(endpoint), request, cancellationToken), cancellationToken);
         }
 
         ValueTask OnFindValueReplyAsync(in KIpEndpoint endpoint, in TKNodeId sender, uint magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var b = new ArrayBufferWriter<byte>();
-            var h = new KPacketHeader<TKNodeId>(b.GetSpan(KPacketHeaderInfo<TKNodeId>.Size));
-            h.Version = 1;
-            h.Sender = engine.SelfId;
-            h.Magic = magic;
-            h.Type = KPacketType.FindValueResponse;
+            KMessageHeader<TKNodeId>.Write(b, 1, engine.SelfId, magic, KPacketType.FindValueResponse);
             KPacketFindValueResponse<TKNodeId>.Write(b, response);
-
-            var z = new byte[b.WrittenCount];
-            b.WrittenSpan.CopyTo(z);
-            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return SocketSendToAsync(b, endpoint);
         }
 
         /// <summary>
@@ -385,7 +377,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="sender"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        KResponse<TKNodeId, TResponseData> PackageResponse<TResponseData>(KPacketHeaderReadOnly<TKNodeId> header, in TResponseData body)
+        KResponse<TKNodeId, TResponseData> PackageResponse<TResponseData>(KMessageHeader<TKNodeId> header, in TResponseData body)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
             return new KResponse<TKNodeId, TResponseData>(header.Sender, KResponseStatus.Success, body);
@@ -397,8 +389,9 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceivePingResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceivePingResponseAsync(endpoint, header, new KPacketPingResponse<TKNodeId>(packet), cancellationToken);
         }
@@ -409,8 +402,9 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketPingResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnReceivePingResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var endpoints = new IKEndpoint<TKNodeId>[response.Endpoints.Count];
             for (var i = 0; i < endpoints.Length; i++)
@@ -426,8 +420,9 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveStoreResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveStoreResponseAsync(endpoint, header, new KPacketStoreResponse<TKNodeId>(packet), cancellationToken);
         }
@@ -438,8 +433,9 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveStoreResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             storeQueue.Respond(endpoint, header.Magic, PackageResponse(header, new KStoreResponse<TKNodeId>(response.Key)));
             return new ValueTask(Task.CompletedTask);
@@ -451,8 +447,9 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="packet"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindNodeResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveFindNodeResponseAsync(endpoint, header, new KPacketFindNodeResponse<TKNodeId>(packet), cancellationToken);
         }
@@ -463,14 +460,15 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="header"></param>
         /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindNodeResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var peers = new KPeerEndpointInfo<TKNodeId>[response.Peers.Count];
             for (var i = 0; i < peers.Length; i++)
             {
                 var endpoints = new IKEndpoint<TKNodeId>[response.Peers[i].Endpoints.Count];
-                for (var j = 0; i < endpoints.Length; j++)
+                for (var j = 0; j < endpoints.Length; j++)
                     endpoints[j] = CreateEndpoint(response.Peers[i].Endpoints[j].Value);
 
                 peers[i] = new KPeerEndpointInfo<TKNodeId>(response.Peers[i].Id, endpoints);
@@ -487,7 +485,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="header"></param>
         /// <param name="packet"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindValueResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             return OnReceiveFindValueResponseAsync(endpoint, header, new KPacketFindValueResponse<TKNodeId>(packet), cancellationToken);
         }
@@ -499,13 +497,13 @@ namespace Cogito.Kademlia.Network
         /// <param name="header"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindValueResponseAsync(in KIpEndpoint endpoint, in KPacketHeaderReadOnly<TKNodeId> header, in KPacketFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueResponseAsync(in KIpEndpoint endpoint, in KMessageHeader<TKNodeId> header, in KPacketFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             var peers = new KPeerEndpointInfo<TKNodeId>[response.Peers.Count];
             for (var i = 0; i < peers.Length; i++)
             {
                 var endpoints = new IKEndpoint<TKNodeId>[response.Peers[i].Endpoints.Count];
-                for (var j = 0; i < endpoints.Length; j++)
+                for (var j = 0; j < endpoints.Length; j++)
                     endpoints[j] = CreateEndpoint(response.Peers[i].Endpoints[j].Value);
 
                 peers[i] = new KPeerEndpointInfo<TKNodeId>(response.Peers[i].Id, endpoints);
@@ -528,9 +526,8 @@ namespace Cogito.Kademlia.Network
         {
             using (await sync.LockAsync())
             {
-                // remove any endpoints of ourselves
-                foreach (var ep in endpoints.Values)
-                    engine.SelfData.Endpoints.Remove(ep);
+                // remove any endpoints registered by ourselves
+                engine.SelfData.Endpoints.ExceptWith(engine.SelfData.Endpoints.Where(i => i.Protocol == this).ToList());
 
                 // zero out our endpoint list
                 endpoints.Clear();
@@ -561,11 +558,11 @@ namespace Cogito.Kademlia.Network
         /// <param name="buffer"></param>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        ValueTask<int> SocketSendToAsync(ArrayBufferWriter<byte> buffer, KIpEndpoint endpoint)
+        ValueTask SocketSendToAsync(ArrayBufferWriter<byte> buffer, KIpEndpoint endpoint)
         {
             var z = new byte[buffer.WrittenCount];
             buffer.WrittenSpan.CopyTo(z);
-            return new ValueTask<int>(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
         }
 
         /// <summary>
@@ -601,9 +598,9 @@ namespace Cogito.Kademlia.Network
 
         async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            var m = GetNextMagic();
+            var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
-            KPacketHeaderReadOnly<TKNodeId>.Write(b, engine.SelfId, m, KPacketType.PingRequest);
+            KMessageHeader<TKNodeId>.Write(b, 1, engine.SelfId, m, KPacketType.PingRequest);
             KPacketPingRequest<TKNodeId>.Write(b, request);
             return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, pingQueue, b, cancellationToken);
         }
@@ -622,9 +619,9 @@ namespace Cogito.Kademlia.Network
 
         async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            var magic = GetNextMagic();
+            var magic = NewMagic();
             var buffer = new ArrayBufferWriter<byte>();
-            KPacketHeaderReadOnly<TKNodeId>.Write(buffer, engine.SelfId, magic, KPacketType.StoreRequest);
+            KMessageHeader<TKNodeId>.Write(buffer, 1, engine.SelfId, magic, KPacketType.StoreRequest);
             KPacketStoreRequest<TKNodeId>.Write(buffer, request);
             return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, magic, storeQueue, buffer, cancellationToken);
         }
@@ -643,9 +640,9 @@ namespace Cogito.Kademlia.Network
 
         async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            var magic = GetNextMagic();
+            var magic = NewMagic();
             var buffer = new ArrayBufferWriter<byte>();
-            KPacketHeaderReadOnly<TKNodeId>.Write(buffer, engine.SelfId, magic, KPacketType.FindNodeRequest);
+            KMessageHeader<TKNodeId>.Write(buffer, 1, engine.SelfId, magic, KPacketType.FindNodeRequest);
             KPacketFindNodeRequest<TKNodeId>.Write(buffer, request);
             return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, magic, findNodeQueue, buffer, cancellationToken);
         }
@@ -664,9 +661,9 @@ namespace Cogito.Kademlia.Network
 
         async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            var magic = GetNextMagic();
+            var magic = NewMagic();
             var buffer = new ArrayBufferWriter<byte>();
-            KPacketHeaderReadOnly<TKNodeId>.Write(buffer, engine.SelfId, magic, KPacketType.FindNodeRequest);
+            KMessageHeader<TKNodeId>.Write(buffer, 1, engine.SelfId, magic, KPacketType.FindNodeRequest);
             KPacketFindValueRequest<TKNodeId>.Write(buffer, request);
             return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, magic, findValueQueue, buffer, cancellationToken);
         }

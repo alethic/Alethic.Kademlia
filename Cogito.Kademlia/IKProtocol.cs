@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,11 +16,6 @@ namespace Cogito.Kademlia
         /// Gets the engine associated with this protocol.
         /// </summary>
         IKEngine<TKNodeId> Engine { get; }
-
-        /// <summary>
-        /// Gets the unique identifier of this protocol format.
-        /// </summary>
-        Guid Id { get; }
 
         /// <summary>
         /// Gets the set of endpoints available for communication with this protocol.

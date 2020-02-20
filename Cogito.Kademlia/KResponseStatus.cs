@@ -7,7 +7,8 @@
     public enum KResponseStatus
     {
 
-        Success,
+        Failure = 0,
+        Success = 1,
 
     }
 

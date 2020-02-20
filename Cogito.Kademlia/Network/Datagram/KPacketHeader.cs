@@ -13,57 +13,62 @@ namespace Cogito.Kademlia.Network.Datagram
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly Span<byte> span;
+        /// <summary>
+        /// Writes the header to the buffer.
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="version"></param>
+        /// <param name="sender"></param>
+        /// <param name="magic"></param>
+        /// <param name="type"></param>
+        public static void Write(IBufferWriter<byte> writer, uint version, in TKNodeId sender, uint magic, KPacketType type)
+        {
+            // write Version
+            BinaryPrimitives.WriteUInt32BigEndian(writer.GetMemory(sizeof(uint)).Span, version);
+            writer.Advance(sizeof(uint));
+
+            // writer Sender
+            sender.Write(writer);
+
+            // write Magic
+            BinaryPrimitives.WriteUInt32BigEndian(writer.GetMemory(sizeof(uint)).Span, magic);
+            writer.Advance(sizeof(uint));
+
+            // write Type
+            writer.GetSpan(sizeof(sbyte))[0] = (byte)(sbyte)type;
+            writer.Advance(sizeof(sbyte));
+        }
+
+        readonly ReadOnlySpan<byte> span;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="span"></param>
-        public KPacketHeader(Span<byte> span)
+        public KPacketHeader(ReadOnlySpan<byte> span)
         {
             this.span = span;
-
-            // currently only supported version
-            if (Version != 1)
-                throw new InvalidOperationException();
         }
 
         /// <summary>
-        /// Gets the version of the data gram.
+        /// Gets the version of the datagram.
         /// </summary>
-        public uint Version
-        {
-            get => new KPacketHeaderReadOnly<TKNodeId>(span).Version;
-            set => BinaryPrimitives.WriteUInt32BigEndian(span.Slice(KPacketHeaderInfo<TKNodeId>.VersionOffset, KPacketHeaderInfo<TKNodeId>.VersionSize), value);
-        }
+        public uint Version => BinaryPrimitives.ReadUInt32BigEndian(span.Slice(KPacketHeaderInfo<TKNodeId>.VersionOffset, KPacketHeaderInfo<TKNodeId>.VersionSize));
 
         /// <summary>
         /// Gets the sender of the datagram.
         /// </summary>
-        public TKNodeId Sender
-        {
-            get => new KPacketHeaderReadOnly<TKNodeId>(span).Sender;
-            set => value.Write(span.Slice(KPacketHeaderInfo<TKNodeId>.SenderOffset, KPacketHeaderInfo<TKNodeId>.SenderSize));
-        }
+        public TKNodeId Sender => KNodeId<TKNodeId>.Read(span.Slice(KPacketHeaderInfo<TKNodeId>.SenderOffset, KPacketHeaderInfo<TKNodeId>.SenderSize));
 
         /// <summary>
         /// Gets the value identifying this datagram in a request/response lifecycle.
         /// </summary>
-        public uint Magic
-        {
-            get => new KPacketHeaderReadOnly<TKNodeId>(span).Magic;
-            set => BinaryPrimitives.WriteUInt32BigEndian(span.Slice(KPacketHeaderInfo<TKNodeId>.MagicOffset, KPacketHeaderInfo<TKNodeId>.MagicSize), value);
-        }
+        public uint Magic => BinaryPrimitives.ReadUInt32BigEndian(span.Slice(KPacketHeaderInfo<TKNodeId>.MagicOffset, KPacketHeaderInfo<TKNodeId>.MagicSize));
 
         /// <summary>
         /// Gets the type of request.
         /// </summary>
-        public KPacketType Type
-        {
-            get => new KPacketHeaderReadOnly<TKNodeId>(span).Type;
-            set => span.Slice(KPacketHeaderInfo<TKNodeId>.TypeOffset, KPacketHeaderInfo<TKNodeId>.TypeSize)[0] = (byte)(sbyte)value;
-        }
-
+        public KPacketType Type => (KPacketType)(sbyte)span.Slice(KPacketHeaderInfo<TKNodeId>.TypeOffset, KPacketHeaderInfo<TKNodeId>.TypeSize)[0];
 
     }
 

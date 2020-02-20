@@ -31,7 +31,7 @@ namespace Cogito.Kademlia
         /// Creates a new random node ID.
         /// </summary>
         /// <returns></returns>
-        public static TKNodeId CreateNodeId()
+        public static TKNodeId Create()
         {
 #if NET47 || NETSTANDARD2_0
             var b = new byte[SizeOf()];
@@ -89,7 +89,7 @@ namespace Cogito.Kademlia
         /// <param name="l"></param>
         /// <param name="r"></param>
         /// <param name="o"></param>
-        public unsafe static void CalculateDistance(in TKNodeId l, in TKNodeId r, Span<byte> o)
+        public static void CalculateDistance(in TKNodeId l, in TKNodeId r, Span<byte> o)
         {
             var s = SizeOf();
             if (o.Length < s)
@@ -120,6 +120,16 @@ namespace Cogito.Kademlia
     /// </summary>
     public static class KNodeId
     {
+
+        /// <summary>
+        /// Creates a new random node ID.
+        /// </summary>
+        /// <returns></returns>
+        public static TKNodeId Create<TKNodeId>()
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        {
+            return KNodeId<TKNodeId>.Create();
+        }
 
         /// <summary>
         /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.

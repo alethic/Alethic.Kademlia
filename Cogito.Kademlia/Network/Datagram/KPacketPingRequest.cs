@@ -37,7 +37,8 @@ namespace Cogito.Kademlia.Network.Datagram
         /// <summary>
         /// Gets the set of endpoints in the request.
         /// </summary>
-        public KPacketIpEndpointSequence Endpoints
+        public KPacketIpEndpoin
+            tSequence Endpoints
         {
             get => new KPacketIpEndpointSequence(span.Slice(KPacketPingResponseInfo<TKNodeId>.EndpointsOffset));
         }

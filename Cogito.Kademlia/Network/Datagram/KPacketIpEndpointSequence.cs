@@ -92,7 +92,7 @@ namespace Cogito.Kademlia.Network.Datagram
         /// </summary>
         public int Count
         {
-            get => (int)BinaryPrimitives.ReadUInt32BigEndian(span.Slice(0, sizeof(uint)));
+            get => BinaryPrimitives.ReadInt32BigEndian(span.Slice(0, sizeof(int)));
         }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace Cogito.Kademlia.Network.Datagram
         /// <returns></returns>
         public KPacketIpEndpoint this[int index]
         {
-            get => new KPacketIpEndpoint(span.Slice(sizeof(uint), Count * KPacketIpEndpointInfo.Size));
+            get => new KPacketIpEndpoint(span.Slice(sizeof(int) + index * KPacketIpEndpointInfo.Size, KPacketIpEndpointInfo.Size));
         }
 
         /// <summary>

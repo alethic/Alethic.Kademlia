@@ -4,7 +4,7 @@
     /// <summary>
     /// Describes a response to a STORE request.
     /// </summary>
-    public readonly struct KStoreResponse<TKNodeId> : IKResponseData<TKNodeId>
+    public readonly struct KStoreResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 

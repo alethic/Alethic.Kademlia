@@ -5,7 +5,7 @@
     /// Describes a response to a PING request.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KPingResponse<TKNodeId> : IKResponseData<TKNodeId>
+    public readonly struct KPingResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 

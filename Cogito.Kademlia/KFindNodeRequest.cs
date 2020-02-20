@@ -1,13 +1,36 @@
-﻿namespace Cogito.Kademlia
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
     /// Describes a FIND_NODE request.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KFindNodeRequest<TKNodeId>
+    public readonly struct KFindNodeRequest<TKNodeId> : IKMessageBody<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
+
+        /// <summary>
+        /// Creates a response to the given request.
+        /// </summary>
+        /// <param name="peers"></param>
+        /// <returns></returns>
+        public KFindNodeResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers)
+        {
+            return new KFindNodeResponse<TKNodeId>(key, peers);
+        }
+
+        /// <summary>
+        /// Creates a response to the given request.
+        /// </summary>
+        /// <param name="peers"></param>
+        /// <returns></returns>
+        public KFindNodeResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers)
+        {
+            return new KFindNodeResponse<TKNodeId>(key, peers.ToArray());
+        }
 
         readonly TKNodeId key;
 

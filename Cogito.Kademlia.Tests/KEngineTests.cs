@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Network;
@@ -20,25 +18,41 @@ namespace Cogito.Kademlia.Tests
         [TestMethod]
         public async Task Should_respond_to_ping()
         {
-            var kid1 = KNodeId.CreateNodeId<KNodeId32>();
-            var kad1 = new KEngine<KNodeId32, KPeerData<KNodeId32>>(new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(kid1, new KPeerData<KNodeId32>()));
-            var udp1 = new KSimpleUdpNetwork<KNodeId32, KPeerData<KNodeId32>>(kad1, 0);
-            await udp1.StartAsync();
+            var s = 5;
 
-            var kid2 = KNodeId.CreateNodeId<KNodeId32>();
-            var kad2 = new KEngine<KNodeId32, KPeerData<KNodeId32>>(new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(kid2, new KPeerData<KNodeId32>()));
-            var udp2 = new KSimpleUdpNetwork<KNodeId32, KPeerData<KNodeId32>>(kad2, 0);
-            await udp2.StartAsync();
+            var kid = new KNodeId32[s];
+            var krt = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>[s];
+            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>[s];
+            var udp = new KSimpleUdpNetwork<KNodeId32, KPeerData<KNodeId32>>[s];
+
+            for (int i = 0; i < s; i++)
+            {
+                kid[i] = KNodeId<KNodeId32>.Create();
+                krt[i] = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(kid[i], new KPeerData<KNodeId32>());
+                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i]);
+                udp[i] = new KSimpleUdpNetwork<KNodeId32, KPeerData<KNodeId32>>(kad[i], 0);
+                await udp[i].StartAsync();
+            }
 
             await Task.Delay(TimeSpan.FromSeconds(1));
-            await kad1.ConnectAsync(udp1.CreateEndpoint(udp2.Endpoints.Cast<KIpProtocolEndpoint<KNodeId32>>().First().Endpoint));
+
+            for (int i = 0; i < s; i++)
+            {
+                var n = i + 1;
+                if (n >= s)
+                    n = 0;
+                await kad[i].ConnectAsync(udp[i].CreateEndpoint(udp[n].Endpoints.Cast<KIpProtocolEndpoint<KNodeId32>>().First().Endpoint));
+            }
+
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            kad1.Router.Count.Should().Be(1);
-            kad2.Router.Count.Should().Be(1);
-
-            await udp1.StopAsync();
-            await udp2.StopAsync();
+            for (int i = 0; i < s; i++)
+            {
+                Console.WriteLine($"Instance {i} ({kid[i]}) has {kad[i].Router.Count} items in it's node table.");
+                foreach (var j in krt[i])
+                    Console.WriteLine($"    {j.Key}");
+                await udp[i].StopAsync();
+            }
         }
 
     }

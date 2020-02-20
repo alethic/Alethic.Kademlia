@@ -20,7 +20,7 @@ namespace Cogito.Kademlia.Network.Datagram
         public static void Write(IBufferWriter<byte> writer, KPeerEndpointInfo<TKNodeId> peer)
         {
             KNodeId<TKNodeId>.Write(peer.Id, writer);
-            KPacketIpEndpointSequence.Write<TKNodeId>(writer, peer.Endpoints.OfType<KIpProtocolEndpoint<TKNodeId>>().ToArray());
+            KPacketIpEndpointSequence.Write(writer, peer.Endpoints.OfType<KIpProtocolEndpoint<TKNodeId>>().ToArray());
         }
 
         readonly ReadOnlySpan<byte> span;

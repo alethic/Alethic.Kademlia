@@ -17,6 +17,7 @@ namespace Cogito.Kademlia.Network.Datagram
         public static void Write(ArrayBufferWriter<byte> writer, KFindNodeResponse<TKNodeId> response)
         {
             KNodeId<TKNodeId>.Write(response.Key, writer);
+            KPacketPeerSequence<TKNodeId>.Write(writer, response.Peers);
         }
 
         readonly ReadOnlySpan<byte> span;

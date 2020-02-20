@@ -102,7 +102,7 @@ namespace Cogito.Kademlia.Network.Datagram
         /// <returns></returns>
         public KPacketPeerEndpointInfo<TKNodeId> this[int index]
         {
-            get => new KPacketPeerEndpointInfo<TKNodeId>(span.Slice(sizeof(uint)));
+            get => new KPacketPeerEndpointInfo<TKNodeId>(span.Slice(sizeof(uint) + index * KPacketPeerEndpointInfo<TKNodeId>));
         }
 
         /// <summary>

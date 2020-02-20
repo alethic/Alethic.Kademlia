@@ -60,37 +60,41 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming PING requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KPingResponse<TKNodeId>> OnPingAsync(in TKNodeId sender, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KPingResponse<TKNodeId>> OnPingAsync(in TKNodeId sender, IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming STORE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(in TKNodeId sender, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(in TKNodeId sender, IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming FIND_NODE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(in TKNodeId sender, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(in TKNodeId sender, IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Invoked to handle incoming FIND_VALUE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(in TKNodeId sender, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(in TKNodeId sender, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
 
     }
 

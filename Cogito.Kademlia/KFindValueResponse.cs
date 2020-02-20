@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a response to a FIND_VALUE request.
     /// </summary>
-    public readonly struct KFindValueResponse<TKNodeId> : IKResponseData<TKNodeId>
+    public readonly struct KFindValueResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -27,18 +27,6 @@ namespace Cogito.Kademlia
             this.key = key;
             this.value = value;
             this.peers = peers;
-        }
-
-        /// <summary>
-        /// Initializes a new instance.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="peers"></param>
-        public KFindValueResponse(in TKNodeId key, ReadOnlyMemory<byte>? value, IEnumerable<KPeerEndpointInfo<TKNodeId>> peers) :
-            this(key, value, peers.ToArray())
-        {
-
         }
 
         /// <summary>

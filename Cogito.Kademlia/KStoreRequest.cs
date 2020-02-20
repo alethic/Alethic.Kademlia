@@ -7,9 +7,20 @@ namespace Cogito.Kademlia
     /// Describes a STORE request.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KStoreRequest<TKNodeId>
+    public readonly struct KStoreRequest<TKNodeId> : IKMessageBody<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
+
+        /// <summary>
+        /// Creates a response to the given request.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public KStoreResponse<TKNodeId> Respond()
+        {
+            return new KStoreResponse<TKNodeId>(key);
+        }
 
         readonly TKNodeId key;
         readonly ReadOnlyMemory<byte> value;

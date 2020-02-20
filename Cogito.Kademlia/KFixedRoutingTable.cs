@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -50,7 +51,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedRoutingTable, IKRouter<TKNodeId, TKPeerData>
+    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedRoutingTable, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
@@ -123,7 +124,9 @@ namespace Cogito.Kademlia
         public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
         {
             if (endpoints is null)
-                throw new ArgumentNullException(nameof(endpoints));
+                return new ValueTask(Task.CompletedTask);
+            if (nodeId.Equals(SelfId))
+                return new ValueTask(Task.CompletedTask);
 
             return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoints, cancellationToken);
         }
@@ -146,6 +149,20 @@ namespace Cogito.Kademlia
         /// Gets the number of peers known by the table.
         /// </summary>
         public int Count => buckets.Sum(i => i.Count);
+
+        /// <summary>
+        /// Iterates all of the known peers.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerator<KeyValuePair<TKNodeId, TKPeerData>> GetEnumerator()
+        {
+            return buckets.SelectMany(i => i).Select(i => new KeyValuePair<TKNodeId, TKPeerData>(i.Id, i.Data)).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
 
     }
 

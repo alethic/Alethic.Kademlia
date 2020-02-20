@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+option csharp_namespace = "Cogito.Kademlia.Protocols.Protobuf";
+
+message Packet {
+    repeated Message message = 1;
+}
+
+message Message {
+    Header header = 1;
+    oneof body {
+        PingRequest ping_request = 2;
+        PingResponse ping_response = 3;
+        StoreRequest store_request = 4;
+        StoreResponse store_response = 5;
+        FindNodeRequest find_node_request = 6;
+        FindNodeResponse find_node_response = 7;
+        FindValueRequest find_value_request = 8;
+        FindValueResponse find_value_response = 9;
+    }
+}
+
+message Header {
+    bytes sender = 1;
+    uint32 magic = 2;
+}
+
+message IpAddress {
+    oneof ip_address {
+        fixed32 v4 = 1;
+        bytes v6 = 2;
+    }
+}
+
+message IpEndpoint {
+    IpAddress address = 1;
+    uint32 port = 2;
+}
+
+message Peer {
+    bytes id = 1;
+    repeated IpEndpoint endpoint = 2;
+}
+
+message PingRequest {
+
+}
+
+message PingResponse {
+
+}
+
+message StoreRequest {
+    bytes key = 1;
+    bytes value = 2;
+}
+
+message StoreResponse {
+    enum StoreResponseCode {
+        Stored = 0;
+        NotStored = 1;
+    }
+
+    bytes key = 1;
+    StoreResponseCode code = 2;
+}
+
+message FindNodeRequest {
+    bytes key = 1;
+}
+
+message FindNodeResponse {
+    bytes key = 1;
+    repeated Peer peers = 2;
+}
+
+message FindValueRequest {
+    bytes key = 1;
+}
+
+message FindValueResponse {
+    enum FindValueResponseCode {
+        Found = 0;
+        NotFound = 1;
+    }
+    bytes key = 1;
+    repeated Peer peers = 2;
+    FindValueResponseCode code = 3;
+    bytes value = 4;
+}
+
