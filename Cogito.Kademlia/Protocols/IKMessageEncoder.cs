@@ -14,17 +14,11 @@ namespace Cogito.Kademlia.Protocols
         /// <summary>
         /// Encodes the sequence of messages into the buffer.
         /// </summary>
+        /// <param name="protcol"></param>
         /// <param name="buffer"></param>
         /// <param name="messages"></param>
         /// <returns></returns>
-        void Encode(IBufferWriter<byte> buffer, IEnumerable<IKMessage<TKNodeId>> messages);
-
-        /// <summary>
-        /// Encodes a single message into the buffer.
-        /// </summary>
-        /// <param name="buyffer"></param>
-        /// <param name="message"></param>
-        void Encode(IBufferWriter<byte> buyffer, IKMessage<TKNodeId> message);
+        void Encode(IKProtocol<TKNodeId> protcol, IBufferWriter<byte> buffer, IEnumerable<IKMessage<TKNodeId>> messages);
 
     }
 

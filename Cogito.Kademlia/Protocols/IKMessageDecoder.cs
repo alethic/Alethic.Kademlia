@@ -15,9 +15,10 @@ namespace Cogito.Kademlia.Protocols
         /// <summary>
         /// Decodes the sequence of messages from the buffer.
         /// </summary>
+        /// <param name="protocol"></param>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        IEnumerable<IKMessage<TKNodeId>> Decode(ReadOnlySequence<byte> buffer);
+        IEnumerable<IKMessage<TKNodeId>> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer);
 
     }
 

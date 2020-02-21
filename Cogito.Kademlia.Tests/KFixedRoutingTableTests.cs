@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+
 using FluentAssertions;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,112 +12,6 @@ namespace Cogito.Kademlia.Tests
     [TestClass]
     public class KFixedRoutingTableTests
     {
-
-        class FakeNetwork<TKNodeId> : IKProtocol<TKNodeId>
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
-        {
-
-            readonly TKNodeId self;
-            readonly IKEngine<TKNodeId> engine;
-
-            public FakeNetwork(in TKNodeId self, IKEngine<TKNodeId> engine)
-            {
-                this.self = self;
-                this.engine = engine;
-            }
-
-            public IKEngine<TKNodeId> Engine => engine;
-
-            public Guid Id => Guid.Empty;
-
-            public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
-
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>(new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, KResponseStatus.Success, new KPingResponse<TKNodeId>()));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>(new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, KResponseStatus.Success, new KStoreResponse<TKNodeId>(request.Key)));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindNodeResponse<TKNodeId>(request.Key, new KPeerEndpointInfo<TKNodeId>[0])));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>(new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindValueResponse<TKNodeId>(request.Key, new byte[8], new KPeerEndpointInfo<TKNodeId>[0])));
-            }
-
-        }
-
-        class FakeSlowNetwork<TKNodeId> : IKProtocol<TKNodeId>
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
-        {
-
-            readonly TKNodeId self;
-            readonly IKEngine<TKNodeId> engine;
-
-            public FakeSlowNetwork(in TKNodeId self, IKEngine<TKNodeId> engine)
-            {
-                this.self = self;
-                this.engine = engine;
-            }
-
-            public IKEngine<TKNodeId> Engine => engine;
-
-            public Guid Id => Guid.Empty;
-
-            public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
-
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return PingAsync(endpoint, request, cancellationToken);
-            }
-
-            async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                await Task.Delay(100);
-                return new KResponse<TKNodeId, KPingResponse<TKNodeId>>(self, KResponseStatus.Success, new KPingResponse<TKNodeId>());
-            }
-
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return StoreAsync(endpoint, request, cancellationToken);
-            }
-
-            async ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                await Task.Delay(100);
-                return new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(self, KResponseStatus.Success, new KStoreResponse<TKNodeId>(request.Key));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return FindNodeAsync(endpoint, request, cancellationToken);
-            }
-
-            async ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindNodeResponse<TKNodeId>(request.Key, new KPeerEndpointInfo<TKNodeId>[0]));
-            }
-
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                return FindValueAsync(endpoint, request, cancellationToken);
-            }
-
-            async ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
-            {
-                await Task.Delay(100);
-                return new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(self, KResponseStatus.Success, new KFindValueResponse<TKNodeId>(request.Key, new byte[8], new KPeerEndpointInfo<TKNodeId>[0]));
-            }
-
-        }
 
         [TestMethod]
         public void Should_find_proper_bucket_for_int32()
@@ -137,7 +30,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), Enumerable.Empty<IKEndpoint<KNodeId32>>());
+                await t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null, null);
         }
 
         [TestMethod]
@@ -147,12 +40,12 @@ namespace Cogito.Kademlia.Tests
             var t = new KFixedRoutingTable<KNodeId32>(s);
 
             for (int i = 1; i <= 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)i), Enumerable.Empty<IKEndpoint<KNodeId32>>());
+                await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
 
             var c = t.Count;
 
             for (int i = 1; i <= 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)i), Enumerable.Empty<IKEndpoint<KNodeId32>>());
+                await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
 
             t.Count.Should().Be(c);
         }
@@ -166,7 +59,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), Enumerable.Empty<IKEndpoint<KNodeId32>>()).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null, null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -179,7 +72,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), Enumerable.Empty<IKEndpoint<KNodeId64>>());
+                await t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null, null);
         }
 
         [TestMethod]
@@ -191,7 +84,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), Enumerable.Empty<IKEndpoint<KNodeId64>>()).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null, null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -203,7 +96,7 @@ namespace Cogito.Kademlia.Tests
             var t = new KFixedRoutingTable<KNodeId128>(s);
 
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), Enumerable.Empty<IKEndpoint<KNodeId128>>());
+                await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null);
         }
 
         [TestMethod]
@@ -214,7 +107,7 @@ namespace Cogito.Kademlia.Tests
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), Enumerable.Empty<IKEndpoint<KNodeId128>>()).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -227,7 +120,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), Enumerable.Empty<IKEndpoint<KNodeId160>>());
+                await t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null, null);
         }
 
         [TestMethod]
@@ -239,7 +132,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), Enumerable.Empty<IKEndpoint<KNodeId160>>()).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null, null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -252,7 +145,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), Enumerable.Empty<IKEndpoint<KNodeId256>>());
+                await t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null, null);
         }
 
         [TestMethod]
@@ -264,7 +157,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), Enumerable.Empty<IKEndpoint<KNodeId256>>()).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null, null).AsTask());
 
             await Task.WhenAll(l);
         }

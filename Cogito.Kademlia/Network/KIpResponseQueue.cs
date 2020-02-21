@@ -34,17 +34,18 @@ namespace Cogito.Kademlia.Network
         /// </summary>
         /// <param name="endpoint"></param>
         /// <param name="magic"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
         public Task<KResponse<TKNodeId, TResponseData>> WaitAsync(in KIpEndpoint endpoint, uint magic, CancellationToken cancellationToken)
         {
             // generate a new task completion source hooked up with the given request information
             var tcs = queue.GetOrAdd((endpoint, magic), k =>
-           {
-               var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
-               var cts = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(timeout).Token, cancellationToken);
-               cts.Token.Register(() => { queue.TryRemove(k, out _); tcs.TrySetCanceled(); }, useSynchronizationContext: false);
-               return tcs;
-           });
+            {
+                var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(timeout).Token, cancellationToken);
+                cts.Token.Register(() => { queue.TryRemove(k, out _); tcs.TrySetCanceled(); }, useSynchronizationContext: false);
+                return tcs;
+            });
 
             // return task to user for waiting
             return tcs.Task;

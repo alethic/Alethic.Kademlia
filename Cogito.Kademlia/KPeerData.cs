@@ -9,20 +9,20 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly KEndpointList<TKNodeId> endpoints;
+        readonly KEndpointSet<TKNodeId> endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         public KPeerData()
         {
-            endpoints = new KEndpointList<TKNodeId>();
+            endpoints = new KEndpointSet<TKNodeId>();
         }
 
         /// <summary>
         /// Gets the endpoints associated with the peer.
         /// </summary>
-        public IKEndpointList<TKNodeId> Endpoints => endpoints;
+        public IKEndpointSet<TKNodeId> Endpoints => endpoints;
 
     }
 

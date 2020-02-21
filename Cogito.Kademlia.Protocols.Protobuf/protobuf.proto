@@ -3,7 +3,7 @@ syntax = "proto3";
 option csharp_namespace = "Cogito.Kademlia.Protocols.Protobuf";
 
 message Packet {
-    repeated Message message = 1;
+    repeated Message messages = 1;
 }
 
 message Message {
@@ -39,15 +39,15 @@ message IpEndpoint {
 
 message Peer {
     bytes id = 1;
-    repeated IpEndpoint endpoint = 2;
+    repeated IpEndpoint endpoints = 2;
 }
 
 message PingRequest {
-
+    repeated IpEndpoint endpoints = 1;
 }
 
 message PingResponse {
-
+    repeated IpEndpoint endpoints = 1;
 }
 
 message StoreRequest {

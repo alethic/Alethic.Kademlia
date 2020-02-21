@@ -5,8 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cogito.Kademlia.Core;
-
 namespace Cogito.Kademlia
 {
 
@@ -28,6 +26,7 @@ namespace Cogito.Kademlia
         public KEngine(IKRouter<TKNodeId, TKPeerData> router)
         {
             this.router = router ?? throw new ArgumentNullException(nameof(router));
+            this.router.Attach(this);
         }
 
         /// <summary>
@@ -56,8 +55,8 @@ namespace Cogito.Kademlia
                 throw new ArgumentException("Endpoint originates from different engine.");
 
             var r = await endpoint.PingAsync(new KPingRequest<TKNodeId>(SelfData.Endpoints.ToArray()), cancellationToken);
-            await router.UpdatePeerAsync(r.Sender, r.Body.Endpoints.ToArray(), cancellationToken);
-            await LookupAsync(SelfId, cancellationToken);
+            await router.UpdatePeerAsync(r.Sender, endpoint, r.Body.Endpoints.ToArray(), cancellationToken);
+            await LookupAsync(SelfId, false, cancellationToken);
         }
 
         /// <summary>
@@ -84,57 +83,94 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
+        /// Initiates a lookup for the specified key, returning the closest discovered node.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<TKNodeId> LookupAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            return LookupAsync(key, true, cancellationToken);
+        }
+
+        /// <summary>
         /// Begins a search process for the specified node.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<TKNodeId> LookupAsync(TKNodeId key, CancellationToken cancellationToken)
+        async ValueTask<TKNodeId> LookupAsync(TKNodeId key, bool self = true, CancellationToken cancellationToken = default)
         {
-            // find our own closest peers and populate a priority queue to work through
-            var l = await router.GetPeersAsync(key, 3, cancellationToken);
-            var q = new FibonacciQueue<TKNodeId, TKNodeId>(l.Select(i => i.Id), i => i, new KNodeIdDistanceComparer<TKNodeId>(key).Compare);
-            var d = new FibonacciQueue<TKNodeId, TKNodeId>(Enumerable.Empty<TKNodeId>(), i => i, new KNodeIdDistanceComparer<TKNodeId>(key).Compare);
-            var t = new List<Task<IEnumerable<KPeerEndpointInfo<TKNodeId>>>>(4);
+            var wait = new HashSet<Task<(IKEndpoint<TKNodeId> Endpoint, IEnumerable<KPeerEndpointInfo<TKNodeId>> Peers)?>>();
+            var comp = new KNodeIdDistanceComparer<TKNodeId>(key);
 
-            while (q.Count > 0)
+            // find our own closest peers to seed from
+            var init = await router.GetPeersAsync(key, 3, cancellationToken);
+            var hash = new HashSet<TKNodeId>(init.Select(i => i.Id));
+            if (hash.Count == 0)
+                throw new InvalidOperationException("Cannot conduct lookup, no initial nodes to contact.");
+
+            // tracks the peers remaining to query
+            var todo = new C5.IntervalHeap<TKNodeId>(20, comp);
+            todo.AddAll(hash);
+
+            // our nearest neighbor so far
+            var near = todo.FindMin();
+
+            // we continue until we have no more work todo
+            while (todo.Count > 0)
             {
                 // schedule queries of our closest nodes
-                while (t.Count < 4 && q.Count > 0)
+                while (wait.Count < 3 && todo.Count > 0)
                 {
-                    // schedule query from node, and move to final queue
-                    var n = q.Dequeue();
+                    // schedule new node to query
+                    var n = todo.DeleteMin();
                     if (n.Equals(SelfId) == false)
-                    {
-                        t.Add(FindNodeAsync(n, key, cancellationToken).AsTask());
-                        d.Enqueue(n);
-                    }
+                        wait.Add(FindNodeAsync(n, key, cancellationToken).AsTask());
                 }
 
                 // we have at least one task in the task pool to wait for
-                if (t.Count > 0)
+                if (wait.Count > 0)
                 {
-                    // wait for first finished task
-                    var r = await Task.WhenAny(t);
-                    t.Remove(r);
-                    var z = await r;
-
-                    // iterate over newly retrieved peers
-                    foreach (var i in z)
+                    try
                     {
-                        // ignore self references
-                        if (i.Id.Equals(SelfId) == false)
+                        // wait for first finished task
+                        var r = await Task.WhenAny(wait);
+                        wait.Remove(r);
+
+                        // iterate over newly retrieved peers
+                        if (r.Result.HasValue)
                         {
-                            // update router and move peer to queried list
-                            await router.UpdatePeerAsync(i.Id, i.Endpoints, cancellationToken);
-                            q.Enqueue(i.Id);
+                            foreach (var i in r.Result.Value.Peers)
+                            {
+                                // received node is closer than current
+                                var n = i.Id;
+                                if (n.Equals(SelfId) == false && comp.Compare(n, near) < 0)
+                                {
+                                    near = n;
+
+                                    // update router and move peer to queried list
+                                    await router.UpdatePeerAsync(n, null, i.Endpoints, cancellationToken);
+                                    if (hash.Add(n))
+                                    {
+                                        todo.Add(n);
+
+                                        // remove uninteresting nodes
+                                        while (todo.Count > 20)
+                                            todo.DeleteMax();
+                                    }
+                                }
+                            }
                         }
+                    }
+                    catch (Exception e)
+                    {
+                        // ignore
                     }
                 }
             }
 
-            // return closest completed node
-            return d.Dequeue();
+            return near;
         }
 
         /// <summary>
@@ -144,7 +180,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> FindNodeAsync(TKNodeId target, TKNodeId key, CancellationToken cancellationToken)
+        async ValueTask<(IKEndpoint<TKNodeId>, IEnumerable<KPeerEndpointInfo<TKNodeId>>)?> FindNodeAsync(TKNodeId target, TKNodeId key, CancellationToken cancellationToken)
         {
             foreach (var endpoint in (await router.GetPeerAsync(target, cancellationToken)).Endpoints)
             {
@@ -155,21 +191,26 @@ namespace Cogito.Kademlia
                     if (p.Status == KResponseStatus.Success)
                     {
                         // update knowledge of peer
-                        await router.UpdatePeerAsync(p.Sender, p.Body.Endpoints.ToArray(), cancellationToken);
+                        await router.UpdatePeerAsync(p.Sender, p.Endpoint, p.Body.Endpoints.ToArray(), cancellationToken);
 
                         // send find node to query for nodes to key
-                        var l = await endpoint.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken);
+                        var l = await p.Endpoint.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken);
                         if (l.Status == KResponseStatus.Success)
-                            return l.Body.Peers;
+                            return (l.Endpoint, l.Body.Peers);
                     }
                 }
                 catch (OperationCanceledException)
                 {
                     // ignore
                 }
+                catch (KProtocolException e) when (e.Error == KProtocolError.NotAvailable)
+                {
+                    // the protocol is no longer available
+                    break;
+                }
             }
 
-            return Enumerable.Empty<KPeerEndpointInfo<TKNodeId>>();
+            return null;
         }
 
         /// <summary>
@@ -195,8 +236,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KPingResponse<TKNodeId>> OnPingAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(source, request.Endpoints, cancellationToken);
-            await router.UpdatePeerAsync(source, new IKEndpoint<TKNodeId>[] { endpoint }, cancellationToken);
+            await router.UpdatePeerAsync(source, endpoint, request.Endpoints, cancellationToken);
             return request.Respond(SelfData.Endpoints.ToArray());
         }
 
@@ -223,7 +263,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(source, new IKEndpoint<TKNodeId>[] { endpoint }, cancellationToken);
+            await router.UpdatePeerAsync(source, endpoint, null, cancellationToken);
             return request.Respond();
         }
 
@@ -250,7 +290,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(source, new IKEndpoint<TKNodeId>[] { endpoint }, cancellationToken);
+            await router.UpdatePeerAsync(source, endpoint, null, cancellationToken);
             return request.Respond(await router.GetPeersAsync(request.Key, 3, cancellationToken));
         }
 
@@ -277,8 +317,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(source, new IKEndpoint<TKNodeId>[] { endpoint }, cancellationToken);
-            return request.Respond(null, new KPeerEndpointInfo<TKNodeId>[0]); // TODO respond with correct info
+            await router.UpdatePeerAsync(source, endpoint, null, cancellationToken);
+            return request.Respond(null, await router.GetPeersAsync(request.Key, 3, cancellationToken)); // TODO respond with correct info
         }
 
     }

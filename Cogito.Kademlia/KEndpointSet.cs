@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 
+using Cogito.Kademlia.Core;
+
 namespace Cogito.Kademlia
 {
 
@@ -7,15 +9,14 @@ namespace Cogito.Kademlia
     /// Defines a standard list of endpoints.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KEndpointList<TKNodeId> : HashSet<IKEndpoint<TKNodeId>>, IKEndpointList<TKNodeId>
+    public class KEndpointSet<TKNodeId> : OrderedSet<IKEndpoint<TKNodeId>>, IKEndpointSet<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="comparer"></param>
-        public KEndpointList() :
+        public KEndpointSet() :
             base(EqualityComparer<IKEndpoint<TKNodeId>>.Default)
         {
 

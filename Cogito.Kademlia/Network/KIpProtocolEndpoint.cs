@@ -33,11 +33,6 @@ namespace Cogito.Kademlia.Network
         public IKProtocol<TKNodeId> Protocol => protocol;
 
         /// <summary>
-        /// Gets the unique identifier of the protocol available over this endpoint.
-        /// </summary>
-        public Guid ProtocolId => protocol.Id;
-
-        /// <summary>
         /// Gets the endpoint.
         /// </summary>
         public KIpEndpoint Endpoint => endpoint;

@@ -23,14 +23,14 @@ namespace Cogito.Kademlia
         }
 
         readonly TKNodeId key;
-        readonly ReadOnlyMemory<byte> value;
+        readonly ReadOnlyMemory<byte>? value;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte> value)
+        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value)
         {
             this.key = key;
             this.value = value;
@@ -44,7 +44,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Specifies the value to be stored with the key.
         /// </summary>
-        public ReadOnlyMemory<byte> Value => value;
+        public ReadOnlyMemory<byte>? Value => value;
 
     }
 

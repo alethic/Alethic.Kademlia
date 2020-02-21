@@ -11,7 +11,7 @@
         /// <summary>
         /// Gets the list of endpoints.
         /// </summary>
-        IKEndpointList<TKNodeId> Endpoints { get; }
+        IKEndpointSet<TKNodeId> Endpoints { get; }
 
     }
 

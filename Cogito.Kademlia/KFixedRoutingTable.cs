@@ -61,6 +61,8 @@ namespace Cogito.Kademlia
         readonly int k;
         readonly KBucket<TKNodeId, TKPeerData>[] buckets;
 
+        IKEngine<TKNodeId> engine;
+
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
@@ -76,6 +78,25 @@ namespace Cogito.Kademlia
             for (var i = 0; i < buckets.Length; i++)
                 buckets[i] = new KBucket<TKNodeId, TKPeerData>(k);
         }
+
+        /// <summary>
+        /// Attaches the routing table to the given engine.
+        /// </summary>
+        /// <param name="engine"></param>
+        void IKRouter<TKNodeId>.Attach(IKEngine<TKNodeId> engine)
+        {
+            if (engine == null)
+                throw new ArgumentNullException(nameof(engine));
+            if (this.engine != null && this.engine != engine)
+                throw new InvalidOperationException();
+
+            this.engine = engine;
+        }
+
+        /// <summary>
+        /// Gets the currently associated engine.
+        /// </summary>
+        public IKEngine<TKNodeId> Engine => engine;
 
         /// <summary>
         /// Gets the ID of the node itself.
@@ -118,17 +139,16 @@ namespace Cogito.Kademlia
         /// Updates the endpoints for the peer within the table.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="endpoints"></param>
+        /// <param name="endpoint"></param>
+        /// <param name="additional"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
+        public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken = default)
         {
-            if (endpoints is null)
-                return new ValueTask(Task.CompletedTask);
             if (nodeId.Equals(SelfId))
                 return new ValueTask(Task.CompletedTask);
-
-            return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+            else
+                return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
         }
 
         /// <summary>
@@ -143,6 +163,49 @@ namespace Cogito.Kademlia
             var c = new KNodeIdDistanceComparer<TKNodeId>(key);
             var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
             return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
+        }
+
+        /// <summary>
+        /// Initiates a refresh of the routing table buckets.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            return new ValueTask(Task.WhenAll(Enumerable.Range(1, buckets.Length - 1).Select(i => GetRandomNodeIdFromBucket(i)).Select(i => engine.LookupAsync(i, cancellationToken).AsTask())));
+        }
+
+        /// <summary>
+        /// Generates a random node ID with the specified number of right masked bits set.
+        /// </summary>
+        /// <param name="bucket"></param>
+        /// <returns></returns>
+        TKNodeId GetRandomNodeIdFromBucket(int bucket)
+        {
+            // set all except suffix
+            var selfMask = new BitArray(KNodeId<TKNodeId>.SizeOf() * 8);
+            for (int i = 0; i < selfMask.Length - bucket; i++)
+                selfMask.Set(i, true);
+
+            // set only suffix
+            var randMask = new BitArray(selfMask).Not();
+
+            var selfNode = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            SelfId.Write(selfNode);
+            var selfBuff = new BitArray(selfNode.ToArray());
+            selfBuff.And(selfMask);
+
+            var randNode = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            KNodeId<TKNodeId>.Create().Write(randNode);
+            var randBuff = new BitArray(randNode.ToArray());
+            randBuff.And(randMask);
+
+            var cmplBuff = selfBuff.Or(randBuff);
+            var cmplNode = new byte[KNodeId<TKNodeId>.SizeOf()];
+            cmplBuff.CopyTo(cmplNode, 0);
+            var cmplFins = KNodeId<TKNodeId>.Read(cmplNode);
+
+            return cmplFins;
         }
 
         /// <summary>

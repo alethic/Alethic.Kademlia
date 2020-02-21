@@ -6,7 +6,7 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a node ID in a Kademlia network.
     /// </summary>
-    public interface IKNodeId<TKNodeId> : IEquatable<TKNodeId>
+    public interface IKNodeId<TKNodeId> : IEquatable<TKNodeId>, IComparable<TKNodeId>
         where TKNodeId : IKNodeId<TKNodeId>
     {
 

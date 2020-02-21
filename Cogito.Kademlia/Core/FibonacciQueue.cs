@@ -143,7 +143,7 @@ namespace Cogito.Kademlia.Core
 
         public TVertex Peek()
         {
-            return heap.Top.Value;
+            return heap.Top != null ? heap.Top.Value : default;
         }
 
         public TVertex[] ToArray()

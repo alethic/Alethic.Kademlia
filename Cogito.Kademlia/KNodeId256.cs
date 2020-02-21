@@ -101,6 +101,16 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
+        /// Compares this instance to the other instance.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public int CompareTo(KNodeId256 other)
+        {
+            return KNodeIdComparer<KNodeId256>.Default.Compare(this, other);
+        }
+
+        /// <summary>
         /// Returns a string representation of this node ID.
         /// </summary>
         /// <returns></returns>

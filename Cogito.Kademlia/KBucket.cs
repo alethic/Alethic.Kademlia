@@ -93,25 +93,22 @@ namespace Cogito.Kademlia
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="endpoints"></param>
+        /// <param name="additional"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
         {
-            return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+            return UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
         }
 
         /// <summary>
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="endpoints"></param>
+        /// <param name="additional"></param>
         /// <param name="cancellationToken"></param>
-        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
         {
-            if (endpoints is null)
-                throw new ArgumentNullException(nameof(endpoints));
-
             var lk = rw.BeginUpgradableReadLock();
 
             try
@@ -125,9 +122,15 @@ namespace Cogito.Kademlia
                         l.Remove(i);
                         l.AddLast(i);
 
-                        // update endpoints
-                        if (endpoints != null)
-                            i.Value.Data.Endpoints.AddRange(endpoints);
+                        // incorporate new additional endpoints into end of set
+                        if (additional != null)
+                            foreach (var j in additional)
+                                if (i.Value.Data.Endpoints.Contains(j) == false)
+                                    i.Value.Data.Endpoints.AddLast(j);
+
+                        // promote contact endpoint to top
+                        if (endpoint != null)
+                            i.Value.Data.Endpoints.AddFirst(endpoint);
                     }
                 }
                 else if (l.Count < k)
@@ -136,8 +139,16 @@ namespace Cogito.Kademlia
                     {
                         // generate new peer entry
                         var p = new TKPeerData();
-                        if (endpoints != null)
-                            p.Endpoints.AddRange(endpoints);
+
+                        // incorporate new additional endpoints into end of set
+                        if (additional != null)
+                            foreach (var j in additional)
+                                if (p.Endpoints.Contains(j) == false)
+                                    p.Endpoints.AddLast(j);
+
+                        // promote contact endpoint to top
+                        if (endpoint != null)
+                            p.Endpoints.AddFirst(endpoint);
 
                         // item does not exist, but bucket has room, insert at tail
                         l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
@@ -187,7 +198,17 @@ namespace Cogito.Kademlia
                             // first entry had no response, remove, insert new at tail
                             l.Remove(n);
                             var p = new TKPeerData();
-                            p.Endpoints.AddRange(endpoints);
+
+                            // incorporate new additional endpoints into end of set
+                            if (additional != null)
+                                foreach (var j in additional)
+                                    if (p.Endpoints.Contains(j) == false)
+                                        p.Endpoints.AddLast(j);
+
+                            // promote contact endpoint to top
+                            if (endpoint != null)
+                                p.Endpoints.AddFirst(endpoint);
+
                             l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                         }
                     }

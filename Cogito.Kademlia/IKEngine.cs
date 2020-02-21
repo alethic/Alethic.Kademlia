@@ -40,6 +40,14 @@ namespace Cogito.Kademlia
         TKNodeId SelfId { get; }
 
         /// <summary>
+        /// Initiates a lookup for the specified key and returns the closest node.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<TKNodeId> LookupAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Gets the value for the specified key.
         /// </summary>
         /// <param name="key"></param>
