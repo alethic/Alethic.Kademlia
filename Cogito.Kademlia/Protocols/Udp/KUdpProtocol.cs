@@ -294,13 +294,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received PING:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
+            logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "PING", request.Header.Magic, request.Header.Sender, endpoint);
             await OnPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Sending PING:{Magic} reply to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "PING", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
             return SocketSendToAsync(b, endpoint, cancellationToken);
@@ -315,13 +315,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask OnReceiveStoreRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KStoreRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received STORE:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
+            logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "STORE", request.Header.Magic, request.Header.Sender, endpoint);
             await OnStoreReplyAsync(endpoint, request.Header.Magic, await engine.OnStoreAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask OnStoreReplyAsync(in KIpEndpoint endpoint, uint magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Sending STORE:{Magic} reply to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "STORE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
             return SocketSendToAsync(b, endpoint, cancellationToken);
@@ -336,13 +336,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask OnReceiveFindNodeRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindNodeRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received FIND_NODE:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
+            logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.Magic, request.Header.Sender, endpoint);
             await OnFindNodeReplyAsync(endpoint, request.Header.Magic, await engine.OnFindNodeAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask OnFindNodeReplyAsync(in KIpEndpoint endpoint, uint magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Sending FIND_NODE:{Magic} reply to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_NODE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
             return SocketSendToAsync(b, endpoint, cancellationToken);
@@ -357,13 +357,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask OnReceiveFindValueRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindValueRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received FIND_VALUE:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
+            logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.Magic, request.Header.Sender, endpoint);
             await OnFindValueReplyAsync(endpoint, request.Header.Magic, await engine.OnFindValueAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask OnFindValueReplyAsync(in KIpEndpoint endpoint, uint magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Sending FIND_VALUE:{Magic} reply to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_VALUE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
             return SocketSendToAsync(b, endpoint, cancellationToken);

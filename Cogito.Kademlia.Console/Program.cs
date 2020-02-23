@@ -39,7 +39,7 @@ namespace Cogito.Kademlia.Console
             var enc = new KProtobufMessageEncoder<KNodeId32>();
             var dec = new KProtobufMessageDecoder<KNodeId32>();
             var rtr = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(KNodeId<KNodeId32>.Create(), new KPeerData<KNodeId32>(), logger: log);
-            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>(rtr, log);
+            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>(rtr, logger: log);
             var udp = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, enc, dec, 0, log);
             var mcd = new KUdpMulticastDiscovery<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
             await udp.StartAsync();
