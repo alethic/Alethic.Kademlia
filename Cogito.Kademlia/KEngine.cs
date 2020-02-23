@@ -16,22 +16,24 @@ namespace Cogito.Kademlia
     /// Provides an implementation of a Kademlia network engine. The <see cref="KEngine{TKNodeId, TKPeerData}"/>
     /// class implements the core runtime logic of a Kademlia node.
     /// </summary>
-    public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>
+    public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>, IKDistributedTable<TKNodeId>, IKLookup<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
         readonly int alpha;
         readonly IKRouter<TKNodeId, TKPeerData> router;
+        readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="router"></param>
+        /// <param name="invoker"></param>
         /// <param name="alpha"></param>
         /// <param name="logger"></param>
-        public KEngine(IKRouter<TKNodeId, TKPeerData> router, int alpha = 3, ILogger logger = null)
+        public KEngine(IKRouter<TKNodeId, TKPeerData> router, IKEndpointInvoker<TKNodeId> invoker, int alpha = 3, ILogger logger = null)
         {
             if (router == null)
                 throw new ArgumentNullException(nameof(router));
@@ -40,10 +42,8 @@ namespace Cogito.Kademlia
 
             this.router = router;
             this.alpha = alpha;
+            this.invoker = invoker;
             this.logger = logger;
-
-            if (this.router.Engine != null)
-                throw new KException("Router already attached to engine.");
 
             // configure router
             this.router.Engine = this;
@@ -81,12 +81,12 @@ namespace Cogito.Kademlia
         {
             logger.LogInformation("Bootstrapping network with connection to {Endpoints}.", endpoints);
 
-            var r = await PingAsync(endpoints, cancellationToken);
+            var r = await invoker.PingAsync(endpoints, cancellationToken);
             if (r.Status == KResponseStatus.Failure)
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
             await router.UpdatePeerAsync(r.Sender, null, r.Body.Endpoints, cancellationToken);
-            await LookupNodeAsync(SelfId, cancellationToken);
+            await LookupAsync(SelfId, cancellationToken);
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<ReadOnlyMemory<byte>> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<ReadOnlyMemory<byte>?> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -118,7 +118,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask SetValueAsync(in TKNodeId key, ReadOnlySpan<byte> value, CancellationToken cancellationToken = default)
+        public ValueTask SetValueAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -129,9 +129,20 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<TKNodeId> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KLookupResult<TKNodeId>> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            return LookupNodeAsync(key, cancellationToken);
+            return LookupAsync(key, cancellationToken);
+        }
+
+        /// <summary>
+        /// Initiates a lookup for the specified key, returning the closest discovered node.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KLookupResult<TKNodeId>> LookupValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            return LookupAsync(key, cancellationToken);
         }
 
         /// <summary>
@@ -140,7 +151,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<TKNodeId> LookupNodeAsync(TKNodeId key, CancellationToken cancellationToken = default)
+        async ValueTask<KLookupResult<TKNodeId>> LookupAsync(TKNodeId key, CancellationToken cancellationToken = default)
         {
             var wait = new HashSet<Task<IEnumerable<KPeerEndpointInfo<TKNodeId>>>>();
             var comp = new KNodeIdDistanceComparer<TKNodeId>(key);
@@ -155,21 +166,25 @@ namespace Cogito.Kademlia
             // tracks the peers remaining to query sorted by distance
             var todo = new C5.IntervalHeap<KPeerEndpointInfo<TKNodeId>>(router.K, new FuncComparer<KPeerEndpointInfo<TKNodeId>, TKNodeId>(i => i.Id, comp));
             todo.AddAll(init);
-            var done = new HashSet<TKNodeId>(todo.Select(i => i.Id));
 
-            // our nearest neighbor so far
-            var near = todo.FindMin();
+            // track done nodes so we don't recurse; and maintain a list of near nodes that have been traversed
+            var done = new HashSet<TKNodeId>(todo.Select(i => i.Id));
+            var path = new C5.IntervalHeap<KPeerEndpointInfo<TKNodeId>>(router.K, new FuncComparer<KPeerEndpointInfo<TKNodeId>, TKNodeId>(i => i.Id, comp));
 
             try
             {
-                // we continue until we have no more work todo
-                while (todo.Count > 0)
+                // continue until all work is completed
+                while (todo.Count > 0 || wait.Count > 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    // our nearest neighbor is the key itself
-                    if (near.Id.Equals(key))
-                        return near.Id;
+                    if (path.Count > 0)
+                    {
+                        // check that the current nearest node isn't the key itself; if so, we are obviously done
+                        var near = path.FindMin();
+                        if (near.Id.Equals(key))
+                            return new KLookupResult<TKNodeId>(key, near, path);
+                    }
 
                     // schedule queries of our closest nodes
                     while (wait.Count < alpha && todo.Count > 0)
@@ -201,14 +216,15 @@ namespace Cogito.Kademlia
                         // task returned something; must have succeeded in our lookup
                         if (r.Result != null)
                         {
+                            // after we've received a successful result; mark the node as one we've encountered
+                            path.Add((KPeerEndpointInfo<TKNodeId>)r.AsyncState);
+
                             // iterate over newly retrieved peers
                             foreach (var i in r.Result)
                             {
                                 // received node is closer than current
-                                if (i.Id.Equals(SelfId) == false && comp.Compare(i.Id, near.Id) < 0)
+                                if (i.Id.Equals(SelfId) == false)
                                 {
-                                    near = i;
-
                                     if (done.Add(i.Id))
                                     {
                                         todo.Add(i);
@@ -243,7 +259,8 @@ namespace Cogito.Kademlia
                 }
             }
 
-            return near.Id;
+            // we never found anything; return the path we took, but that's it
+            return new KLookupResult<TKNodeId>(key, null, path);
         }
 
         /// <summary>
@@ -255,7 +272,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> FindNodeAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
-            var r = await TryAsync(peer.Endpoints, endpoint => endpoint.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken));
+            var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return r.Body.Peers;
 
@@ -271,101 +288,11 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<(IEnumerable<KPeerEndpointInfo<TKNodeId>>, ReadOnlyMemory<byte>?)> FindValueAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
-            var r = await TryAsync(peer.Endpoints, endpoint => endpoint.FindValueAsync(new KFindValueRequest<TKNodeId>(key), cancellationToken));
+            var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return (r.Body.Peers, r.Body.Value);
 
             return (null, null);
-        }
-
-        /// <summary>
-        /// Attempts to execute the specified method against an endpoint.
-        /// </summary>
-        /// <param name="endpoint"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpoint<TKNodeId> endpoint, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
-            where TResponseBody : struct, IKResponseData<TKNodeId>
-        {
-            if (endpoint.Protocol.Engine != this)
-                throw new KProtocolException(KProtocolError.Invalid, "The endpoint specified originates from another Kademlia engine.");
-
-            try
-            {
-                logger?.LogTrace("Attempting request against {Endpoint}.", endpoint);
-                var r = await func(endpoint);
-                if (r.Status == KResponseStatus.Success)
-                    return r;
-            }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
-
-            return default;
-        }
-
-        /// <summary>
-        /// Attempts to execute the specified method against the provided endpoints.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="func"></param>
-        /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IEnumerable<IKEndpoint<TKNodeId>> endpoints, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
-            where TResponseBody : struct, IKResponseData<TKNodeId>
-        {
-            foreach (var endpoint in endpoints)
-            {
-                var r = await TryAsync(endpoint, func);
-                if (r.Status == KResponseStatus.Success)
-                    return r;
-            }
-
-            return default;
-        }
-
-        /// <summary>
-        /// Attempts to execute a PING request against each of the provided endpoints.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
-        {
-            return TryAsync(endpoints, ep => ep.PingAsync(new KPingRequest<TKNodeId>(SelfData.Endpoints.ToArray()), cancellationToken));
-        }
-
-        /// <summary>
-        /// Attempts to execute a STORE request against each of the provided endpoints.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, CancellationToken cancellationToken = default)
-        {
-            return TryAsync(endpoints, ep => ep.StoreAsync(new KStoreRequest<TKNodeId>(key, value), cancellationToken));
-        }
-
-        /// <summary>
-        /// Attempts to execute a FIND_NODE request against each of the provided endpoints.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
-        {
-            return TryAsync(endpoints, ep => ep.FindNodeAsync(new KFindNodeRequest<TKNodeId>(key), cancellationToken));
-        }
-
-        /// <summary>
-        /// Attempts to execute a FIND_VALUE request against each of the provided endpoints.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
-        {
-            return TryAsync(endpoints, ep => ep.FindValueAsync(new KFindValueRequest<TKNodeId>(key), cancellationToken));
         }
 
         /// <summary>

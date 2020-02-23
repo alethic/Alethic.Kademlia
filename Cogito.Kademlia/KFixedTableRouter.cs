@@ -29,10 +29,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="selfId"></param>
         /// <param name="selfData"></param>
+        /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(in TKNodeId selfId, int k = DefaultKSize, ILogger logger = null) :
-            base(selfId, new KPeerData<TKNodeId>(), k, logger)
+        public KFixedTableRouter(in TKNodeId selfId, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null) :
+            base(selfId, new KPeerData<TKNodeId>(), invoker, k, logger)
         {
             this.logger = logger;
         }
@@ -42,10 +43,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="selfId"></param>
         /// <param name="selfData"></param>
+        /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(in TKNodeId selfId, in KPeerData<TKNodeId> selfData, int k = DefaultKSize, ILogger logger = null) :
-            base(selfId, selfData, k, logger)
+        public KFixedTableRouter(in TKNodeId selfId, in KPeerData<TKNodeId> selfData, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null) :
+            base(selfId, selfData, invoker, k, logger)
         {
 
         }
@@ -67,6 +69,7 @@ namespace Cogito.Kademlia
         readonly TKNodeId selfId;
         readonly TKPeerData selfData;
         readonly int k;
+        readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly ILogger logger;
         readonly KBucket<TKNodeId, TKPeerData>[] buckets;
 
@@ -77,9 +80,10 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="selfId"></param>
         /// <param name="selfData"></param>
+        /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, int k = DefaultKSize, ILogger logger = null)
+        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null)
         {
             if (k < 1)
                 throw new ArgumentOutOfRangeException("The value of k must be greater than or equal to 1.");
@@ -87,11 +91,12 @@ namespace Cogito.Kademlia
             this.selfId = selfId;
             this.selfData = selfData;
             this.k = k;
+            this.invoker = invoker;
             this.logger = logger;
 
             buckets = new KBucket<TKNodeId, TKPeerData>[Unsafe.SizeOf<TKNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
-                buckets[i] = new KBucket<TKNodeId, TKPeerData>(this, k, logger);
+                buckets[i] = new KBucket<TKNodeId, TKPeerData>(k, invoker, logger);
         }
 
         /// <summary>
@@ -99,7 +104,7 @@ namespace Cogito.Kademlia
         /// </summary>
         public IKEngine<TKNodeId> Engine
         {
-            get => engine;
+            get => engine ?? throw new InvalidOperationException("Router has not yet been initialized.");
             set => engine = value;
         }
 
@@ -152,6 +157,9 @@ namespace Cogito.Kademlia
         public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken = default)
         {
             logger?.LogTrace("Received request to update peer {NodeId} with {Endpoint}.", nodeId, endpoint);
+
+            if (engine == null)
+                throw new KException("Router is not yet initialized.");
 
             if (nodeId.Equals(SelfId))
             {

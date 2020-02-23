@@ -7,24 +7,18 @@ namespace Cogito.Kademlia
     /// Describes information about an endpoint.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public struct KEndpointInfo<TKNodeId>
+    public class KEndpointInfo<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="endpoint"></param>
-        public KEndpointInfo(IKEndpoint<TKNodeId> endpoint)
+        /// <param name="lastSeen"></param>
+        public KEndpointInfo(DateTime lastSeen)
         {
-            Endpoint = endpoint;
-            LastSeen = DateTime.MinValue;
+            LastSeen = lastSeen;
         }
-
-        /// <summary>
-        /// Gets or sets the endpoint itself.
-        /// </summary>
-        public IKEndpoint<TKNodeId> Endpoint { get; }
 
         /// <summary>
         /// Gets or sets the last time the endpoint was seen.

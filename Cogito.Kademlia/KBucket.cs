@@ -22,8 +22,8 @@ namespace Cogito.Kademlia
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
-        readonly IKRouter<TKNodeId> router;
         readonly int k;
+        readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly ILogger logger;
         readonly ReaderWriterLockSlim rw = new ReaderWriterLockSlim();
         readonly LinkedList<KBucketItem<TKNodeId, TKPeerData>> l = new LinkedList<KBucketItem<TKNodeId, TKPeerData>>();
@@ -31,13 +31,13 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="router"></param>
         /// <param name="k"></param>
+        /// <param name="invoker"></param>
         /// <param name="logger"></param>
-        public KBucket(IKRouter<TKNodeId> router, int k, ILogger logger = null)
+        public KBucket(int k, IKEndpointInvoker<TKNodeId> invoker, ILogger logger = null)
         {
-            this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.k = k;
+            this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.logger = logger;
         }
 
@@ -61,6 +61,7 @@ namespace Cogito.Kademlia
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
+        /// <param name="endpoint"></param>
         /// <param name="additional"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
@@ -73,6 +74,7 @@ namespace Cogito.Kademlia
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
+        /// <param name="endpoint"></param>
         /// <param name="additional"></param>
         /// <param name="cancellationToken"></param>
         async ValueTask UpdatePeerAsync(TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
@@ -96,14 +98,14 @@ namespace Cogito.Kademlia
                         if (endpoint != null)
                         {
                             logger?.LogTrace("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
-                            i.Value.Data.Endpoints.AddFirst(endpoint);
+                            i.Value.Data.Endpoints.Update(endpoint).LastSeen = DateTime.UtcNow;
                         }
 
                         // incorporate new additional endpoints into end of set
                         if (additional != null)
                             foreach (var j in additional)
-                                if (i.Value.Data.Endpoints.Contains(j) == false)
-                                    i.Value.Data.Endpoints.AddLast(j);
+                                if (i.Value.Data.Endpoints.Select(j) == null)
+                                    i.Value.Data.Endpoints.Demote(j);
                     }
                 }
                 else if (l.Count < k)
@@ -119,14 +121,14 @@ namespace Cogito.Kademlia
                         if (endpoint != null)
                         {
                             logger?.LogDebug("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
-                            p.Endpoints.AddFirst(endpoint);
+                            p.Endpoints.Update(endpoint);
                         }
 
                         // incorporate new additional endpoints into end of set
                         if (additional != null)
                             foreach (var j in additional)
-                                if (p.Endpoints.Contains(j) == false)
-                                    p.Endpoints.AddLast(j);
+                                if (p.Endpoints.Select(j) == null)
+                                    p.Endpoints.Demote(j);
 
                         // item does not exist, but bucket has room, insert at tail
                         l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
@@ -141,7 +143,7 @@ namespace Cogito.Kademlia
 
                     // start ping, check for async completion
                     var r = (KResponse<TKNodeId, KPingResponse<TKNodeId>>)default;
-                    var t = endpoint.Protocol.Engine.PingAsync(n.Value.Data.Endpoints, cancellationToken);
+                    var t = invoker.PingAsync(n.Value.Data.Endpoints, cancellationToken);
 
                     // completed synchronously (or immediately)
                     if (t.IsCompleted)
@@ -186,12 +188,12 @@ namespace Cogito.Kademlia
                             // incorporate new additional endpoints into end of set
                             if (additional != null)
                                 foreach (var j in additional)
-                                    if (p.Endpoints.Contains(j) == false)
-                                        p.Endpoints.AddLast(j);
+                                    if (p.Endpoints.Select(j) == null)
+                                        p.Endpoints.Demote(j);
 
                             // promote contact endpoint to top
                             if (endpoint != null)
-                                p.Endpoints.AddFirst(endpoint);
+                                p.Endpoints.Update(endpoint);
 
                             l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                         }

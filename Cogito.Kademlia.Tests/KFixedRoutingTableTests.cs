@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 using FluentAssertions;
@@ -12,6 +13,33 @@ namespace Cogito.Kademlia.Tests
     [TestClass]
     public class KFixedRoutingTableTests
     {
+
+        class FakeEndpointInvoker<TKNodeId> : IKEndpointInvoker<TKNodeId>
+            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        {
+
+            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
+            {
+                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>();
+            }
+
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, CancellationToken cancellationToken = default)
+            {
+                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>();
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+            {
+                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>();
+            }
+
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+            {
+                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>();
+            }
+
+        }
+
 
         [TestMethod]
         public void Should_find_proper_bucket_for_int32()
@@ -26,7 +54,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedTableRouter<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s, new FakeEndpointInvoker<KNodeId32>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -37,7 +65,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_double()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedTableRouter<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s, new FakeEndpointInvoker<KNodeId32>());
 
             for (int i = 1; i <= 262144 * 8; i++)
                 await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
@@ -54,7 +82,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_mt()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedTableRouter<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s, new FakeEndpointInvoker<KNodeId32>());
 
             var r = new Random();
             var l = new List<Task>();
@@ -68,7 +96,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedTableRouter<KNodeId64>(s);
+            var t = new KFixedTableRouter<KNodeId64>(s, new FakeEndpointInvoker<KNodeId64>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -79,7 +107,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64_mt()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedTableRouter<KNodeId64>(s);
+            var t = new KFixedTableRouter<KNodeId64>(s, new FakeEndpointInvoker<KNodeId64>());
 
             var r = new Random();
             var l = new List<Task>();
@@ -93,7 +121,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedTableRouter<KNodeId128>(s);
+            var t = new KFixedTableRouter<KNodeId128>(s, new FakeEndpointInvoker<KNodeId128>());
 
             for (int i = 0; i < 262144 * 8; i++)
                 await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null);
@@ -103,7 +131,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128_mt()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedTableRouter<KNodeId128>(s);
+            var t = new KFixedTableRouter<KNodeId128>(s, new FakeEndpointInvoker<KNodeId128>());
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
@@ -116,7 +144,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedTableRouter<KNodeId160>(s);
+            var t = new KFixedTableRouter<KNodeId160>(s, new FakeEndpointInvoker<KNodeId160>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -127,7 +155,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160_mt()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedTableRouter<KNodeId160>(s);
+            var t = new KFixedTableRouter<KNodeId160>(s, new FakeEndpointInvoker<KNodeId160>());
 
             var r = new Random();
             var l = new List<Task>();
@@ -141,7 +169,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedTableRouter<KNodeId256>(s);
+            var t = new KFixedTableRouter<KNodeId256>(s, new FakeEndpointInvoker<KNodeId256>());
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -152,7 +180,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256_mt()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedTableRouter<KNodeId256>(s);
+            var t = new KFixedTableRouter<KNodeId256>(s, new FakeEndpointInvoker<KNodeId256>());
 
             var r = new Random();
             var l = new List<Task>();

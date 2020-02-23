@@ -176,7 +176,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                 foreach (var i in endpoints.Values)
                 {
                     logger?.LogInformation("Socket listening on {Endpoint}.", i);
-                    engine.SelfData.Endpoints.AddLast(i);
+                    engine.SelfData.Endpoints.Demote(i);
                 }
 
                 recvArgs = new SocketAsyncEventArgs();
