@@ -14,7 +14,7 @@ using Cogito.Threading;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cogito.Kademlia.Protocols
+namespace Cogito.Kademlia.Protocols.Udp
 {
 
     /// <summary>

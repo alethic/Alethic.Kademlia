@@ -6,8 +6,8 @@ using Autofac;
 
 using Cogito.Autofac;
 using Cogito.Kademlia.Network;
-using Cogito.Kademlia.Protocols;
 using Cogito.Kademlia.Protocols.Protobuf;
+using Cogito.Kademlia.Protocols.Udp;
 using Cogito.Serilog;
 
 using Microsoft.Extensions.Logging;

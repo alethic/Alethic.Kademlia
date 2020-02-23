@@ -59,10 +59,9 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
-        /// Associates the routing table with the given engine.
+        /// Engine associated with the routing table.
         /// </summary>
-        /// <param name="engine"></param>
-        void Initialize(IKEngine<TKNodeId> engine);
+        IKEngine<TKNodeId> Engine { get; set; }
 
         /// <summary>
         /// Gets the ID of the node itself.

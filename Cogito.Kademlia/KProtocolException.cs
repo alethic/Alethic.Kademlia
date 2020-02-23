@@ -1,12 +1,10 @@
-﻿using System;
-
-namespace Cogito.Kademlia
+﻿namespace Cogito.Kademlia
 {
 
     /// <summary>
     /// Describes an exception that occurred in a Kademlia protocol implementation.
     /// </summary>
-    public class KProtocolException : Exception
+    public class KProtocolException : KException
     {
 
         readonly KProtocolError error;

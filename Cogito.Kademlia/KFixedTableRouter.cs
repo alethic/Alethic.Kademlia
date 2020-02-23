@@ -95,24 +95,13 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Initializes the router.
+        /// Gets or sets the currently associated engine.
         /// </summary>
-        /// <param name="engine"></param>
-        void IKRouter<TKNodeId>.Initialize(IKEngine<TKNodeId> engine)
+        public IKEngine<TKNodeId> Engine
         {
-            if (engine == null)
-                throw new ArgumentNullException(nameof(engine));
-            if (this.engine != null && this.engine != engine)
-                throw new InvalidOperationException();
-
-            logger?.LogTrace("Attaching to engine.");
-            this.engine = engine;
+            get => engine;
+            set => engine = value;
         }
-
-        /// <summary>
-        /// Gets the currently associated engine.
-        /// </summary>
-        public IKEngine<TKNodeId> Engine => engine;
 
         /// <summary>
         /// Gets the ID of the node itself.
@@ -198,7 +187,7 @@ namespace Cogito.Kademlia
         {
             logger?.LogTrace("Beginning table refresh.");
 
-            return new ValueTask(Task.WhenAll(Enumerable.Range(1, buckets.Length - 1).Select(i => GetRandomNodeIdFromBucket(i)).Select(i => engine.LookupAsync(i, cancellationToken).AsTask())));
+            return new ValueTask(Task.WhenAll(Enumerable.Range(1, buckets.Length - 1).Select(i => GetRandomNodeIdFromBucket(i)).Select(i => engine.LookupNodeAsync(i, cancellationToken).AsTask())));
         }
 
         /// <summary>

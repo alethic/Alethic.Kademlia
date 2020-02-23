@@ -62,7 +62,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<TKNodeId> LookupAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<TKNodeId> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the value for the specified key.

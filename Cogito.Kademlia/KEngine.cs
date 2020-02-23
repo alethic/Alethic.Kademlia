@@ -19,22 +19,32 @@ namespace Cogito.Kademlia
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
+        readonly int alpha;
         readonly IKRouter<TKNodeId, TKPeerData> router;
         readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="network"></param>
         /// <param name="router"></param>
+        /// <param name="alpha"></param>
         /// <param name="logger"></param>
-        public KEngine(IKRouter<TKNodeId, TKPeerData> router, ILogger logger = null)
+        public KEngine(IKRouter<TKNodeId, TKPeerData> router, int alpha = 3, ILogger logger = null)
         {
-            this.router = router ?? throw new ArgumentNullException(nameof(router));
+            if (router == null)
+                throw new ArgumentNullException(nameof(router));
+            if (alpha < 1)
+                throw new ArgumentOutOfRangeException(nameof(alpha));
+
+            this.router = router;
+            this.alpha = alpha;
             this.logger = logger;
 
+            if (this.router.Engine != null)
+                throw new KException("Router already attached to engine.");
+
             // configure router
-            this.router.Initialize(this);
+            this.router.Engine = this;
             logger?.LogInformation("Attached to router as {NodeId}.", this.router.SelfId);
         }
 
@@ -54,6 +64,12 @@ namespace Cogito.Kademlia
         public IKRouter<TKNodeId, TKPeerData> Router => router;
 
         /// <summary>
+        /// Gets the 'alpha' value. The alpha value represents the number of concurrent requests to keep inflight for
+        /// a lookup.
+        /// </summary>
+        public int Alpha => alpha;
+
+        /// <summary>
         /// Initiates a bootstrap connection to the specified endpoints.
         /// </summary>
         /// <param name="endpoints"></param>
@@ -68,7 +84,7 @@ namespace Cogito.Kademlia
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
             await router.UpdatePeerAsync(r.Sender, null, r.Body.Endpoints, cancellationToken);
-            await LookupAsync(SelfId, cancellationToken);
+            await LookupNodeAsync(SelfId, cancellationToken);
         }
 
         /// <summary>
@@ -111,9 +127,9 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<TKNodeId> LookupAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<TKNodeId> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            return LookupAsync(key, cancellationToken);
+            return LookupNodeAsync(key, cancellationToken);
         }
 
         /// <summary>
@@ -122,13 +138,17 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<TKNodeId> LookupAsync(TKNodeId key, CancellationToken cancellationToken = default)
+        async ValueTask<TKNodeId> LookupNodeAsync(TKNodeId key, CancellationToken cancellationToken = default)
         {
             var wait = new HashSet<Task<(IKEndpoint<TKNodeId> Endpoint, IEnumerable<KPeerEndpointInfo<TKNodeId>> Peers)?>>();
             var comp = new KNodeIdDistanceComparer<TKNodeId>(key);
 
+            // kill is used to cancel outstanding tasks early
+            var kill = new CancellationTokenSource();
+            var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, kill.Token);
+
             // find our own closest peers to seed from
-            var init = await router.GetPeersAsync(key, 3, cancellationToken);
+            var init = await router.GetPeersAsync(key, alpha, cancellationToken);
             var hash = new HashSet<TKNodeId>(init.Select(i => i.Id));
             if (hash.Count == 0)
                 throw new InvalidOperationException("Cannot conduct lookup, no initial nodes to contact.");
@@ -140,36 +160,44 @@ namespace Cogito.Kademlia
             // our nearest neighbor so far
             var near = todo.FindMin();
 
-            // we continue until we have no more work todo
-            while (todo.Count > 0)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // schedule queries of our closest nodes
-                while (wait.Count < 3 && todo.Count > 0)
+                // we continue until we have no more work todo
+                while (todo.Count > 0)
                 {
-                    // schedule new node to query
-                    var n = todo.DeleteMin();
-                    if (n.Equals(SelfId) == false)
-                        wait.Add(FindNodeAsync(n, key, cancellationToken).AsTask());
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                // we have at least one task in the task pool to wait for
-                if (wait.Count > 0)
-                {
-                    try
+                    // schedule queries of our closest nodes
+                    while (wait.Count < alpha && todo.Count > 0)
+                    {
+                        // schedule new node to query
+                        var n = todo.DeleteMin();
+                        if (n.Equals(SelfId) == false)
+                            wait.Add(FindNodeAsync(n, key, stop.Token).AsTask().ContinueWith((r, o) => r.Result, n));
+                    }
+
+                    // we have at least one task in the task pool to wait for
+                    if (wait.Count > 0)
                     {
                         // wait for first finished task
                         var r = await Task.WhenAny(wait);
                         wait.Remove(r);
 
-                        // skip failed tasks
-                        if (r.Exception != null)
+                        // skip cancelled tasks
+                        if (r.IsCanceled)
                             continue;
 
-                        // iterate over newly retrieved peers
+                        // skip failed tasks
+                        if (r.Exception != null)
+                        {
+                            logger?.LogError(r.Exception, "Received error from lookup task.");
+                            continue;
+                        }
+
+                        // task returned something; must have succeeded in our lookup
                         if (r.Result.HasValue)
                         {
+                            // iterate over newly retrieved peers
                             foreach (var i in r.Result.Value.Peers)
                             {
                                 // received node is closer than current
@@ -178,24 +206,39 @@ namespace Cogito.Kademlia
                                 {
                                     near = n;
 
-                                    // update router and move peer to queried list
+                                    // update router and move peer to query list
                                     await router.UpdatePeerAsync(n, null, i.Endpoints, cancellationToken);
                                     if (hash.Add(n))
                                     {
                                         todo.Add(n);
 
                                         // remove uninteresting nodes
-                                        while (todo.Count > 20)
+                                        while (todo.Count > router.K)
                                             todo.DeleteMax();
                                     }
                                 }
                             }
                         }
                     }
-                    catch (Exception e)
+                }
+            }
+            finally
+            {
+                // signal any remaining tasks to exit immediately
+                kill.Cancel();
+
+                try
+                {
+                    // clean up and capture results of outstanding
+                    if (wait.Count > 0)
                     {
-                        // ignore
+                        logger?.LogDebug("Cancelling {Count} outstanding requests.", wait.Count);
+                        await Task.WhenAll(wait);
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
                 }
             }
 
@@ -283,7 +326,7 @@ namespace Cogito.Kademlia
         /// Attempts to execute the specified method against the provided endpoints.
         /// </summary>
         /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="func"></param>
         /// <returns></returns>
         async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IEnumerable<IKEndpoint<TKNodeId>> endpoints, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
             where TResponseBody : struct, IKResponseData<TKNodeId>

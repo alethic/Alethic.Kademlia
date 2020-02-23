@@ -13,7 +13,7 @@ using Cogito.Threading;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cogito.Kademlia.Protocols
+namespace Cogito.Kademlia.Protocols.Udp
 {
 
     /// <summary>
@@ -198,7 +198,7 @@ namespace Cogito.Kademlia.Protocols
             using (sync.LockAsync().Result)
             {
                 var s = (Socket)sender;
-                if (s != null && s.IsBound)
+                if (s != null)
                 {
                     // reset remote endpoint
                     args.RemoteEndPoint = p.Protocol switch
@@ -208,7 +208,14 @@ namespace Cogito.Kademlia.Protocols
                         _ => throw new InvalidOperationException(),
                     };
 
-                    s.ReceiveMessageFromAsync(args);
+                    try
+                    {
+                        s.ReceiveMessageFromAsync(args);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // we must have been terminated, ignore
+                    }
                 }
             }
         }
