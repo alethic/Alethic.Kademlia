@@ -8,9 +8,19 @@
     {
 
         /// <summary>
+        /// A generic error related to the protocol.
+        /// </summary>
+        Invalid = 0,
+
+        /// <summary>
         /// The Kademlia protocol implementation is no longer available.
         /// </summary>
-        NotAvailable = 1,
+        ProtocolNotAvailable = 1,
+
+        /// <summary>
+        /// The specified attempted endpoint is no longer available.
+        /// </summary>
+        EndpointNotAvailable = 2,
 
     }
 

@@ -21,11 +21,6 @@ namespace Cogito.Kademlia
         TKPeerData SelfData { get; }
 
         /// <summary>
-        /// Gets the number of peers known by the router.
-        /// </summary>
-        int Count { get; }
-
-        /// <summary>
         /// Gets the stored peer data within the router.
         /// </summary>
         /// <param name="id"></param>
@@ -67,12 +62,22 @@ namespace Cogito.Kademlia
         /// Associates the routing table with the given engine.
         /// </summary>
         /// <param name="engine"></param>
-        void Attach(IKEngine<TKNodeId> engine);
+        void Initialize(IKEngine<TKNodeId> engine);
 
         /// <summary>
         /// Gets the ID of the node itself.
         /// </summary>
         TKNodeId SelfId { get; }
+
+        /// <summary>
+        /// Gets the current K-value of the router.
+        /// </summary>
+        int K { get; }
+
+        /// <summary>
+        /// Gets the number of peers known by the router.
+        /// </summary>
+        int Count { get; }
 
     }
 

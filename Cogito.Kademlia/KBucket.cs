@@ -5,14 +5,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cogito.Collections;
 using Cogito.Threading;
+
+using Microsoft.Extensions.Logging;
 
 namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Represents a set of items within a <see cref="KTable{TKNodeId, TKBucketItem}"/>.
+    /// Represents a set of items within a <see cref="KFixedTableRouter{TKNodeId}"/>.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
@@ -21,56 +22,23 @@ namespace Cogito.Kademlia
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
+        readonly IKRouter<TKNodeId> router;
         readonly int k;
+        readonly ILogger logger;
         readonly ReaderWriterLockSlim rw = new ReaderWriterLockSlim();
-        readonly LinkedList<KBucketItem<TKNodeId, TKPeerData>> l;
+        readonly LinkedList<KBucketItem<TKNodeId, TKPeerData>> l = new LinkedList<KBucketItem<TKNodeId, TKPeerData>>();
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="router"></param>
         /// <param name="k"></param>
-        public KBucket(int k)
+        /// <param name="logger"></param>
+        public KBucket(IKRouter<TKNodeId> router, int k, ILogger logger = null)
         {
+            this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.k = k;
-
-            l = new LinkedList<KBucketItem<TKNodeId, TKPeerData>>();
-        }
-
-        /// <summary>
-        /// Attempts to ping all of the provided endpoints and returns <c>true</c> if any are reachable.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        async ValueTask<IEnumerable<IKEndpoint<TKNodeId>>> TryPingAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var r = await endpoint.PingAsync(new KPingRequest<TKNodeId>(), cancellationToken);
-                if (r.Body.Endpoints.Length > 0)
-                    return r.Body.Endpoints.ToArray();
-            }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Attempts to ping all of the provided endpoints and returns <c>true</c> if any are reachable.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        async ValueTask<IEnumerable<IKEndpoint<TKNodeId>>> TryPingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
-        {
-            foreach (var endpoint in endpoints)
-                if (await TryPingAsync(endpoint, cancellationToken) is IEnumerable<IKEndpoint<TKNodeId>> e)
-                    return e;
-
-            return null;
+            this.logger = logger;
         }
 
         /// <summary>
@@ -109,6 +77,8 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         async ValueTask UpdatePeerAsync(TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
         {
+            logger?.LogTrace("Updating peer {NodeId} with {Endpoint}.", nodeId, endpoint);
+
             var lk = rw.BeginUpgradableReadLock();
 
             try
@@ -118,27 +88,39 @@ namespace Cogito.Kademlia
                 {
                     using (rw.BeginWriteLock())
                     {
-                        // item already exists, move to tail
+                        logger?.LogTrace("Peer {NodeId} exists, moving to tail.", nodeId);
                         l.Remove(i);
                         l.AddLast(i);
+
+                        // promote contact endpoint to top
+                        if (endpoint != null)
+                        {
+                            logger?.LogTrace("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
+                            i.Value.Data.Endpoints.AddFirst(endpoint);
+                        }
 
                         // incorporate new additional endpoints into end of set
                         if (additional != null)
                             foreach (var j in additional)
                                 if (i.Value.Data.Endpoints.Contains(j) == false)
                                     i.Value.Data.Endpoints.AddLast(j);
-
-                        // promote contact endpoint to top
-                        if (endpoint != null)
-                            i.Value.Data.Endpoints.AddFirst(endpoint);
                     }
                 }
                 else if (l.Count < k)
                 {
                     using (rw.BeginWriteLock())
                     {
+                        logger?.LogTrace("Peer {NodeId} does not exist, appending to tail.", nodeId);
+
                         // generate new peer entry
                         var p = new TKPeerData();
+
+                        // promote contact endpoint to top
+                        if (endpoint != null)
+                        {
+                            logger?.LogDebug("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
+                            p.Endpoints.AddFirst(endpoint);
+                        }
 
                         // incorporate new additional endpoints into end of set
                         if (additional != null)
@@ -146,22 +128,20 @@ namespace Cogito.Kademlia
                                 if (p.Endpoints.Contains(j) == false)
                                     p.Endpoints.AddLast(j);
 
-                        // promote contact endpoint to top
-                        if (endpoint != null)
-                            p.Endpoints.AddFirst(endpoint);
-
                         // item does not exist, but bucket has room, insert at tail
                         l.AddLast(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                     }
                 }
                 else
                 {
+                    logger?.LogTrace("Peer {NodeId} not in bucket, however bucket is full. Beginning peer elimination.", nodeId);
+
                     // item does not exist, but bucket does not have room, ping first entry
                     var n = l.First;
 
                     // start ping, check for async completion
-                    var r = (IEnumerable<IKEndpoint<TKNodeId>>)null;
-                    var t = TryPingAsync(n.Value.Data.Endpoints, cancellationToken);
+                    var r = (KResponse<TKNodeId, KPingResponse<TKNodeId>>)default;
+                    var t = endpoint.Protocol.Engine.PingAsync(n.Value.Data.Endpoints, cancellationToken);
 
                     // completed synchronously (or immediately)
                     if (t.IsCompleted)
@@ -175,8 +155,10 @@ namespace Cogito.Kademlia
                     }
 
                     // was able to successfully ping the node
-                    if (r != null)
+                    if (r.Status == KResponseStatus.Success)
                     {
+                        logger?.LogTrace("PING to {ExistingNodeId} succeeded. Keeping existing peer and discarding {NodeId}.", n.Value.Id, nodeId);
+
                         // entry had response, move to tail, discard new entry
                         if (l.Count > 1)
                         {
@@ -193,6 +175,8 @@ namespace Cogito.Kademlia
                     }
                     else
                     {
+                        logger?.LogTrace("PING failed to {PingNodeId}. Replacing with {NodeId}", n, nodeId);
+
                         using (rw.BeginWriteLock())
                         {
                             // first entry had no response, remove, insert new at tail

@@ -15,7 +15,6 @@
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="version"></param>
         /// <param name="sender"></param>
         /// <param name="magic"></param>
         public KMessageHeader(in TKNodeId sender, uint magic)

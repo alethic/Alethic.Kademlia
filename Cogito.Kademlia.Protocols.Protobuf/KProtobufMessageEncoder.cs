@@ -19,13 +19,14 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        public void Encode(IKProtocol<TKNodeId> protocol, IBufferWriter<byte> buffer, IEnumerable<IKMessage<TKNodeId>> messages)
+        public void Encode(IKProtocol<TKNodeId> protocol, IBufferWriter<byte> buffer, KMessageSequence<TKNodeId> sequence)
         {
             var m = new MemoryStream();
 
             // generate packet
             var p = new Packet();
-            p.Messages.AddRange(Encode(protocol, messages));
+            p.NetworkId = sequence.NetworkId;
+            p.Messages.AddRange(Encode(protocol, sequence));
             p.WriteTo(m);
 
             // reset and dump stream into buffer writer

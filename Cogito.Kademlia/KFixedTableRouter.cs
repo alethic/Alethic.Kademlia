@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
 
+using Microsoft.Extensions.Logging;
+
 namespace Cogito.Kademlia
 {
 
@@ -16,9 +18,11 @@ namespace Cogito.Kademlia
     /// Implements a fixed Kademlia routing table with the default peer data type.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KFixedRoutingTable<TKNodeId> : KFixedRoutingTable<TKNodeId, KPeerData<TKNodeId>>
+    public class KFixedTableRouter<TKNodeId> : KFixedRoutingTable<TKNodeId, KPeerData<TKNodeId>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
+
+        readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance.
@@ -26,10 +30,11 @@ namespace Cogito.Kademlia
         /// <param name="selfId"></param>
         /// <param name="selfData"></param>
         /// <param name="k"></param>
-        public KFixedRoutingTable(in TKNodeId selfId, int k = 20) :
-            base(selfId, new KPeerData<TKNodeId>(), k)
+        /// <param name="logger"></param>
+        public KFixedTableRouter(in TKNodeId selfId, int k = DefaultKSize, ILogger logger = null) :
+            base(selfId, new KPeerData<TKNodeId>(), k, logger)
         {
-
+            this.logger = logger;
         }
 
         /// <summary>
@@ -38,8 +43,9 @@ namespace Cogito.Kademlia
         /// <param name="selfId"></param>
         /// <param name="selfData"></param>
         /// <param name="k"></param>
-        public KFixedRoutingTable(in TKNodeId selfId, in KPeerData<TKNodeId> selfData, int k = 20) :
-            base(selfId, selfData, k)
+        /// <param name="logger"></param>
+        public KFixedTableRouter(in TKNodeId selfId, in KPeerData<TKNodeId> selfData, int k = DefaultKSize, ILogger logger = null) :
+            base(selfId, selfData, k, logger)
         {
 
         }
@@ -51,14 +57,17 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedRoutingTable, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
+    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedTableRouter, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
+        public const int DefaultKSize = 20;
+
         readonly TKNodeId selfId;
         readonly TKPeerData selfData;
         readonly int k;
+        readonly ILogger logger;
         readonly KBucket<TKNodeId, TKPeerData>[] buckets;
 
         IKEngine<TKNodeId> engine;
@@ -67,29 +76,36 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         /// </summary>
         /// <param name="selfId"></param>
+        /// <param name="selfData"></param>
         /// <param name="k"></param>
-        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, int k = 20)
+        /// <param name="logger"></param>
+        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, int k = DefaultKSize, ILogger logger = null)
         {
+            if (k < 1)
+                throw new ArgumentOutOfRangeException("The value of k must be greater than or equal to 1.");
+
             this.selfId = selfId;
             this.selfData = selfData;
             this.k = k;
+            this.logger = logger;
 
             buckets = new KBucket<TKNodeId, TKPeerData>[Unsafe.SizeOf<TKNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
-                buckets[i] = new KBucket<TKNodeId, TKPeerData>(k);
+                buckets[i] = new KBucket<TKNodeId, TKPeerData>(this, k, logger);
         }
 
         /// <summary>
-        /// Attaches the routing table to the given engine.
+        /// Initializes the router.
         /// </summary>
         /// <param name="engine"></param>
-        void IKRouter<TKNodeId>.Attach(IKEngine<TKNodeId> engine)
+        void IKRouter<TKNodeId>.Initialize(IKEngine<TKNodeId> engine)
         {
             if (engine == null)
                 throw new ArgumentNullException(nameof(engine));
             if (this.engine != null && this.engine != engine)
                 throw new InvalidOperationException();
 
+            logger?.LogTrace("Attaching to engine.");
             this.engine = engine;
         }
 
@@ -121,6 +137,7 @@ namespace Cogito.Kademlia
         internal KBucket<TKNodeId, TKPeerData> GetBucket(in TKNodeId nodeId)
         {
             var i = GetBucketIndex(selfId, nodeId);
+            logger?.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", nodeId, i);
             return buckets[i];
         }
 
@@ -145,10 +162,15 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken = default)
         {
+            logger?.LogTrace("Received request to update peer {NodeId} with {Endpoint}.", nodeId, endpoint);
+
             if (nodeId.Equals(SelfId))
+            {
+                logger?.LogError("Peer update request for self at {Endpoint}. Discarding.", endpoint);
                 return new ValueTask(Task.CompletedTask);
-            else
-                return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
+            }
+
+            return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
         }
 
         /// <summary>
@@ -160,6 +182,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
         {
+            logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
+
             var c = new KNodeIdDistanceComparer<TKNodeId>(key);
             var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
             return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
@@ -172,6 +196,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
         {
+            logger?.LogTrace("Beginning table refresh.");
+
             return new ValueTask(Task.WhenAll(Enumerable.Range(1, buckets.Length - 1).Select(i => GetRandomNodeIdFromBucket(i)).Select(i => engine.LookupAsync(i, cancellationToken).AsTask())));
         }
 
@@ -232,7 +258,7 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a Kademlia routing table.
     /// </summary>
-    public abstract class KFixedRoutingTable
+    public abstract class KFixedTableRouter
     {
 
         /// <summary>

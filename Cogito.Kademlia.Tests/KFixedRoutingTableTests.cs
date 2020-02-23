@@ -17,16 +17,16 @@ namespace Cogito.Kademlia.Tests
         public void Should_find_proper_bucket_for_int32()
         {
             var s = new KNodeId32(0);
-            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(1)).Should().Be(0);
-            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(2)).Should().Be(1);
-            KFixedRoutingTable.GetBucketIndex(s, new KNodeId32(2147483648)).Should().Be(31);
+            KFixedTableRouter.GetBucketIndex(s, new KNodeId32(1)).Should().Be(0);
+            KFixedTableRouter.GetBucketIndex(s, new KNodeId32(2)).Should().Be(1);
+            KFixedTableRouter.GetBucketIndex(s, new KNodeId32(2147483648)).Should().Be(31);
         }
 
         [TestMethod]
         public async Task Can_randomly_populate_int32()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedRoutingTable<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -37,7 +37,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_double()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedRoutingTable<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s);
 
             for (int i = 1; i <= 262144 * 8; i++)
                 await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
@@ -54,7 +54,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int32_mt()
         {
             var s = new KNodeId32(0);
-            var t = new KFixedRoutingTable<KNodeId32>(s);
+            var t = new KFixedTableRouter<KNodeId32>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -68,7 +68,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedRoutingTable<KNodeId64>(s);
+            var t = new KFixedTableRouter<KNodeId64>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -79,7 +79,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int64_mt()
         {
             var s = new KNodeId64(0);
-            var t = new KFixedRoutingTable<KNodeId64>(s);
+            var t = new KFixedTableRouter<KNodeId64>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -93,7 +93,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedRoutingTable<KNodeId128>(s);
+            var t = new KFixedTableRouter<KNodeId128>(s);
 
             for (int i = 0; i < 262144 * 8; i++)
                 await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null);
@@ -103,7 +103,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int128_mt()
         {
             var s = new KNodeId128(Guid.Empty);
-            var t = new KFixedRoutingTable<KNodeId128>(s);
+            var t = new KFixedTableRouter<KNodeId128>(s);
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
@@ -116,7 +116,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId160>(s);
+            var t = new KFixedTableRouter<KNodeId160>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -127,7 +127,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int160_mt()
         {
             var s = new KNodeId160(0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId160>(s);
+            var t = new KFixedTableRouter<KNodeId160>(s);
 
             var r = new Random();
             var l = new List<Task>();
@@ -141,7 +141,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId256>(s);
+            var t = new KFixedTableRouter<KNodeId256>(s);
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
@@ -152,7 +152,7 @@ namespace Cogito.Kademlia.Tests
         public async Task Can_randomly_populate_int256_mt()
         {
             var s = new KNodeId256(0, 0, 0, 0);
-            var t = new KFixedRoutingTable<KNodeId256>(s);
+            var t = new KFixedTableRouter<KNodeId256>(s);
 
             var r = new Random();
             var l = new List<Task>();

@@ -19,9 +19,11 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        public IEnumerable<IKMessage<TKNodeId>> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer)
+        public KMessageSequence<TKNodeId> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer)
         {
-            return Decode(protocol, Packet.Parser.ParseFrom(buffer.ToArray()).Messages);
+            var p = Packet.Parser.ParseFrom(buffer.ToArray());
+            var s = new KMessageSequence<TKNodeId>(p.NetworkId, Decode(protocol, p.Messages));
+            return s;
         }
 
         IEnumerable<IKMessage<TKNodeId>> Decode(IKProtocol<TKNodeId> protocol, RepeatedField<Message> messages)

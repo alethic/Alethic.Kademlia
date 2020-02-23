@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Collections.Generic;
 
 namespace Cogito.Kademlia.Protocols
 {
@@ -18,7 +17,7 @@ namespace Cogito.Kademlia.Protocols
         /// <param name="protocol"></param>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        IEnumerable<IKMessage<TKNodeId>> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer);
+        KMessageSequence<TKNodeId> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer);
 
     }
 

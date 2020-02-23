@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,6 +41,14 @@ namespace Cogito.Kademlia
         TKNodeId SelfId { get; }
 
         /// <summary>
+        /// Attempts to connect the engine to one of the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask ConnectAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Initiates a lookup for the specified key and returns the closest node.
         /// </summary>
         /// <param name="key"></param>
@@ -63,6 +72,38 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask SetValueAsync(in TKNodeId key, ReadOnlySpan<byte> value, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Initiates a PING request against the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Initiates a STORE request against the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Initiates a FIND_NODE request against the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Initiates a FIND_VALUE request against the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Invoked to handle incoming PING requests.

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
@@ -61,7 +62,7 @@ namespace Cogito.Kademlia.Network
         /// </summary>
         /// <param name="address"></param>
         public KIp4Address(IPAddress address) :
-            this(address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes() : throw new ArgumentException())
+            this(address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes().ToArray() : throw new ArgumentException())
         {
 
         }
@@ -73,7 +74,7 @@ namespace Cogito.Kademlia.Network
         public IPAddress ToIPAddress()
         {
             fixed (byte* ptr = data)
-                return new IPAddress(BinaryPrimitives.ReadUInt32BigEndian(new ReadOnlySpan<byte>(ptr, 4)));
+                return new IPAddress(new ReadOnlySpan<byte>(ptr, 4).ToArray());
         }
 
         /// <summary>
