@@ -54,7 +54,7 @@ namespace Cogito.Kademlia
         public IKRouter<TKNodeId, TKPeerData> Router => router;
 
         /// <summary>
-        /// Initiates a bootstrap connection to the specified endpoint.
+        /// Initiates a bootstrap connection to the specified endpoints.
         /// </summary>
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
@@ -69,6 +69,17 @@ namespace Cogito.Kademlia
 
             await router.UpdatePeerAsync(r.Sender, null, r.Body.Endpoints, cancellationToken);
             await LookupAsync(SelfId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Initiates a bootstrap connection to the specified endpoint.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken = default)
+        {
+            return ConnectAsync(new[] { endpoint });
         }
 
         /// <summary>

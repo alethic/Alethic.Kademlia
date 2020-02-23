@@ -27,7 +27,7 @@ namespace Cogito.Kademlia.Protocols
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(3);
         static readonly Random rnd = new Random();
 
         readonly uint networkId;

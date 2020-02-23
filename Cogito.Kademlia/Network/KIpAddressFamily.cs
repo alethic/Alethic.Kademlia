@@ -4,7 +4,7 @@
     /// <summary>
     /// Describes the format of an IP endpoint.
     /// </summary>
-    public enum KIpProtocol : byte
+    public enum KIpAddressFamily : byte
     {
 
         /// <summary>

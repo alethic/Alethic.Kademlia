@@ -17,13 +17,16 @@ namespace Cogito.Kademlia.Protocols
 {
 
     /// <summary>
-    /// Listens for multicast PING requests on a multicast group.
+    /// Listens for multicast PING requests on a multicast group and provides Connect operations for joining a UDP Kademlia network.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KUdpMulticastDiscovery<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
+
+        static readonly KIpEndpoint Ip4Any = new KIpEndpoint(new KIp4Address(), 0);
+        static readonly KIpEndpoint Ip6Any = new KIpEndpoint(new KIp6Address(), 0);
 
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         static readonly Random rnd = new Random();
@@ -39,9 +42,11 @@ namespace Cogito.Kademlia.Protocols
 
         readonly KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>> pingQueue = new KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>>(DefaultTimeout);
 
-        Socket socket;
-        Socket socket2;
-        SocketAsyncEventArgs recvArgs;
+        Socket mcastSocket;
+        SocketAsyncEventArgs mcastRecvArgs;
+
+        Socket localSocket;
+        SocketAsyncEventArgs localRecvArgs;
 
         /// <summary>
         /// Initializes a new instance.
@@ -94,6 +99,16 @@ namespace Cogito.Kademlia.Protocols
         }
 
         /// <summary>
+        /// Gets the wildcard endpoint.
+        /// </summary>
+        KIpEndpoint IpAny => endpoint.Protocol switch
+        {
+            KIpAddressFamily.IPv4 => Ip4Any,
+            KIpAddressFamily.IPv6 => Ip6Any,
+            _ => throw new InvalidOperationException(),
+        };
+
+        /// <summary>
         /// Starts listening for announcement packets.
         /// </summary>
         /// <param name="cancellationToken"></param>
@@ -102,42 +117,57 @@ namespace Cogito.Kademlia.Protocols
         {
             using (await sync.LockAsync())
             {
-                if (socket != null)
+                if (mcastSocket != null)
                     throw new KProtocolException(KProtocolError.Invalid, "Discovery is already started.");
 
                 switch (endpoint.Protocol)
                 {
-                    case KIpProtocol.IPv4:
+                    case KIpAddressFamily.IPv4:
                         logger?.LogInformation("Initializing IPv4 multicast UDP discovery on {Endpoint}.", endpoint);
-                        socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                        socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                        socket.Bind(new IPEndPoint(IPAddress.Any, endpoint.Port));
-                        socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(endpoint.V4.ToIPAddress(), IPAddress.Any));
-                        socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
+                        mcastSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                        mcastSocket.Bind(new IPEndPoint(IPAddress.Any, endpoint.Port));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(endpoint.V4.ToIPAddress(), IPAddress.Any));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
+                        mcastRecvArgs = new SocketAsyncEventArgs();
+                        mcastRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
-                        recvArgs = new SocketAsyncEventArgs();
-                        recvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                        localSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        localSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
+                        localSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
+                        localSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
+                        localRecvArgs = new SocketAsyncEventArgs();
+                        localRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
                         break;
-                    case KIpProtocol.IPv6:
+                    case KIpAddressFamily.IPv6:
                         logger?.LogInformation("Initializing IPv6 multicast UDP discovery on {Endpoint}.", endpoint);
-                        socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                        socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                        socket.Bind(new IPEndPoint(IPAddress.IPv6Any, endpoint.Port));
-                        socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new MulticastOption(endpoint.V6.ToIPAddress(), IPAddress.IPv6Any));
-                        socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastTimeToLive, 2);
+                        mcastSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                        mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                        mcastSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, endpoint.Port));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new MulticastOption(endpoint.V6.ToIPAddress(), IPAddress.IPv6Any));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastTimeToLive, 2);
+                        mcastRecvArgs = new SocketAsyncEventArgs();
+                        mcastRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
 
-                        recvArgs = new SocketAsyncEventArgs();
-                        recvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
+                        localSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                        localSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
+                        localSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
+                        localSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
+                        localRecvArgs = new SocketAsyncEventArgs();
+                        localRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
                         break;
                     default:
                         throw new InvalidOperationException();
                 }
 
-                recvArgs.SetBuffer(new byte[8192], 0, 8192);
-                recvArgs.Completed += recvArgs_Completed;
+                mcastRecvArgs.SetBuffer(new byte[8192], 0, 8192);
+                mcastRecvArgs.Completed += recvArgs_Completed;
+                localRecvArgs.SetBuffer(new byte[8192], 0, 8192);
+                localRecvArgs.Completed += recvArgs_Completed;
 
                 logger?.LogInformation("Waiting for incoming multicast announcement packets.");
-                socket.ReceiveMessageFromAsync(recvArgs);
+                mcastSocket.ReceiveMessageFromAsync(mcastRecvArgs);
+                localSocket.ReceiveMessageFromAsync(localRecvArgs);
             }
         }
 
@@ -155,7 +185,7 @@ namespace Cogito.Kademlia.Protocols
                 return;
             }
 
-            logger?.LogInformation("Received incoming UDP multicast packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
+            logger?.LogInformation("Received incoming UDP packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
             var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
             var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
             var o = MemoryPool<byte>.Shared.Rent(b.Length);
@@ -167,17 +197,18 @@ namespace Cogito.Kademlia.Protocols
             // this lock is blocking, but should be okay since this event handler can stall
             using (sync.LockAsync().Result)
             {
-                if (socket != null && socket.IsBound)
+                var s = (Socket)sender;
+                if (s != null && s.IsBound)
                 {
                     // reset remote endpoint
-                    recvArgs.RemoteEndPoint = p.Protocol switch
+                    args.RemoteEndPoint = p.Protocol switch
                     {
-                        KIpProtocol.IPv4 => new IPEndPoint(IPAddress.Any, 0),
-                        KIpProtocol.IPv6 => new IPEndPoint(IPAddress.IPv6Any, 0),
+                        KIpAddressFamily.IPv4 => new IPEndPoint(IPAddress.Any, 0),
+                        KIpAddressFamily.IPv6 => new IPEndPoint(IPAddress.IPv6Any, 0),
                         _ => throw new InvalidOperationException(),
                     };
 
-                    socket.ReceiveMessageFromAsync(recvArgs);
+                    s.ReceiveMessageFromAsync(args);
                 }
             }
         }
@@ -203,7 +234,7 @@ namespace Cogito.Kademlia.Protocols
         ValueTask OnReceiveAsync(in KIpEndpoint endpoint, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
             // check for continued connection
-            var s = socket;
+            var s = mcastSocket;
             if (s == null || s.IsBound == false)
                 return new ValueTask(Task.CompletedTask);
 
@@ -245,8 +276,8 @@ namespace Cogito.Kademlia.Protocols
         /// <returns></returns>
         ValueTask SocketSendToAsync(ArrayBufferWriter<byte> buffer, KIpEndpoint endpoint, CancellationToken cancellationToken)
         {
-            var s = socket;
-            if (s == null || s.IsBound == false)
+            var s = localSocket;
+            if (s == null)
                 throw new KProtocolException(KProtocolError.ProtocolNotAvailable, "Cannot send. Socket no longer available.");
 
             var z = new byte[buffer.WrittenCount];
@@ -258,19 +289,18 @@ namespace Cogito.Kademlia.Protocols
         /// Sends the given buffer to an endpoint and begins a wait on the specified reply queue.
         /// </summary>
         /// <typeparam name="TResponseData"></typeparam>
-        /// <param name="endpoint"></param>
         /// <param name="magic"></param>
         /// <param name="queue"></param>
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(KIpEndpoint endpoint, uint magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(uint magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
-            logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, IpAny);
 
             var c = new CancellationTokenSource();
-            var t = queue.WaitAsync(endpoint, magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
+            var t = queue.WaitAsync(IpAny, magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
 
             try
             {
@@ -285,7 +315,7 @@ namespace Cogito.Kademlia.Protocols
 
             // wait on response
             var r = await t;
-            logger?.LogDebug("Exited wait for {Magic} to {Endpoint}.", magic, endpoint);
+            logger?.LogDebug("Exited wait for {Magic} to {Endpoint}.", magic, IpAny);
             return r;
         }
 
@@ -305,7 +335,6 @@ namespace Cogito.Kademlia.Protocols
         /// <summary>
         /// Initiates a PING to the multicast endpoint.
         /// </summary>
-        /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
@@ -314,7 +343,7 @@ namespace Cogito.Kademlia.Protocols
             var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(protocol, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(endpoint, m, pingQueue, b, cancellationToken);
+            return await SendAndWaitAsync(m, pingQueue, b, cancellationToken);
         }
 
         /// <summary>
@@ -327,10 +356,10 @@ namespace Cogito.Kademlia.Protocols
         async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received multicast PING:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
-            await OnPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, request.Body.Endpoints.FirstOrDefault(), request.Body, cancellationToken), cancellationToken);
+            await SendPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, request.Body.Endpoints.FirstOrDefault(), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask SendPingReplyAsync(in KIpEndpoint endpoint, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending multicast PING:{Magic} reply to {Endpoint}.", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
@@ -347,7 +376,7 @@ namespace Cogito.Kademlia.Protocols
         /// <returns></returns>
         ValueTask OnReceivePingResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            pingQueue.Respond(endpoint, response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(response.Body.Endpoints.FirstOrDefault(), response.Header.Sender, KResponseStatus.Success, response.Body));
+            pingQueue.Respond(IpAny, response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(response.Body.Endpoints.FirstOrDefault(), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
         }
 
@@ -360,11 +389,29 @@ namespace Cogito.Kademlia.Protocols
             using (await sync.LockAsync())
             {
                 // shutdown socket
-                if (socket != null)
+                if (mcastSocket != null)
                 {
                     // swap for null
-                    var s = socket;
-                    socket = null;
+                    var s = mcastSocket;
+                    mcastSocket = null;
+
+                    try
+                    {
+                        s.Close();
+                        s.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+
+                    }
+                }
+
+                // shutdown socket
+                if (localSocket != null)
+                {
+                    // swap for null
+                    var s = localSocket;
+                    localSocket = null;
 
                     try
                     {

@@ -192,10 +192,10 @@ namespace Cogito.Kademlia.Protocols.Protobuf
 
             switch (ip.Value.Endpoint.Protocol)
             {
-                case KIpProtocol.IPv4:
+                case KIpAddressFamily.IPv4:
                     e.Address = new IpAddress() { V4 = Encode(protocol, ip.Value.Endpoint.V4) };
                     break;
-                case KIpProtocol.IPv6:
+                case KIpAddressFamily.IPv6:
                     e.Address = new IpAddress() { V6 = Encode(protocol, ip.Value.Endpoint.V6) };
                     break;
                 default:

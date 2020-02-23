@@ -18,13 +18,13 @@ namespace Cogito.Kademlia.Core
         /// <returns></returns>
         public static int CountLeadingZeros(this uint n)
         {
+            if (n == 0)
+                return 32;
+
 #if NETCOREAPP3_0
             if (Lzcnt.IsSupported)
                 return (int)Lzcnt.LeadingZeroCount(n);
 #endif
-
-            if (n == 0)
-                return 32;
 
             // do the smearing
             n |= n >> 1;

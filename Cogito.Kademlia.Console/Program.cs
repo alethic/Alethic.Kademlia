@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 
 using Autofac;
@@ -43,10 +44,37 @@ namespace Cogito.Kademlia.Console
             var mcd = new KUdpMulticastDiscovery<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
             await udp.StartAsync();
             await mcd.StartAsync();
-            await mcd.ConnectAsync();
+
+            try
+            {
+                await mcd.ConnectAsync();
+                await rtr.RefreshAsync();
+            }
+            catch (Exception e)
+            {
+
+            }
 
             System.Console.WriteLine("Started...");
-            System.Console.ReadLine();
+
+            var cont = true;
+            while (cont)
+            {
+                switch (System.Console.ReadLine())
+                {
+                    case "exit":
+                        cont = false;
+                        break;
+                    case "show":
+                        foreach (var node in rtr)
+                        {
+                            System.Console.WriteLine("{0}", node.Key);
+                            foreach (var ep in node.Value.Endpoints)
+                                System.Console.WriteLine("    {0}", ep);
+                        }
+                        break;
+                }
+            }
 
             await mcd.StopAsync();
             await udp.StopAsync();

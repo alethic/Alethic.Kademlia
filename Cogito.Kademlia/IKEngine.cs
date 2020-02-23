@@ -49,6 +49,14 @@ namespace Cogito.Kademlia
         ValueTask ConnectAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Attempts to connect the engine to one of the specified endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoints, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Initiates a lookup for the specified key and returns the closest node.
         /// </summary>
         /// <param name="key"></param>

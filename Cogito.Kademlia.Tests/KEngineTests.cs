@@ -47,7 +47,7 @@ namespace Cogito.Kademlia.Tests
                 if (n >= s)
                     n = 0;
 
-                await Task.Run(() => kad[j].BootstrapAsync(udp[j].CreateEndpoint(udp[n].Endpoints.Cast<KIpProtocolEndpoint<KNodeId32>>().First().Endpoint)));
+                await Task.Run(() => kad[j].ConnectAsync(udp[j].CreateEndpoint(udp[n].Endpoints.Cast<KIpProtocolEndpoint<KNodeId32>>().First().Endpoint)));
                 await Task.Delay(TimeSpan.FromMilliseconds(500));
             }
 
