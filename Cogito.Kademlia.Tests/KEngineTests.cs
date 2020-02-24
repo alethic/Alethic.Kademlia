@@ -26,7 +26,7 @@ namespace Cogito.Kademlia.Tests
             var dec = new KProtobufMessageDecoder<KNodeId32>();
             var kid = new KNodeId32[s];
             var dat = new KPeerData<KNodeId32>[s];
-            var krt = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>[s];
+            var krt = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>[s];
             var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>[s];
             var udp = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>[s];
 
@@ -35,8 +35,9 @@ namespace Cogito.Kademlia.Tests
                 kid[i] = KNodeId<KNodeId32>.Create();
                 dat[i] = new KPeerData<KNodeId32>();
                 var inv = new KEndpointInvoker<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], logger: log.CreateLogger($"Instance {i}"));
-                krt[i] = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], inv, logger: log.CreateLogger($"Instance {i}"));
-                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i], inv, logger: log.CreateLogger($"Instance {i}"));
+                krt[i] = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], inv, logger: log.CreateLogger($"Instance {i}"));
+                var lku = new KLookup<KNodeId32>(krt[i], inv, logger: log.CreateLogger($"Instance {i}"));
+                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i], inv, lku, logger: log.CreateLogger($"Instance {i}"));
                 udp[i] = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(13442, kad[i], enc, dec, 0, logger: log.CreateLogger($"Instance {i}"));
                 await udp[i].StartAsync();
             }
@@ -58,7 +59,7 @@ namespace Cogito.Kademlia.Tests
             for (int i = 0; i < s; i++)
             {
                 var j = i;
-                await Task.Run(() => krt[j].RefreshAsync());
+                await Task.Run(() => kad[j].RefreshAsync());
             }
 
             await Task.Delay(TimeSpan.FromSeconds(5));

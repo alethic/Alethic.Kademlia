@@ -30,7 +30,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(3);
         static readonly Random rnd = new Random();
 
-        readonly uint networkId;
+        readonly ulong network;
         readonly IKEngine<TKNodeId, TKPeerData> engine;
         readonly IKMessageDecoder<TKNodeId> decoder;
         readonly IKMessageEncoder<TKNodeId> encoder;
@@ -52,15 +52,15 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="networkId"></param>
+        /// <param name="network"></param>
         /// <param name="engine"></param>
         /// <param name="encoder"></param>
         /// <param name="decoder"></param>
         /// <param name="port"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(uint networkId, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, ushort port = 0, ILogger logger = null)
+        public KUdpProtocol(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, ushort port = 0, ILogger logger = null)
         {
-            this.networkId = networkId;
+            this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.encoder = encoder ?? throw new ArgumentNullException(nameof(encoder));
             this.decoder = decoder ?? throw new ArgumentNullException(nameof(decoder));
@@ -71,7 +71,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <summary>
         /// Uniquely idenfies the traffic for this network from others.
         /// </summary>
-        public uint NetworkId => networkId;
+        public ulong Network => network;
 
         /// <summary>
         /// Gets the engine associated with this protocol.
@@ -102,9 +102,9 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// Gets the next magic value.
         /// </summary>
         /// <returns></returns>
-        uint NewMagic()
+        ulong NewMagic()
         {
-            return (uint)rnd.Next(int.MinValue, int.MaxValue);
+            return (ulong)rnd.NextInt64();
         }
 
         /// <summary>
@@ -208,12 +208,17 @@ namespace Cogito.Kademlia.Protocols.Udp
             }
 
             logger?.LogInformation("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
-            var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-            var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
-            var o = MemoryPool<byte>.Shared.Rent(b.Length);
-            var m = o.Memory.Slice(0, b.Length);
-            b.CopyTo(m.Span);
-            Task.Run(async () => { try { await OnReceiveAsync(p, m.Span, CancellationToken.None); } catch { } finally { o.Dispose(); } });
+
+            // sometimes we receive no bytes
+            if (args.BytesTransferred > 0)
+            {
+                var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
+                var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
+                var o = MemoryPool<byte>.Shared.Rent(b.Length);
+                var m = o.Memory.Slice(0, b.Length);
+                b.CopyTo(m.Span);
+                Task.Run(async () => { try { await OnReceiveAsync(p, m.Span, CancellationToken.None); } catch { } finally { o.Dispose(); } });
+            }
 
             // continue receiving if socket still available
             // this lock is blocking, but should be okay since this event handler can stall
@@ -243,9 +248,9 @@ namespace Cogito.Kademlia.Protocols.Udp
 
             // decode incoming byte sequence
             var l = decoder.Decode(this, new ReadOnlySequence<byte>(packet.ToArray()));
-            if (l.NetworkId != networkId)
+            if (l.Network != network)
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.NetworkId);
+                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
                 return new ValueTask(Task.CompletedTask);
             }
 
@@ -279,10 +284,10 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="magic"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        KMessageSequence<TKNodeId> PackageMessage<TBody>(uint magic, TBody body)
+        KMessageSequence<TKNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKMessageBody<TKNodeId>
         {
-            return new KMessageSequence<TKNodeId>(networkId, new[] { (IKMessage<TKNodeId>)new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
+            return new KMessageSequence<TKNodeId>(network, new[] { (IKMessage<TKNodeId>)new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
         }
 
         /// <summary>
@@ -298,7 +303,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             await OnPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, ulong magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "PING", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
@@ -319,7 +324,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             await OnStoreReplyAsync(endpoint, request.Header.Magic, await engine.OnStoreAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnStoreReplyAsync(in KIpEndpoint endpoint, uint magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnStoreReplyAsync(in KIpEndpoint endpoint, ulong magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "STORE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
@@ -340,7 +345,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             await OnFindNodeReplyAsync(endpoint, request.Header.Magic, await engine.OnFindNodeAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnFindNodeReplyAsync(in KIpEndpoint endpoint, uint magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnFindNodeReplyAsync(in KIpEndpoint endpoint, ulong magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_NODE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
@@ -361,7 +366,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             await OnFindValueReplyAsync(endpoint, request.Header.Magic, await engine.OnFindValueAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnFindValueReplyAsync(in KIpEndpoint endpoint, uint magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnFindValueReplyAsync(in KIpEndpoint endpoint, ulong magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_VALUE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
@@ -489,7 +494,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(KIpEndpoint endpoint, uint magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(KIpEndpoint endpoint, ulong magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
             logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, endpoint);

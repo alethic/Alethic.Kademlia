@@ -25,7 +25,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
 
             // generate packet
             var p = new Packet();
-            p.NetworkId = sequence.NetworkId;
+            p.Network = sequence.Network;
             p.Messages.AddRange(Encode(protocol, sequence));
             p.WriteTo(m);
 

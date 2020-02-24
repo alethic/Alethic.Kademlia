@@ -18,24 +18,21 @@ namespace Cogito.Kademlia
     /// Implements a fixed Kademlia routing table with the default peer data type.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KFixedTableRouter<TKNodeId> : KFixedRoutingTable<TKNodeId, KPeerData<TKNodeId>>
+    public class KFixedTableRouter<TKNodeId> : KFixedTableRouter<TKNodeId, KPeerData<TKNodeId>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
-
-        readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="selfId"></param>
-        /// <param name="selfData"></param>
         /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
         public KFixedTableRouter(in TKNodeId selfId, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null) :
             base(selfId, new KPeerData<TKNodeId>(), invoker, k, logger)
         {
-            this.logger = logger;
+
         }
 
         /// <summary>
@@ -59,7 +56,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KFixedRoutingTable<TKNodeId, TKPeerData> : KFixedTableRouter, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
+    public class KFixedTableRouter<TKNodeId, TKPeerData> : KFixedTableRouter, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
@@ -68,12 +65,10 @@ namespace Cogito.Kademlia
 
         readonly TKNodeId selfId;
         readonly TKPeerData selfData;
-        readonly int k;
         readonly IKEndpointInvoker<TKNodeId> invoker;
+        readonly int k;
         readonly ILogger logger;
         readonly KBucket<TKNodeId, TKPeerData>[] buckets;
-
-        IKEngine<TKNodeId> engine;
 
         /// <summary>
         /// Initializes a new instance.
@@ -83,29 +78,21 @@ namespace Cogito.Kademlia
         /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KFixedRoutingTable(in TKNodeId selfId, in TKPeerData selfData, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null)
+        public KFixedTableRouter(in TKNodeId selfId, in TKPeerData selfData, IKEndpointInvoker<TKNodeId> invoker, int k = DefaultKSize, ILogger logger = null)
         {
             if (k < 1)
                 throw new ArgumentOutOfRangeException("The value of k must be greater than or equal to 1.");
 
             this.selfId = selfId;
             this.selfData = selfData;
+            this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.k = k;
-            this.invoker = invoker;
             this.logger = logger;
 
+            logger?.LogInformation("Initializing Fixed Table Router with {NodeId}.", selfId);
             buckets = new KBucket<TKNodeId, TKPeerData>[Unsafe.SizeOf<TKNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
                 buckets[i] = new KBucket<TKNodeId, TKPeerData>(k, invoker, logger);
-        }
-
-        /// <summary>
-        /// Gets or sets the currently associated engine.
-        /// </summary>
-        public IKEngine<TKNodeId> Engine
-        {
-            get => engine ?? throw new InvalidOperationException("Router has not yet been initialized.");
-            set => engine = value;
         }
 
         /// <summary>
@@ -141,9 +128,25 @@ namespace Cogito.Kademlia
         /// <param name="nodeId"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<TKPeerData> GetPeerAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
+        public ValueTask<TKPeerData> GetPeerDataAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
         {
-            return GetBucket(nodeId).GetPeerAsync(nodeId, cancellationToken);
+            return GetBucket(nodeId).GetPeerDataAsync(nodeId, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetNextHopAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
+        {
+            logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
+
+            var c = new KNodeIdDistanceComparer<TKNodeId>(key);
+            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
+            return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
         }
 
         /// <summary>
@@ -158,9 +161,6 @@ namespace Cogito.Kademlia
         {
             logger?.LogTrace("Received request to update peer {NodeId} with {Endpoint}.", nodeId, endpoint);
 
-            if (engine == null)
-                throw new KException("Router is not yet initialized.");
-
             if (nodeId.Equals(SelfId))
             {
                 logger?.LogError("Peer update request for self at {Endpoint}. Discarding.", endpoint);
@@ -168,67 +168,6 @@ namespace Cogito.Kademlia
             }
 
             return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
-        }
-
-        /// <summary>
-        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="k"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
-        {
-            logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
-
-            var c = new KNodeIdDistanceComparer<TKNodeId>(key);
-            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
-            return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
-        }
-
-        /// <summary>
-        /// Initiates a refresh of the routing table buckets.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
-        {
-            logger?.LogTrace("Beginning table refresh.");
-
-            return new ValueTask(Task.WhenAll(Enumerable.Range(1, buckets.Length - 1).Select(i => GetRandomNodeIdFromBucket(i)).Select(i => engine.LookupNodeAsync(i, cancellationToken).AsTask())));
-        }
-
-        /// <summary>
-        /// Generates a random node ID with the specified number of right masked bits set.
-        /// </summary>
-        /// <param name="bucket"></param>
-        /// <returns></returns>
-        TKNodeId GetRandomNodeIdFromBucket(int bucket)
-        {
-            // set all except suffix
-            var selfMask = new BitArray(KNodeId<TKNodeId>.SizeOf() * 8);
-            for (int i = 0; i < selfMask.Length - bucket; i++)
-                selfMask.Set(i, true);
-
-            // set only suffix
-            var randMask = new BitArray(selfMask).Not();
-
-            var selfNode = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
-            SelfId.Write(selfNode);
-            var selfBuff = new BitArray(selfNode.ToArray());
-            selfBuff.And(selfMask);
-
-            var randNode = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
-            KNodeId<TKNodeId>.Create().Write(randNode);
-            var randBuff = new BitArray(randNode.ToArray());
-            randBuff.And(randMask);
-
-            var cmplBuff = selfBuff.Or(randBuff);
-            var cmplNode = new byte[KNodeId<TKNodeId>.SizeOf()];
-            cmplBuff.CopyTo(cmplNode, 0);
-            var cmplFins = KNodeId<TKNodeId>.Read(cmplNode);
-
-            return cmplFins;
         }
 
         /// <summary>
@@ -272,7 +211,7 @@ namespace Cogito.Kademlia
                 throw new ArgumentException("Cannot get bucket for own node.");
 
             // calculate distance between nodes
-            var o = (Span<byte>)stackalloc byte[Unsafe.SizeOf<TKNodeId>()];
+            var o = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
             KNodeId<TKNodeId>.CalculateDistance(self, other, o);
 
             // leading zeros is our bucket position

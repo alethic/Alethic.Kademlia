@@ -32,14 +32,14 @@ namespace Cogito.Kademlia.Network
             /// <summary>
             /// Describes the inbound magic to match.
             /// </summary>
-            public uint Magic;
+            public ulong Magic;
 
             /// <summary>
             /// Initializes a new instance.
             /// </summary>
             /// <param name="endpoint"></param>
             /// <param name="magic"></param>
-            public RoutingKey(KIpEndpoint endpoint, uint magic)
+            public RoutingKey(KIpEndpoint endpoint, ulong magic)
             {
                 Endpoint = endpoint;
                 Magic = magic;
@@ -89,19 +89,41 @@ namespace Cogito.Kademlia.Network
         /// <param name="magic"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task<KResponse<TKNodeId, TResponseData>> WaitAsync(in KIpEndpoint endpoint, uint magic, CancellationToken cancellationToken)
+        public Task<KResponse<TKNodeId, TResponseData>> WaitAsync(in KIpEndpoint endpoint, ulong magic, CancellationToken cancellationToken)
         {
-            // generate a new task completion source hooked up with the given request information
-            var tcs = queue.GetOrAdd(new RoutingKey(endpoint, magic), k =>
-            {
-                var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(timeout).Token, cancellationToken);
-                cts.Token.Register(() => OnCancel(k, tcs), useSynchronizationContext: false);
-                return tcs;
-            });
+            return WaitAsync(endpoint, magic, cancellationToken);
+        }
 
-            // return task to user for waiting
-            return tcs.Task;
+        /// <summary>
+        /// Enqueues a wait for an inbound operation with the specified signature and returns a task to be resumed upon completion.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="magic"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task<KResponse<TKNodeId, TResponseData>> WaitAsync(KIpEndpoint endpoint, ulong magic, CancellationToken cancellationToken)
+        {
+            using (var cts = new CancellationTokenSource(timeout))
+            {
+                try
+                {
+                    // generate a new task completion source hooked up with the given request information
+                    var tcs = queue.GetOrAdd(new RoutingKey(endpoint, magic), k =>
+                    {
+                        var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
+                        var lnk = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+                        lnk.Token.Register(() => OnCancel(k, tcs), useSynchronizationContext: false);
+                        return tcs;
+                    });
+
+                    // return task to user for waiting
+                    return await tcs.Task;
+                }
+                catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+                {
+                    throw new TimeoutException();
+                }
+            }
         }
 
         /// <summary>
@@ -122,7 +144,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="magic"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        public bool Respond(in KIpEndpoint endpoint, uint magic, in KResponse<TKNodeId, TResponseData> data)
+        public bool Respond(in KIpEndpoint endpoint, ulong magic, in KResponse<TKNodeId, TResponseData> data)
         {
             if (queue.TryRemove(new RoutingKey(endpoint, magic), out var tcs))
             {
@@ -144,7 +166,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="magic"></param>
         /// <param name="exception"></param>
         /// <returns></returns>
-        public bool Respond(in KIpEndpoint endpoint, uint magic, Exception exception)
+        public bool Respond(in KIpEndpoint endpoint, ulong magic, Exception exception)
         {
             if (queue.TryRemove(new RoutingKey(endpoint, magic), out var tcs))
             {

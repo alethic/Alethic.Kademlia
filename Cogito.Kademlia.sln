@@ -7,6 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		appveyor.yml = appveyor.yml
 		Directory.Build.props = Directory.Build.props
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia", "Cogito.Kademlia\Cogito.Kademlia.csproj", "{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}"
@@ -15,7 +16,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Tests", "Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Console", "Cogito.Kademlia.Console\Cogito.Kademlia.Console.csproj", "{A28AE7E0-C268-4FAC-9AB4-C165860B3366}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cogito.Kademlia.Protocols.Protobuf", "Cogito.Kademlia.Protocols.Protobuf\Cogito.Kademlia.Protocols.Protobuf.csproj", "{2C0E8981-84D9-4144-99DB-C7FEDFF089F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Protocols.Protobuf", "Cogito.Kademlia.Protocols.Protobuf\Cogito.Kademlia.Protocols.Protobuf.csproj", "{2C0E8981-84D9-4144-99DB-C7FEDFF089F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

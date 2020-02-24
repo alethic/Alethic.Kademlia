@@ -31,7 +31,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         static readonly Random rnd = new Random();
 
-        readonly uint networkId;
+        readonly ulong network;
         readonly IKEngine<TKNodeId, TKPeerData> engine;
         readonly IKIpProtocol<TKNodeId> protocol;
         readonly IKMessageEncoder<TKNodeId> encoder;
@@ -51,16 +51,16 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="networkId"></param>
+        /// <param name="network"></param>
         /// <param name="engine"></param>
         /// <param name="protocol"></param>
         /// <param name="encoder"></param>
         /// <param name="decoder"></param>
         /// <param name="endpoint"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(uint networkId, IKEngine<TKNodeId, TKPeerData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, in KIpEndpoint endpoint, ILogger logger = null)
+        public KUdpMulticastDiscovery(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, in KIpEndpoint endpoint, ILogger logger = null)
         {
-            this.networkId = networkId;
+            this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.encoder = encoder ?? throw new ArgumentNullException(nameof(encoder));
@@ -93,9 +93,9 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// Gets the next magic value.
         /// </summary>
         /// <returns></returns>
-        uint NewMagic()
+        ulong NewMagic()
         {
-            return (uint)rnd.Next(int.MinValue, int.MaxValue);
+            return (ulong)rnd.NextInt64();
         }
 
         /// <summary>
@@ -247,9 +247,9 @@ namespace Cogito.Kademlia.Protocols.Udp
 
             // decode incoming byte sequence
             var l = decoder.Decode(protocol, new ReadOnlySequence<byte>(packet.ToArray()));
-            if (l.NetworkId != networkId)
+            if (l.Network != network)
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.NetworkId);
+                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
                 return new ValueTask(Task.CompletedTask);
             }
 
@@ -301,7 +301,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(uint magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(ulong magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
             logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, IpAny);
@@ -333,10 +333,10 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="magic"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        KMessageSequence<TKNodeId> PackageMessage<TBody>(uint magic, TBody body)
+        KMessageSequence<TKNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKMessageBody<TKNodeId>
         {
-            return new KMessageSequence<TKNodeId>(networkId, new[] { (IKMessage<TKNodeId>)new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
+            return new KMessageSequence<TKNodeId>(network, new[] { (IKMessage<TKNodeId>)new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
         }
 
         /// <summary>
@@ -366,7 +366,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             await SendPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, request.Body.Endpoints.FirstOrDefault(), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask SendPingReplyAsync(in KIpEndpoint endpoint, uint magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask SendPingReplyAsync(in KIpEndpoint endpoint, ulong magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending multicast PING:{Magic} reply to {Endpoint}.", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();

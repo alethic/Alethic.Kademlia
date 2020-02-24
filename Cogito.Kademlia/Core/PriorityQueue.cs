@@ -186,7 +186,7 @@ namespace Cogito.Kademlia.Core
                 newCapacity = HugeCapacity(minCapacity);
 
             var q = new T[newCapacity];
-            queue.CopyTo(q, newCapacity);
+            queue.CopyTo(q, 0);
             this.queue = q;
         }
 

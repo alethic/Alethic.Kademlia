@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -110,6 +111,40 @@ namespace Cogito.Kademlia
 
             // perform xor
             a.Xor(b, o);
+        }
+
+        /// <summary>
+        /// Randomizes the last <paramref name="suffixCount"/> bits within a <see cref="TKNodeId"/>.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="suffixCount"></param>
+        /// <returns></returns>
+        public static TKNodeId Randomize(in TKNodeId self, int suffixCount)
+        {
+            // set all except suffix
+            var selfMask = new BitArray(SizeOf() * 8);
+            for (int i = 0; i < selfMask.Length - suffixCount; i++)
+                selfMask.Set(i, true);
+
+            // set only suffix
+            var randMask = new BitArray(selfMask).Not();
+
+            var selfNode = (Span<byte>)stackalloc byte[SizeOf()];
+            self.Write(selfNode);
+            var selfBuff = new BitArray(selfNode.ToArray());
+            selfBuff.And(selfMask);
+
+            var randNode = (Span<byte>)stackalloc byte[SizeOf()];
+            Create().Write(randNode);
+            var randBuff = new BitArray(randNode.ToArray());
+            randBuff.And(randMask);
+
+            var cmplBuff = selfBuff.Or(randBuff);
+            var cmplNode = new byte[SizeOf()];
+            cmplBuff.CopyTo(cmplNode, 0);
+            var cmplFins = Read(cmplNode);
+
+            return cmplFins;
         }
 
     }

@@ -12,24 +12,24 @@ namespace Cogito.Kademlia.Protocols
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly uint networkId;
+        readonly ulong network;
         readonly IEnumerable<IKMessage<TKNodeId>> messages;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="networkId"></param>
+        /// <param name="network"></param>
         /// <param name="messages"></param>
-        public KMessageSequence(uint networkId, IEnumerable<IKMessage<TKNodeId>> messages)
+        public KMessageSequence(ulong network, IEnumerable<IKMessage<TKNodeId>> messages)
         {
-            this.networkId = networkId;
+            this.network = network;
             this.messages = messages;
         }
 
         /// <summary>
         /// Gets the network ID of the message sequence.
         /// </summary>
-        public uint NetworkId => networkId;
+        public ulong Network => network;
 
         /// <summary>
         /// Gets an enumerator of the messages.

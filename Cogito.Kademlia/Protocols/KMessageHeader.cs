@@ -10,14 +10,14 @@
     {
 
         readonly TKNodeId sender;
-        readonly uint magic;
+        readonly ulong magic;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="magic"></param>
-        public KMessageHeader(in TKNodeId sender, uint magic)
+        public KMessageHeader(in TKNodeId sender, ulong magic)
         {
             this.sender = sender;
             this.magic = magic;
@@ -31,7 +31,7 @@
         /// <summary>
         /// Gets the value identifying this datagram in a request/response lifecycle.
         /// </summary>
-        public uint Magic => magic;
+        public ulong Magic => magic;
 
     }
 

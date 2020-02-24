@@ -41,8 +41,9 @@ namespace Cogito.Kademlia.Console
             var slf = KNodeId<KNodeId32>.Create();
             var dat = new KPeerData<KNodeId32>();
             var ink = new KEndpointInvoker<KNodeId32, KPeerData<KNodeId32>>(slf, dat, logger: log);
-            var rtr = new KFixedRoutingTable<KNodeId32, KPeerData<KNodeId32>>(slf, dat, ink, logger: log);
-            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>(rtr, ink, logger: log);
+            var rtr = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>(slf, dat, ink, logger: log);
+            var lup = new KLookup<KNodeId32>(rtr, ink, logger: log);
+            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>(rtr, ink, lup, logger: log);
             var udp = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, enc, dec, 0, log);
             var mcd = new KUdpMulticastDiscovery<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
             await udp.StartAsync();
@@ -51,7 +52,7 @@ namespace Cogito.Kademlia.Console
             try
             {
                 await mcd.ConnectAsync();
-                await rtr.RefreshAsync();
+                await kad.StartAsync();
             }
             catch (Exception e)
             {
@@ -76,9 +77,12 @@ namespace Cogito.Kademlia.Console
                                 System.Console.WriteLine("    {0}", ep);
                         }
                         break;
+                    case "ping":
+                        break;
                 }
             }
 
+            await kad.StopAsync();
             await mcd.StopAsync();
             await udp.StopAsync();
             System.Console.WriteLine("Stopped...");

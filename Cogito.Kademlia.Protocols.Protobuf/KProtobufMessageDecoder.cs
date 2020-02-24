@@ -22,7 +22,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         public KMessageSequence<TKNodeId> Decode(IKProtocol<TKNodeId> protocol, ReadOnlySequence<byte> buffer)
         {
             var p = Packet.Parser.ParseFrom(buffer.ToArray());
-            var s = new KMessageSequence<TKNodeId>(p.NetworkId, Decode(protocol, p.Messages));
+            var s = new KMessageSequence<TKNodeId>(p.Network, Decode(protocol, p.Messages));
             return s;
         }
 

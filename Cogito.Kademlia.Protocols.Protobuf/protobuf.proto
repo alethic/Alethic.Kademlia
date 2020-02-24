@@ -3,7 +3,7 @@ syntax = "proto3";
 option csharp_namespace = "Cogito.Kademlia.Protocols.Protobuf";
 
 message Packet {
-    uint32 networkId = 1;
+    uint64 network = 1;
     repeated Message messages = 2;
 }
 
@@ -23,7 +23,7 @@ message Message {
 
 message Header {
     bytes sender = 2;
-    uint32 magic = 3;
+    uint64 magic = 3;
 }
 
 message IpAddress {

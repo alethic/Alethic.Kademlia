@@ -30,7 +30,7 @@ namespace Cogito.Kademlia
     /// Represents a Kademlia network engine.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKEngine<TKNodeId> : IKLookup<TKNodeId>
+    public interface IKEngine<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -38,6 +38,11 @@ namespace Cogito.Kademlia
         /// Gets the Node ID of the node itself.
         /// </summary>
         TKNodeId SelfId { get; }
+
+        /// <summary>
+        /// Gets the lookup engine that provides for node traversal.
+        /// </summary>
+        IKLookup<TKNodeId> Lookup { get; }
 
         /// <summary>
         /// Attempts to connect the engine to one of the specified endpoints.
