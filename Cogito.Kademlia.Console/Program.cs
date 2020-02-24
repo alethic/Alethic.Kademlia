@@ -36,16 +36,16 @@ namespace Cogito.Kademlia.Console
             var cnt = bld.Build();
 
             var log = cnt.Resolve<ILogger>();
-            var enc = new KProtobufMessageEncoder<KNodeId32>();
-            var dec = new KProtobufMessageDecoder<KNodeId32>();
-            var slf = KNodeId<KNodeId32>.Create();
-            var dat = new KPeerData<KNodeId32>();
-            var ink = new KEndpointInvoker<KNodeId32, KPeerData<KNodeId32>>(slf, dat, logger: log);
-            var rtr = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>(slf, dat, ink, logger: log);
-            var lup = new KLookup<KNodeId32>(rtr, ink, logger: log);
-            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>(rtr, ink, lup, logger: log);
-            var udp = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, enc, dec, 0, log);
-            var mcd = new KUdpMulticastDiscovery<KNodeId32, KPeerData<KNodeId32>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
+            var enc = new KProtobufMessageEncoder<KNodeId256>();
+            var dec = new KProtobufMessageDecoder<KNodeId256>();
+            var slf = KNodeId<KNodeId256>.Create();
+            var dat = new KPeerData<KNodeId256>();
+            var ink = new KEndpointInvoker<KNodeId256, KPeerData<KNodeId256>>(slf, dat, logger: log);
+            var rtr = new KFixedTableRouter<KNodeId256, KPeerData<KNodeId256>>(slf, dat, ink, logger: log);
+            var lup = new KLookup<KNodeId256>(rtr, ink, logger: log);
+            var kad = new KEngine<KNodeId256, KPeerData<KNodeId256>>(rtr, ink, lup, logger: log);
+            var udp = new KUdpProtocol<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, enc, dec, 0, log);
+            var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
             await udp.StartAsync();
             await mcd.StartAsync();
 
@@ -56,7 +56,7 @@ namespace Cogito.Kademlia.Console
             }
             catch (Exception e)
             {
-
+                log.LogError(e, "");
             }
 
             System.Console.WriteLine("Started...");

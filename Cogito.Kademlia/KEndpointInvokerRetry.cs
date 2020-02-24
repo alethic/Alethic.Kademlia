@@ -61,9 +61,10 @@ namespace Cogito.Kademlia
                 if (r.Status == KResponseStatus.Success)
                     return r;
             }
-            catch (OperationCanceledException)
+            catch (TimeoutException e)
             {
-                // ignore
+                logger?.LogWarning("Timeout received contacting {Endpoint}.", endpoint);
+                endpoint.OnTimeout(new KEndpointTimeoutEventArgs());
             }
 
             return default;

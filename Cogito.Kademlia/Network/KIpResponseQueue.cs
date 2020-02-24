@@ -105,36 +105,24 @@ namespace Cogito.Kademlia.Network
         {
             using (var cts = new CancellationTokenSource(timeout))
             {
+                // generate a new task completion source hooked up with the given request information
+                var tcs = queue.GetOrAdd(new RoutingKey(endpoint, magic), k =>
+                {
+                    var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
+                    var lnk = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+                    lnk.Token.Register(() => { queue.TryRemove(k, out _); tcs.TrySetCanceled(); }, useSynchronizationContext: false);
+                    return tcs;
+                });
+
                 try
                 {
-                    // generate a new task completion source hooked up with the given request information
-                    var tcs = queue.GetOrAdd(new RoutingKey(endpoint, magic), k =>
-                    {
-                        var tcs = new TaskCompletionSource<KResponse<TKNodeId, TResponseData>>();
-                        var lnk = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-                        lnk.Token.Register(() => OnCancel(k, tcs), useSynchronizationContext: false);
-                        return tcs;
-                    });
-
-                    // return task to user for waiting
                     return await tcs.Task;
                 }
-                catch (OperationCanceledException e) when (e.CancellationToken == cts.Token)
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
                 {
                     throw new TimeoutException();
                 }
             }
-        }
-
-        /// <summary>
-        /// Invoked when a request is canceled.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="tcs"></param>
-        void OnCancel(RoutingKey key, TaskCompletionSource<KResponse<TKNodeId, TResponseData>> tcs)
-        {
-            queue.TryRemove(key, out _);
-            tcs.TrySetCanceled();
         }
 
         /// <summary>

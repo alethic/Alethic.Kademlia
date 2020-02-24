@@ -13,8 +13,8 @@ namespace Cogito.Kademlia
     {
 
         readonly TKNodeId key;
-        readonly KPeerEndpointInfo<TKNodeId>? final;
         readonly IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes;
+        readonly KPeerEndpointInfo<TKNodeId>? final;
         readonly ReadOnlyMemory<byte>? value;
 
         /// <summary>
@@ -24,11 +24,11 @@ namespace Cogito.Kademlia
         /// <param name="final"></param>
         /// <param name="nodes"></param>
         /// <param name="value"></param>
-        public KLookupResult(in TKNodeId key, in KPeerEndpointInfo<TKNodeId>? final, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, ReadOnlyMemory<byte>? value)
+        public KLookupResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? final, ReadOnlyMemory<byte>? value)
         {
             this.key = key;
-            this.final = final;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
+            this.final = final;
             this.value = value;
         }
 
@@ -38,8 +38,8 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="final"></param>
         /// <param name="nodes"></param>
-        public KLookupResult(in TKNodeId key, in KPeerEndpointInfo<TKNodeId>? final, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes) :
-            this(key, final, nodes, null)
+        public KLookupResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? final) :
+            this(key, nodes, final, null)
         {
 
         }
@@ -50,14 +50,14 @@ namespace Cogito.Kademlia
         public TKNodeId Key => key;
 
         /// <summary>
-        /// Gets the node ID that terminated the lookup.
-        /// </summary>
-        public KPeerEndpointInfo<TKNodeId>? Final => final;
-
-        /// <summary>
         /// Gets the set of nodes and node endpoints discovered on the way to the key, sorted by distance.
         /// </summary>
         public IEnumerable<KPeerEndpointInfo<TKNodeId>> Nodes => nodes;
+
+        /// <summary>
+        /// Gets the node ID that terminated the lookup.
+        /// </summary>
+        public KPeerEndpointInfo<TKNodeId>? Final => final;
 
         /// <summary>
         /// Gets the resulting value if any.

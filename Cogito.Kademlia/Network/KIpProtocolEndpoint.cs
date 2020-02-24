@@ -9,7 +9,7 @@ namespace Cogito.Kademlia.Network
     /// Provides a simple IP endpoint connected to a protocol.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
+    public class KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -80,6 +80,20 @@ namespace Cogito.Kademlia.Network
         public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             return protocol.FindValueAsync(this, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Raised when a timeout is received.
+        /// </summary>
+        public event EventHandler<KEndpointTimeoutEventArgs> Timeout;
+
+        /// <summary>
+        /// Raises the Timeout event.
+        /// </summary>
+        /// <param name="args"></param>
+        public void OnTimeout(KEndpointTimeoutEventArgs args)
+        {
+            Timeout?.Invoke(this, args);
         }
 
         /// <summary>

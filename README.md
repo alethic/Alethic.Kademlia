@@ -1,6 +1,6 @@
 # Cogito.Kademlia
 
-This library is an attempt to build an extensive Kademlia implementation in C# running on both .NET Framework and .NET Core. It is a primary goal that the library be easily embeddable into other software.
+This library is an attempt to build an extensible Kademlia implementation in C# running on both .NET Framework and .NET Core. It is a primary goal that the library be easily embeddable into other software.
 
 ## Architecture
 

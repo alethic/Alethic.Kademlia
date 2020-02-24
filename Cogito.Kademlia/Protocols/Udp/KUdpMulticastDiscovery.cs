@@ -227,8 +227,14 @@ namespace Cogito.Kademlia.Protocols.Udp
         public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
         {
             var r = await PingAsync(new KPingRequest<TKNodeId>(engine.SelfData.Endpoints.ToArray()), cancellationToken);
-            if (r.Status == KResponseStatus.Success)
-                await engine.ConnectAsync(r.Body.Endpoints);
+            if (r.Status == KResponseStatus.Failure)
+            {
+                logger?.LogError("Unable to PING multicast address. Not connecting.");
+                return;
+            }
+
+            // initiate connection to retrieved endpoints
+            await engine.ConnectAsync(r.Body.Endpoints);
         }
 
         /// <summary>
@@ -318,6 +324,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             {
                 // cancel item in response queue
                 c.Cancel();
+                throw;
             }
 
             // wait on response
@@ -347,10 +354,17 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            var m = NewMagic();
-            var b = new ArrayBufferWriter<byte>();
-            encoder.Encode(protocol, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(m, pingQueue, b, cancellationToken);
+            try
+            {
+                var m = NewMagic();
+                var b = new ArrayBufferWriter<byte>();
+                encoder.Encode(protocol, b, PackageMessage(m, request));
+                return await SendAndWaitAsync(m, pingQueue, b, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                return default;
+            }
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -48,6 +49,17 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Raised when a timeout occurs with the endpoint.
+        /// </summary>
+        event EventHandler<KEndpointTimeoutEventArgs> Timeout;
+
+        /// <summary>
+        /// Raises the Timeout event.
+        /// </summary>
+        /// <param name="args"></param>
+        void OnTimeout(KEndpointTimeoutEventArgs args);
 
     }
 

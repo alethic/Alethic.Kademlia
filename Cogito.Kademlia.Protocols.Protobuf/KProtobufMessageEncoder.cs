@@ -184,25 +184,25 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         IpEndpoint Encode(IKProtocol<TKNodeId> protocol, IKEndpoint<TKNodeId> endpoint)
         {
             // we only support IP protocol endpoints
-            var ip = endpoint as KIpProtocolEndpoint<TKNodeId>?;
+            var ip = endpoint as KIpProtocolEndpoint<TKNodeId>;
             if (ip is null)
                 return null;
 
             var e = new IpEndpoint();
 
-            switch (ip.Value.Endpoint.Protocol)
+            switch (ip.Endpoint.Protocol)
             {
                 case KIpAddressFamily.IPv4:
-                    e.Address = new IpAddress() { V4 = Encode(protocol, ip.Value.Endpoint.V4) };
+                    e.Address = new IpAddress() { V4 = Encode(protocol, ip.Endpoint.V4) };
                     break;
                 case KIpAddressFamily.IPv6:
-                    e.Address = new IpAddress() { V6 = Encode(protocol, ip.Value.Endpoint.V6) };
+                    e.Address = new IpAddress() { V6 = Encode(protocol, ip.Endpoint.V6) };
                     break;
                 default:
                     throw new InvalidOperationException();
             }
 
-            e.Port = ip.Value.Endpoint.Port;
+            e.Port = ip.Endpoint.Port;
             return e;
         }
 

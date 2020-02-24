@@ -100,7 +100,7 @@ namespace Cogito.Kademlia.Core
 
                 list.Remove(n);
                 list.AddFirst(n);
-                return true;
+                return false;
             }
 
             // item is new
@@ -125,7 +125,7 @@ namespace Cogito.Kademlia.Core
 
                 list.Remove(n);
                 list.AddLast(n);
-                return true;
+                return false;
             }
 
             // item is new
