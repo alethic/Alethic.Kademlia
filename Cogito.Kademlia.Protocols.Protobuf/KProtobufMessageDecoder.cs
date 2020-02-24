@@ -127,7 +127,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         /// <returns></returns>
         KStoreRequest<TKNodeId> Decode(IKProtocol<TKNodeId> protocol, StoreRequest request)
         {
-            return new KStoreRequest<TKNodeId>(DecodeNodeId(protocol, request.Key), request.Value?.ToByteArray());
+            return new KStoreRequest<TKNodeId>(DecodeNodeId(protocol, request.Key), request.Value?.ToByteArray(), request.Ttl != null ? DateTimeOffset.UtcNow + request.Ttl.ToTimeSpan() : (DateTimeOffset?)null);
         }
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         /// <returns></returns>
         KFindValueResponse<TKNodeId> Decode(IKProtocol<TKNodeId> protocol, FindValueResponse response)
         {
-            return new KFindValueResponse<TKNodeId>(DecodeNodeId(protocol, response.Key), response.Value?.ToByteArray(), Decode(protocol, response.Peers).ToArray());
+            return new KFindValueResponse<TKNodeId>(DecodeNodeId(protocol, response.Key), Decode(protocol, response.Peers).ToArray(), response.Value?.ToByteArray(), response.Ttl != null ? DateTimeOffset.UtcNow + response.Ttl.ToTimeSpan() : (DateTimeOffset?)null);
         }
 
         /// <summary>

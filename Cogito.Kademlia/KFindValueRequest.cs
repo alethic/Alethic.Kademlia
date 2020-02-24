@@ -16,23 +16,25 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Creates a response to the given request.
         /// </summary>
-        /// <param name="value"></param>
         /// <param name="peers"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(ReadOnlyMemory<byte>? value, KPeerEndpointInfo<TKNodeId>[] peers)
+        public KFindValueResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
         {
-            return new KFindValueResponse<TKNodeId>(key, value, peers);
+            return new KFindValueResponse<TKNodeId>(key, peers, value, expiration);
         }
 
         /// <summary>
         /// Creates a response to the given request.
         /// </summary>
-        /// <param name="value"></param>
         /// <param name="peers"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(ReadOnlyMemory<byte>? value, IEnumerable<KPeerEndpointInfo<TKNodeId>> peers)
+        public KFindValueResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
         {
-            return new KFindValueResponse<TKNodeId>(key, value, peers.ToArray());
+            return new KFindValueResponse<TKNodeId>(key, peers.ToArray(), value, expiration);
         }
 
         readonly TKNodeId key;

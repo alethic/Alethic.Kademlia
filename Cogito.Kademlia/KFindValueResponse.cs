@@ -11,8 +11,9 @@ namespace Cogito.Kademlia
     {
 
         readonly TKNodeId key;
-        readonly ReadOnlyMemory<byte>? value;
         readonly KPeerEndpointInfo<TKNodeId>[] peers;
+        readonly ReadOnlyMemory<byte>? value;
+        readonly DateTimeOffset? expiration;
 
         /// <summary>
         /// Initializes a new instance.
@@ -20,11 +21,12 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="peers"></param>
-        public KFindValueResponse(in TKNodeId key, ReadOnlyMemory<byte>? value, KPeerEndpointInfo<TKNodeId>[] peers)
+        public KFindValueResponse(in TKNodeId key, KPeerEndpointInfo<TKNodeId>[] peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
         {
             this.key = key;
-            this.value = value;
             this.peers = peers;
+            this.value = value;
+            this.expiration = expiration ?? throw new ArgumentNullException(nameof(expiration));
         }
 
         /// <summary>
@@ -33,14 +35,19 @@ namespace Cogito.Kademlia
         public TKNodeId Key => key;
 
         /// <summary>
+        /// Gets the set of peers and their endpoints returned by the lookup.
+        /// </summary>
+        public KPeerEndpointInfo<TKNodeId>[] Peers => peers;
+
+        /// <summary>
         /// Gets the value that was located.
         /// </summary>
         public ReadOnlyMemory<byte>? Value => value;
 
         /// <summary>
-        /// Gets the set of peers and their endpoints returned by the lookup.
+        /// Gets the date and time at which the value expires.
         /// </summary>
-        public KPeerEndpointInfo<TKNodeId>[] Peers => peers;
+        public DateTimeOffset? Expiration => expiration;
 
     }
 

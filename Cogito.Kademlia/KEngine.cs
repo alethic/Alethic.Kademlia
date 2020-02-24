@@ -24,6 +24,7 @@ namespace Cogito.Kademlia
         readonly IKRouter<TKNodeId, TKPeerData> router;
         readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly IKLookup<TKNodeId> lookup;
+        readonly IKStore<TKNodeId> store;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
 
@@ -36,12 +37,14 @@ namespace Cogito.Kademlia
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
+        /// <param name="store"></param>
         /// <param name="logger"></param>
-        public KEngine(IKRouter<TKNodeId, TKPeerData> router, IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, ILogger logger = null)
+        public KEngine(IKRouter<TKNodeId, TKPeerData> router, IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, ILogger logger = null)
         {
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
+            this.store = store ?? throw new ArgumentNullException(nameof(store));
             this.logger = logger;
         }
 
@@ -241,6 +244,7 @@ namespace Cogito.Kademlia
         async ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(source, endpoint, null, cancellationToken);
+            await store.SetAsync(request.Key, request.Value, request.Expiration);
             return request.Respond();
         }
 
@@ -297,7 +301,8 @@ namespace Cogito.Kademlia
         async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, endpoint, null, cancellationToken);
-            return request.Respond(null, await router.GetNextHopAsync(request.Key, router.K, cancellationToken)); // TODO respond with correct info
+            var r = await store.GetAsync(request.Key);
+            return request.Respond(await router.GetNextHopAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration); // TODO respond with correct info
         }
 
     }

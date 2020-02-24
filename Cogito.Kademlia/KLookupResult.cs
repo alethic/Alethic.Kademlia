@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// Represents a result from a lookup operation against a node.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public struct KLookupResult<TKNodeId>
+    public readonly struct KLookupResult<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 

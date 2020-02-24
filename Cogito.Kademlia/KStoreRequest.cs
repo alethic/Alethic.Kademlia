@@ -24,16 +24,19 @@ namespace Cogito.Kademlia
 
         readonly TKNodeId key;
         readonly ReadOnlyMemory<byte>? value;
+        readonly DateTimeOffset? expiration;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value)
+        /// <param name="expiration"></param>
+        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
         {
             this.key = key;
             this.value = value;
+            this.expiration = expiration;
         }
 
         /// <summary>
@@ -45,6 +48,11 @@ namespace Cogito.Kademlia
         /// Specifies the value to be stored with the key.
         /// </summary>
         public ReadOnlyMemory<byte>? Value => value;
+
+        /// <summary>
+        /// Time at which the value will expire.
+        /// </summary>
+        public DateTimeOffset? Expiration => expiration;
 
     }
 

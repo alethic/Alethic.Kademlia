@@ -37,7 +37,8 @@ namespace Cogito.Kademlia.Tests
                 var inv = new KEndpointInvoker<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], logger: log.CreateLogger($"Instance {i}"));
                 krt[i] = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], inv, logger: log.CreateLogger($"Instance {i}"));
                 var lku = new KLookup<KNodeId32>(krt[i], inv, logger: log.CreateLogger($"Instance {i}"));
-                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i], inv, lku, logger: log.CreateLogger($"Instance {i}"));
+                var str = new KInMemoryStore<KNodeId32>(logger: log.CreateLogger($"Instance {i}"));
+                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i], inv, lku, str, logger: log.CreateLogger($"Instance {i}"));
                 udp[i] = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(13442, kad[i], enc, dec, 0, logger: log.CreateLogger($"Instance {i}"));
                 await udp[i].StartAsync();
             }

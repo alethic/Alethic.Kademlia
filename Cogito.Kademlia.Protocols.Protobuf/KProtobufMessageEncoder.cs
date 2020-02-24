@@ -119,6 +119,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             var r = new StoreRequest();
             r.Key = Encode(protocol, request.Key);
             r.Value = request.Value != null ? ByteString.CopyFrom(request.Value.Value.Span) : null;
+            r.Ttl = request.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(request.Expiration.Value - DateTimeOffset.UtcNow).TotalSeconds } : null;
             return r;
         }
 

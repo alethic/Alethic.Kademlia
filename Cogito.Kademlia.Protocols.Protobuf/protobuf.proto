@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 option csharp_namespace = "Cogito.Kademlia.Protocols.Protobuf";
 
 message Packet {
@@ -54,16 +57,17 @@ message PingResponse {
 message StoreRequest {
     bytes key = 1;
     bytes value = 2;
+    google.protobuf.Duration ttl = 3;
 }
 
 message StoreResponse {
-    enum StoreResponseCode {
+    enum StoreResponseStatus {
         Stored = 0;
         NotStored = 1;
     }
 
     bytes key = 1;
-    StoreResponseCode code = 2;
+    StoreResponseStatus status = 2;
 }
 
 message FindNodeRequest {
@@ -80,13 +84,14 @@ message FindValueRequest {
 }
 
 message FindValueResponse {
-    enum FindValueResponseCode {
+    enum FindValueResponseStatus {
         Found = 0;
         NotFound = 1;
     }
     bytes key = 1;
     repeated Peer peers = 2;
-    FindValueResponseCode code = 3;
+    FindValueResponseStatus status = 3;
     bytes value = 4;
+    google.protobuf.Duration ttl = 5;
 }
 
