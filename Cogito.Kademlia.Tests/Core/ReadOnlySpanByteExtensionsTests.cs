@@ -15,6 +15,26 @@ namespace Cogito.Kademlia.Tests.Core
     {
 
         [TestMethod]
+        public void Should_get_and_set_bits()
+        {
+            var s = (Span<byte>)stackalloc byte[8];
+            BinaryPrimitives.WriteUInt64BigEndian(s, 0b_1010_0110_1001_1010_0110_1001_1010_0110_1001_1010_0110_1001_1001_1010_0110_1001);
+            s.GetBit(0).Should().Be(true);
+            s.GetBit(1).Should().Be(false);
+            s.GetBit(2).Should().Be(true);
+            s.GetBit(3).Should().Be(false);
+            s.SetBit(0, false);
+            s.GetBit(0).Should().Be(false);
+            s.GetBit(1).Should().Be(false);
+            s.SetBit(0, true);
+            s.GetBit(0).Should().Be(true);
+            s.GetBit(1).Should().Be(false);
+            s.SetBit(1, true);
+            s.GetBit(0).Should().Be(true);
+            s.GetBit(1).Should().Be(true);
+        }
+
+        [TestMethod]
         public void Should_return_leading_zeros_for_single_byte()
         {
             var z = new byte[1];

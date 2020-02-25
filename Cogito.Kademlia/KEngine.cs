@@ -78,11 +78,11 @@ namespace Cogito.Kademlia
         {
             logger.LogInformation("Bootstrapping network with connection to {Endpoints}.", endpoints);
 
+            // ping node, which ensures availability and populates tables upon response
             var r = await invoker.PingAsync(endpoints, cancellationToken);
             if (r.Status == KResponseStatus.Failure)
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
-            await router.UpdatePeerAsync(r.Sender, null, r.Body.Endpoints, cancellationToken);
             await lookup.LookupNodeAsync(SelfId, cancellationToken);
         }
 
@@ -105,7 +105,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
         {
-            return new ValueTask(Task.WhenAll(Enumerable.Range(1, KNodeId<TKNodeId>.SizeOf() * 8 - 1).Select(i => KNodeId<TKNodeId>.Randomize(SelfId, i)).Select(i => lookup.LookupNodeAsync(i, cancellationToken).AsTask())));
+            return new ValueTask(Task.WhenAll(Enumerable.Range(1, KNodeId<TKNodeId>.SizeOf * 8 - 1).Select(i => KNodeId<TKNodeId>.Randomize(SelfId, i)).Select(i => lookup.LookupNodeAsync(i, cancellationToken).AsTask())));
         }
 
         /// <summary>
@@ -187,7 +187,7 @@ namespace Cogito.Kademlia
             while (cancellationToken.IsCancellationRequested == false)
             {
                 await RefreshAsync(cancellationToken);
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                await Task.Delay(TimeSpan.FromMinutes(60), cancellationToken);
             }
         }
 

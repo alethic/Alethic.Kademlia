@@ -1,4 +1,8 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -9,7 +13,23 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
+        /// <summary>
+        /// Sets the value in the publisher.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Gets the value in the publisher.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KPublisherGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
 
     }
 

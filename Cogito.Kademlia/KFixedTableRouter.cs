@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
+using Cogito.Linq;
 
 using Microsoft.Extensions.Logging;
 
@@ -144,8 +145,9 @@ namespace Cogito.Kademlia
         {
             logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
 
+            // take first bucket; then append others; pretty inefficient
             var c = new KNodeIdDistanceComparer<TKNodeId>(key);
-            var l = buckets.SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
+            var l = Enumerable.Empty<KBucket<TKNodeId, TKPeerData>>().Append(buckets[GetBucketIndex(selfId, key)]).Concat(buckets).Distinct().SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
             return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
         }
 
@@ -211,7 +213,7 @@ namespace Cogito.Kademlia
                 throw new ArgumentException("Cannot get bucket for own node.");
 
             // calculate distance between nodes
-            var o = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            var o = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
             KNodeId<TKNodeId>.CalculateDistance(self, other, o);
 
             // leading zeros is our bucket position

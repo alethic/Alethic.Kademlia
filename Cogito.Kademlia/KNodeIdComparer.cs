@@ -23,10 +23,10 @@ namespace Cogito.Kademlia
             if (x.Equals(y))
                 return 0;
 
-            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
             x.Write(a);
 
-            var b = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            var b = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
             y.Write(b);
 
             // who is closest?

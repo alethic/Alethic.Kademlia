@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 
 using Autofac;
@@ -45,10 +46,12 @@ namespace Cogito.Kademlia.Console
             var lup = new KLookup<KNodeId256>(rtr, ink, logger: log);
             var str = new KInMemoryStore<KNodeId256>(logger: log);
             var kad = new KEngine<KNodeId256, KPeerData<KNodeId256>>(rtr, ink, lup, str, logger: log);
+            var pub = new KInMemoryPublisher<KNodeId256>(ink, lup, str, logger: log);
             var udp = new KUdpProtocol<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, enc, dec, 0, log);
             var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
             await udp.StartAsync();
             await mcd.StartAsync();
+            await pub.StartAsync();
 
             try
             {
@@ -77,6 +80,9 @@ namespace Cogito.Kademlia.Console
                             foreach (var ep in node.Value.Endpoints)
                                 System.Console.WriteLine("    {0}", ep);
                         }
+                        break;
+                    case "set":
+                        await pub.SetAsync(KNodeId<KNodeId256>.Create(), Encoding.UTF8.GetBytes("test value"), null);
                         break;
                     case "ping":
                         break;

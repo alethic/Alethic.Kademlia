@@ -82,11 +82,11 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         ByteString Encode(IKProtocol<TKNodeId> protocol, TKNodeId nodeId)
         {
 #if NET47
-            var a = new byte[KNodeId<TKNodeId>.SizeOf()];
+            var a = new byte[KNodeId<TKNodeId>.SizeOf];
             nodeId.Write(a);
             return ByteString.CopyFrom(a);
 #else
-            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf()];
+            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
             nodeId.Write(a);
             return ByteString.CopyFrom(a);
 #endif
@@ -118,7 +118,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             var r = new StoreRequest();
             r.Key = Encode(protocol, request.Key);
-            r.Value = request.Value != null ? ByteString.CopyFrom(request.Value.Value.Span) : null;
+            r.Value = request.Value != null ? ByteString.CopyFrom(request.Value.Value.ToArray()) : null;
             r.Ttl = request.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(request.Expiration.Value - DateTimeOffset.UtcNow).TotalSeconds } : null;
             return r;
         }
@@ -156,7 +156,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             var r = new FindValueResponse();
             r.Key = Encode(protocol, response.Key);
-            r.Value = response.Value != null ? ByteString.CopyFrom(response.Value.Value.Span) : null;
+            r.Value = response.Value != null ? ByteString.CopyFrom(response.Value.Value.ToArray()) : null;
             r.Peers.Add(Encode(protocol, response.Peers));
             return r;
         }

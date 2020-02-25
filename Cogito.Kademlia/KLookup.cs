@@ -52,6 +52,54 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
+        /// Describes a result from the Lookup method.
+        /// </summary>
+        readonly struct LookupResult
+        {
+
+            readonly TKNodeId key;
+            readonly IEnumerable<KPeerEndpointInfo<TKNodeId>> peers;
+            readonly KPeerEndpointInfo<TKNodeId>? source;
+            readonly ReadOnlyMemory<byte>? value;
+
+            /// <summary>
+            /// Initializes a new instance.
+            /// </summary>
+            /// <param name="key"></param>
+            /// <param name="peers"></param>
+            /// <param name="source"></param>
+            /// <param name="value"></param>
+            public LookupResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, in KPeerEndpointInfo<TKNodeId>? source, ReadOnlyMemory<byte>? value)
+            {
+                this.key = key;
+                this.peers = peers;
+                this.source = source;
+                this.value = value;
+            }
+
+            /// <summary>
+            /// Gets the original search key.
+            /// </summary>
+            public TKNodeId Key => key;
+
+            /// <summary>
+            /// Gets the set of peers returned from the find method.
+            /// </summary>
+            public IEnumerable<KPeerEndpointInfo<TKNodeId>> Peers => peers;
+
+            /// <summary>
+            /// Gets the final node that returned the result.
+            /// </summary>
+            public KPeerEndpointInfo<TKNodeId>? Source => source;
+
+            /// <summary>
+            /// Optionally gets the value returned from the find method.
+            /// </summary>
+            public ReadOnlyMemory<byte>? Value => value;
+
+        }
+
+        /// <summary>
         /// Describes a version of the find function.
         /// </summary>
         /// <param name="peer"></param>
@@ -86,9 +134,15 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KLookupResult<TKNodeId>> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KLookupNodeResult<TKNodeId>> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            return LookupAsync(key, FindNodeAsync, cancellationToken);
+            return LookupNodeAsync(key, cancellationToken);
+        }
+
+        async ValueTask<KLookupNodeResult<TKNodeId>> LookupNodeAsync(TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            var r = await LookupAsync(key, FindNodeAsync, cancellationToken);
+            return new KLookupNodeResult<TKNodeId>(r.Key, r.Peers);
         }
 
         /// <summary>
@@ -97,9 +151,15 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KLookupResult<TKNodeId>> LookupValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KLookupValueResult<TKNodeId>> LookupValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            return LookupAsync(key, FindValueAsync, cancellationToken);
+            return LookupValueAsync(key, cancellationToken);
+        }
+
+        async ValueTask<KLookupValueResult<TKNodeId>> LookupValueAsync(TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            var r = await LookupAsync(key, FindValueAsync, cancellationToken);
+            return new KLookupValueResult<TKNodeId>(r.Key, r.Peers, r.Source, r.Value);
         }
 
         /// <summary>
@@ -108,7 +168,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KLookupResult<TKNodeId>> LookupAsync(TKNodeId key, FindFunc func, CancellationToken cancellationToken = default)
+        async ValueTask<LookupResult> LookupAsync(TKNodeId key, FindFunc func, CancellationToken cancellationToken = default)
         {
             if (func is null)
                 throw new ArgumentNullException(nameof(func));
@@ -177,7 +237,7 @@ namespace Cogito.Kademlia
 
                             // method returned the value; we can stop looking and return the value and our path
                             if (find.Result.Value != null)
-                                return new KLookupResult<TKNodeId>(key, path, peer, find.Result.Value);
+                                return new LookupResult(key, path, peer, find.Result.Value);
 
                             // after we've received a successful result
                             // mark the node as one we've encountered which did not return a value
@@ -228,7 +288,7 @@ namespace Cogito.Kademlia
             }
 
             // we never found anything; return the path we took, but that's it
-            return new KLookupResult<TKNodeId>(key, path, null);
+            return new LookupResult(key, path, null, null);
         }
 
         /// <summary>

@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KLookupResult<TKNodeId>> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KLookupNodeResult<TKNodeId>> LookupNodeAsync(in TKNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Initiates a value lookup for the specified key, returning the closest discovered nodes and the first occurance of the value.
@@ -26,7 +26,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KLookupResult<TKNodeId>> LookupValueAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KLookupValueResult<TKNodeId>> LookupValueAsync(in TKNodeId key, CancellationToken cancellationToken = default);
 
     }
 

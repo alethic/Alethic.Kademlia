@@ -118,7 +118,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                 foreach (var i in NetworkInterface.GetAllNetworkInterfaces())
                     if (i.OperationalStatus == OperationalStatus.Up)
                         foreach (var j in i.GetIPProperties().UnicastAddresses)
-                            if (IPAddress.IsLoopback(j.Address) == false)
+                            if (IPAddress.IsLoopback(j.Address) == false && j.Address.IsIPv4MappedToIPv6 == false && j.Address.IsIPv6Multicast == false && j.Address.IsIPv6SiteLocal == false)
                                 if (h.Add(j.Address))
                                     yield return j.Address;
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,14 +41,13 @@ namespace Cogito.Kademlia.Tests
 
         }
 
-
         [TestMethod]
         public void Should_find_proper_bucket_for_int32()
         {
             var s = new KNodeId32(0);
             KFixedTableRouter.GetBucketIndex(s, new KNodeId32(1)).Should().Be(0);
             KFixedTableRouter.GetBucketIndex(s, new KNodeId32(2)).Should().Be(1);
-            KFixedTableRouter.GetBucketIndex(s, new KNodeId32(2147483648)).Should().Be(31);
+            KFixedTableRouter.GetBucketIndex(s, new KNodeId32(uint.MaxValue)).Should().Be(31);
         }
 
         [TestMethod]
@@ -188,6 +188,21 @@ namespace Cogito.Kademlia.Tests
                 l.Add(t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null, null).AsTask());
 
             await Task.WhenAll(l);
+        }
+
+        [TestMethod]
+        public async Task Should_find_buckets()
+        {
+            var s = KNodeId<KNodeId32>.Create();
+            var t = new KFixedTableRouter<KNodeId32>(s, new FakeEndpointInvoker<KNodeId32>());
+
+            var r = new Random();
+            var l = new List<Task>();
+            for (int i = 0; i < 1024; i++)
+                await t.UpdatePeerAsync(KNodeId<KNodeId32>.Create(), null, null);
+
+            var z = await t.GetNextHopAsync(KNodeId<KNodeId32>.Create(), 200);
+            var o = z.ToList();
         }
 
     }

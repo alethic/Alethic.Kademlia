@@ -17,16 +17,14 @@ namespace Cogito.Kademlia
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
+        static readonly int szz = Unsafe.SizeOf<TKNodeId>();
         static readonly RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
 
         /// <summary>
         /// Gets the size of the <typeparamref name="TKNodeId"/> type.
         /// </summary>
         /// <returns></returns>
-        public static int SizeOf()
-        {
-            return Unsafe.SizeOf<TKNodeId>();
-        }
+        public static int SizeOf => szz;
 
         /// <summary>
         /// Creates a new random node ID.
@@ -35,9 +33,9 @@ namespace Cogito.Kademlia
         public static TKNodeId Create()
         {
 #if NET47 || NETSTANDARD2_0
-            var b = new byte[SizeOf()];
+            var b = new byte[SizeOf];
 #else
-            var b = (Span<byte>)stackalloc byte[SizeOf()];
+            var b = (Span<byte>)stackalloc byte[SizeOf];
 #endif
             rng.GetBytes(b);
             return MemoryMarshal.Read<TKNodeId>(b);
@@ -49,7 +47,7 @@ namespace Cogito.Kademlia
         /// <param name="sequence"></param>
         public static TKNodeId Read(ref ReadOnlySequence<byte> sequence)
         {
-            return sequence.AdvanceOver(SizeOf(), Read);
+            return sequence.AdvanceOver(SizeOf, Read);
         }
 
         /// <summary>
@@ -68,7 +66,7 @@ namespace Cogito.Kademlia
         /// <param name="writer"></param>
         public static void Write(TKNodeId self, IBufferWriter<byte> writer)
         {
-            var s = SizeOf();
+            var s = SizeOf;
             Write(self, writer.GetSpan(s));
             writer.Advance(s);
         }
@@ -92,7 +90,7 @@ namespace Cogito.Kademlia
         /// <param name="o"></param>
         public static void CalculateDistance(in TKNodeId l, in TKNodeId r, Span<byte> o)
         {
-            var s = SizeOf();
+            var s = SizeOf;
             if (o.Length < s)
                 throw new ArgumentException("Output byte range must be greater than or equal to the size of the node IDs.");
 
@@ -122,25 +120,25 @@ namespace Cogito.Kademlia
         public static TKNodeId Randomize(in TKNodeId self, int suffixCount)
         {
             // set all except suffix
-            var selfMask = new BitArray(SizeOf() * 8);
+            var selfMask = new BitArray(SizeOf * 8);
             for (int i = 0; i < selfMask.Length - suffixCount; i++)
                 selfMask.Set(i, true);
 
             // set only suffix
             var randMask = new BitArray(selfMask).Not();
 
-            var selfNode = (Span<byte>)stackalloc byte[SizeOf()];
+            var selfNode = (Span<byte>)stackalloc byte[SizeOf];
             self.Write(selfNode);
             var selfBuff = new BitArray(selfNode.ToArray());
             selfBuff.And(selfMask);
 
-            var randNode = (Span<byte>)stackalloc byte[SizeOf()];
+            var randNode = (Span<byte>)stackalloc byte[SizeOf];
             Create().Write(randNode);
             var randBuff = new BitArray(randNode.ToArray());
             randBuff.And(randMask);
 
             var cmplBuff = selfBuff.Or(randBuff);
-            var cmplNode = new byte[SizeOf()];
+            var cmplNode = new byte[SizeOf];
             cmplBuff.CopyTo(cmplNode, 0);
             var cmplFins = Read(cmplNode);
 
