@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-using Cogito.Kademlia.Core;
+using Cogito.Collections;
 using Cogito.Threading;
 
 namespace Cogito.Kademlia

@@ -1,6 +1,6 @@
 using System;
 
-using Cogito.Kademlia.Core;
+using Cogito.Memory;
 
 using FluentAssertions;
 
