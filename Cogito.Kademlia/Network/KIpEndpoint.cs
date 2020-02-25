@@ -16,6 +16,16 @@ namespace Cogito.Kademlia.Network
     {
 
         /// <summary>
+        /// Returns the address used to describe any IPv4 endpoint.
+        /// </summary>
+        public static readonly KIpEndpoint Ip4Any = new KIpEndpoint(KIp4Address.Any, 0);
+
+        /// <summary>
+        /// Returns the address used to describe any IPv6 endpoint.
+        /// </summary>
+        public static readonly KIpEndpoint Ip6Any = new KIpEndpoint(KIp6Address.Any, 0);
+
+        /// <summary>
         /// Reads a <see cref="KIpEndpoint"/> from the given span.
         /// </summary>
         /// <param name="span"></param>

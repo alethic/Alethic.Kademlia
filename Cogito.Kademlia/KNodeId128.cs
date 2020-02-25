@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
 using Cogito.Kademlia.Core;
+using Cogito.Memory;
 
 namespace Cogito.Kademlia
 {

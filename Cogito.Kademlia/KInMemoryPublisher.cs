@@ -142,14 +142,14 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync())
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
 
                 // begin new run processes
                 runCts = new CancellationTokenSource();
-                run = Task.WhenAll(Task.Run(() => PeriodicPublishAsync(runCts.Token)));
+                run = Task.WhenAll(Task.Run(() => PublishRunAsync(runCts.Token)));
             }
         }
 
@@ -160,7 +160,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync())
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (runCts != null)
                 {
@@ -183,10 +183,11 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Periodicaly publishes values.
+        /// Periodically publishes key/value pairs to the appropriate nodes.
         /// </summary>
         /// <param name="cancellationToken"></param>
-        async Task PeriodicPublishAsync(CancellationToken cancellationToken)
+        /// <returns></returns>
+        async Task PublishRunAsync(CancellationToken cancellationToken)
         {
             while (cancellationToken.IsCancellationRequested == false)
             {

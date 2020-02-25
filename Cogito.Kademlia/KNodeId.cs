@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 using Cogito.Kademlia.Core;
+using Cogito.Memory;
 
 namespace Cogito.Kademlia
 {

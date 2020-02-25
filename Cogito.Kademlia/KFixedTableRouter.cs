@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
 using Cogito.Linq;
+using Cogito.Memory;
 
 using Microsoft.Extensions.Logging;
 

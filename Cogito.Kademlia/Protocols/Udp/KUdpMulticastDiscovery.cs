@@ -25,9 +25,6 @@ namespace Cogito.Kademlia.Protocols.Udp
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        static readonly KIpEndpoint Ip4Any = new KIpEndpoint(new KIp4Address(), 0);
-        static readonly KIpEndpoint Ip6Any = new KIpEndpoint(new KIp6Address(), 0);
-
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         static readonly Random rnd = new Random();
 
@@ -103,8 +100,8 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// </summary>
         KIpEndpoint IpAny => endpoint.Protocol switch
         {
-            KIpAddressFamily.IPv4 => Ip4Any,
-            KIpAddressFamily.IPv6 => Ip6Any,
+            KIpAddressFamily.IPv4 => KIpEndpoint.Ip4Any,
+            KIpAddressFamily.IPv6 => KIpEndpoint.Ip6Any,
             _ => throw new InvalidOperationException(),
         };
 

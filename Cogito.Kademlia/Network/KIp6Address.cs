@@ -12,6 +12,11 @@ namespace Cogito.Kademlia.Network
     public unsafe struct KIp6Address : IEquatable<KIp6Address>
     {
 
+        /// <summary>
+        /// Returns the address used to describe any thing.
+        /// </summary>
+        public static readonly KIp6Address Any = new KIp6Address();
+
         fixed byte data[16];
 
         /// <summary>

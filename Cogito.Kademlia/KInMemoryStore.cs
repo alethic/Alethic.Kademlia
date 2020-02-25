@@ -79,7 +79,7 @@ namespace Cogito.Kademlia
             {
                 expiration = expiration ?? DateTimeOffset.UtcNow.Add(defaultTimeToLive);
                 logger?.LogInformation("Storing {Key} in memory cache with expiration at {Expiration}.", key, expiration);
-                cache.Set<Entry>(key, new Entry( value.Value.ToArray(), expiration.Value), expiration.Value);
+                cache.Set(key, new Entry(value.Value.ToArray(), expiration.Value), expiration.Value);
             }
             else
             {
