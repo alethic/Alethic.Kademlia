@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cogito.Kademlia.Core;
+using Cogito.Collections;
 
 using Microsoft.Extensions.Logging;
 

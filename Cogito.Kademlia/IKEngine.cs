@@ -19,11 +19,6 @@ namespace Cogito.Kademlia
         /// </summary>
         TKPeerData SelfData { get; }
 
-        /// <summary>
-        /// Gets the router configured on the engine.
-        /// </summary>
-        IKRouter<TKNodeId, TKPeerData> Router { get; }
-
     }
 
     /// <summary>
@@ -38,11 +33,6 @@ namespace Cogito.Kademlia
         /// Gets the Node ID of the node itself.
         /// </summary>
         TKNodeId SelfId { get; }
-
-        /// <summary>
-        /// Gets the lookup engine that provides for node traversal.
-        /// </summary>
-        IKLookup<TKNodeId> Lookup { get; }
 
         /// <summary>
         /// Attempts to connect the engine to one of the specified endpoints.

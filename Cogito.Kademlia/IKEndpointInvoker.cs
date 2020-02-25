@@ -7,7 +7,7 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Describes the methods available to be invoked against multiple endpoints.
+    /// Describes a component that can invoke endpoint methods across a set of multiple endpoints.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public interface IKEndpointInvoker<TKNodeId>
