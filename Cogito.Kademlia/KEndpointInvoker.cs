@@ -21,7 +21,6 @@ namespace Cogito.Kademlia
 
         readonly TKNodeId self;
         readonly TKPeerData data;
-        readonly IKEndpointInvokerRetry<TKNodeId> retry;
         readonly ILogger logger;
 
         /// <summary>
@@ -29,13 +28,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="self"></param>
         /// <param name="data"></param>
-        /// <param name="retry"></param>
         /// <param name="logger"></param>
-        public KEndpointInvoker(in TKNodeId self, TKPeerData data, IKEndpointInvokerRetry<TKNodeId> retry = null, ILogger logger = null)
+        public KEndpointInvoker(in TKNodeId self, TKPeerData data, ILogger logger = null)
         {
             this.self = self;
             this.data = data;
-            this.retry = retry ?? new KEndpointInvokerRetry<TKNodeId>(logger);
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -45,10 +42,10 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpointSet<TKNodeId> endpoints, CancellationToken cancellationToken = default)
         {
             var r = new KPingRequest<TKNodeId>(data.Endpoints.ToArray());
-            return retry.TryAsync(endpoints, ep => ep.PingAsync(r, cancellationToken));
+            return TryAsync(endpoints, ep => ep.PingAsync(r, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -60,10 +57,10 @@ namespace Cogito.Kademlia
         /// <param name="expiration"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default)
         {
             var r = new KStoreRequest<TKNodeId>(key, value, expiration);
-            return retry.TryAsync(endpoints, ep => ep.StoreAsync(r, cancellationToken));
+            return TryAsync(endpoints, ep => ep.StoreAsync(r, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -73,10 +70,10 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
         {
             var r = new KFindNodeRequest<TKNodeId>(key);
-            return retry.TryAsync(endpoints, ep => ep.FindNodeAsync(r, cancellationToken));
+            return TryAsync(endpoints, ep => ep.FindNodeAsync(r, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -86,10 +83,58 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
         {
             var r = new KFindValueRequest<TKNodeId>(key);
-            return retry.TryAsync(endpoints, ep => ep.FindValueAsync(r, cancellationToken));
+            return TryAsync(endpoints, ep => ep.FindValueAsync(r, cancellationToken), cancellationToken);
+        }
+
+        /// <summary>
+        /// Attempts to execute the specified method against the provided endpoints.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        /// <param name="func"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpointSet<TKNodeId> endpoints, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func, CancellationToken cancellationToken)
+            where TResponseBody : struct, IKResponseData<TKNodeId>
+        {
+            while (cancellationToken.IsCancellationRequested == false && endpoints.Acquire() is IKEndpoint<TKNodeId> endpoint)
+            {
+                var r = await TryAsync(endpoint, func);
+                if (r.Status == KResponseStatus.Success)
+                    return r;
+            }
+
+            return default;
+        }
+
+        /// <summary>
+        /// Attempts to execute the specified method against an endpoint.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <returns></returns>
+        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpoint<TKNodeId> endpoint, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
+            where TResponseBody : struct, IKResponseData<TKNodeId>
+        {
+            try
+            {
+                logger?.LogTrace("Attempting request against {Endpoint}.", endpoint);
+                var r = await func(endpoint);
+                if (r.Status == KResponseStatus.Success)
+                {
+                    logger?.LogTrace("Success contacting {Endpoint}.", endpoint);
+                    endpoint.OnSuccess(new KEndpointSuccessEventArgs());
+                    return r;
+                }
+            }
+            catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
+            {
+                logger?.LogWarning("Endpoint not available: {Endpoint}.", endpoint);
+                endpoint.OnTimeout(new KEndpointTimeoutEventArgs());
+            }
+
+            return default;
         }
 
     }

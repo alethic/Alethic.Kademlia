@@ -20,7 +20,7 @@ namespace Cogito.Kademlia.Protocols.Udp
     /// Listens for multicast PING requests on a multicast group and provides Connect operations for joining a UDP Kademlia network.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KUdpMulticastDiscovery<TKNodeId, TKPeerData>
+    public class KUdpMulticastDiscovery<TKNodeId, TKPeerData> : IKIpProtocolResourceProvider<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
@@ -31,19 +31,22 @@ namespace Cogito.Kademlia.Protocols.Udp
         readonly ulong network;
         readonly IKEngine<TKNodeId, TKPeerData> engine;
         readonly IKIpProtocol<TKNodeId> protocol;
-        readonly IKMessageEncoder<TKNodeId> encoder;
-        readonly IKMessageDecoder<TKNodeId> decoder;
+        readonly IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder;
+        readonly IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder;
         readonly KIpEndpoint endpoint;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
 
-        readonly KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>> pingQueue = new KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>>(DefaultTimeout);
+        readonly KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong> pingQueue = new KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong>(DefaultTimeout);
 
         Socket mcastSocket;
         SocketAsyncEventArgs mcastRecvArgs;
 
         Socket localSocket;
         SocketAsyncEventArgs localRecvArgs;
+
+        CancellationTokenSource runCts;
+        Task run;
 
         /// <summary>
         /// Initializes a new instance.
@@ -55,7 +58,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="decoder"></param>
         /// <param name="endpoint"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, in KIpEndpoint endpoint, ILogger logger = null)
+        public KUdpMulticastDiscovery(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, in KIpEndpoint endpoint, ILogger logger = null)
         {
             this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -114,6 +117,9 @@ namespace Cogito.Kademlia.Protocols.Udp
         {
             using (await sync.LockAsync())
             {
+                if (run != null || runCts != null)
+                    throw new InvalidOperationException();
+
                 if (mcastSocket != null)
                     throw new KProtocolException(KProtocolError.Invalid, "Discovery is already started.");
 
@@ -165,6 +171,75 @@ namespace Cogito.Kademlia.Protocols.Udp
                 logger?.LogInformation("Waiting for incoming multicast announcement packets.");
                 mcastSocket.ReceiveMessageFromAsync(mcastRecvArgs);
                 localSocket.ReceiveMessageFromAsync(localRecvArgs);
+
+                // begin new run processes
+                runCts = new CancellationTokenSource();
+                run = Task.WhenAll(Task.Run(() => ConnectRunAsync(runCts.Token)));
+            }
+        }
+
+        /// <summary>
+        /// Stops the processes of the engine.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            using (await sync.LockAsync(cancellationToken))
+            {
+                // shutdown socket
+                if (mcastSocket != null)
+                {
+                    // swap for null
+                    var s = mcastSocket;
+                    mcastSocket = null;
+
+                    try
+                    {
+                        s.Close();
+                        s.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+
+                    }
+                }
+
+                // shutdown socket
+                if (localSocket != null)
+                {
+                    // swap for null
+                    var s = localSocket;
+                    localSocket = null;
+
+                    try
+                    {
+                        s.Close();
+                        s.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+
+                    }
+                }
+
+                if (runCts != null)
+                {
+                    runCts.Cancel();
+                    runCts = null;
+                }
+
+                if (run != null)
+                {
+                    try
+                    {
+                        await run;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // ignore
+                    }
+                }
             }
         }
 
@@ -218,20 +293,50 @@ namespace Cogito.Kademlia.Protocols.Udp
         }
 
         /// <summary>
+        /// Periodically publishes key/value pairs to the appropriate nodes.
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task ConnectRunAsync(CancellationToken cancellationToken)
+        {
+            while (cancellationToken.IsCancellationRequested == false)
+            {
+                try
+                {
+                    logger?.LogInformation("Initiating periodic multicast bootstrap.");
+                    await ConnectAsync(cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    logger?.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+            }
+        }
+
+        /// <summary>
         /// Attempts to bootstrap the Kademlia engine from the available multicast group members.
         /// </summary>
         /// <returns></returns>
-        public async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
+        async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
         {
-            var r = await PingAsync(new KPingRequest<TKNodeId>(engine.SelfData.Endpoints.ToArray()), cancellationToken);
-            if (r.Status == KResponseStatus.Failure)
+            try
             {
-                logger?.LogError("Unable to PING multicast address. Not connecting.");
-                return;
-            }
+                var r = await PingAsync(new KPingRequest<TKNodeId>(engine.SelfData.Endpoints.ToArray()), cancellationToken);
+                if (r.Status == KResponseStatus.Failure)
+                {
+                    logger?.LogError("Unable to PING multicast address");
+                    return;
+                }
 
-            // initiate connection to retrieved endpoints
-            await engine.ConnectAsync(r.Body.Endpoints);
+                // initiate connection to retrieved endpoints
+                await engine.ConnectAsync(r.Body.Endpoints);
+            }
+            catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
+            {
+                // ignore
+            }
         }
 
         /// <summary>
@@ -304,13 +409,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(ulong magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(ulong magic, KResponseQueue<TKNodeId, TResponseData, ulong> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
-            logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, IpAny);
+            logger?.LogDebug("Queuing response wait for {Magic}.", magic);
 
             var c = new CancellationTokenSource();
-            var t = queue.WaitAsync(IpAny, magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
+            var t = queue.WaitAsync(magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
 
             try
             {
@@ -358,8 +463,9 @@ namespace Cogito.Kademlia.Protocols.Udp
                 encoder.Encode(protocol, b, PackageMessage(m, request));
                 return await SendAndWaitAsync(m, pingQueue, b, cancellationToken);
             }
-            catch (TimeoutException)
+            catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
             {
+                logger?.LogError("No response received attempting to ping multicast peers.");
                 return default;
             }
         }
@@ -394,54 +500,8 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         ValueTask OnReceivePingResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            pingQueue.Respond(IpAny, response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(response.Body.Endpoints.FirstOrDefault(), response.Header.Sender, KResponseStatus.Success, response.Body));
+            pingQueue.Respond(response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(response.Body.Endpoints.FirstOrDefault(), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
-        }
-
-        /// <summary>
-        /// Stops the network.
-        /// </summary>
-        /// <returns></returns>
-        public async Task StopAsync()
-        {
-            using (await sync.LockAsync())
-            {
-                // shutdown socket
-                if (mcastSocket != null)
-                {
-                    // swap for null
-                    var s = mcastSocket;
-                    mcastSocket = null;
-
-                    try
-                    {
-                        s.Close();
-                        s.Dispose();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-
-                    }
-                }
-
-                // shutdown socket
-                if (localSocket != null)
-                {
-                    // swap for null
-                    var s = localSocket;
-                    localSocket = null;
-
-                    try
-                    {
-                        s.Close();
-                        s.Dispose();
-                    }
-                    catch (ObjectDisposedException)
-                    {
-
-                    }
-                }
-            }
         }
 
     }

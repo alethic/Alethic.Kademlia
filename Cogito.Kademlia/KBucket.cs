@@ -61,26 +61,22 @@ namespace Cogito.Kademlia
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="endpoint"></param>
-        /// <param name="additional"></param>
+        /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
+        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
         {
-            return UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
+            return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
         }
 
         /// <summary>
         /// Updates the given node with the newly available endpoints.
         /// </summary>
         /// <param name="nodeId"></param>
-        /// <param name="endpoint"></param>
-        /// <param name="additional"></param>
+        /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
-        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken)
+        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
         {
-            logger?.LogTrace("Updating peer {NodeId} with {Endpoint}.", nodeId, endpoint);
-
             var lk = rw.BeginUpgradableReadLock();
 
             try
@@ -94,16 +90,9 @@ namespace Cogito.Kademlia
                         l.Remove(i);
                         l.AddFirst(i);
 
-                        // promote contact endpoint to top
-                        if (endpoint != null)
-                        {
-                            logger?.LogTrace("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
-                            i.Value.Data.Endpoints.Update(endpoint).LastSeen = DateTime.UtcNow;
-                        }
-
                         // incorporate new additional endpoints into end of set
-                        if (additional != null)
-                            foreach (var j in additional)
+                        if (endpoints != null)
+                            foreach (var j in endpoints)
                                 if (i.Value.Data.Endpoints.Select(j) == null)
                                     i.Value.Data.Endpoints.Demote(j);
                     }
@@ -117,16 +106,9 @@ namespace Cogito.Kademlia
                         // generate new peer entry
                         var p = new TKPeerData();
 
-                        // promote contact endpoint to top
-                        if (endpoint != null)
-                        {
-                            logger?.LogDebug("Promoting {Endpoint} for peer {NodeId}.", endpoint, nodeId);
-                            p.Endpoints.Update(endpoint);
-                        }
-
                         // incorporate new additional endpoints into end of set
-                        if (additional != null)
-                            foreach (var j in additional)
+                        if (endpoints != null)
+                            foreach (var j in endpoints)
                                 if (p.Endpoints.Select(j) == null)
                                     p.Endpoints.Demote(j);
 
@@ -186,14 +168,10 @@ namespace Cogito.Kademlia
                             var p = new TKPeerData();
 
                             // incorporate new additional endpoints into end of set
-                            if (additional != null)
-                                foreach (var j in additional)
+                            if (endpoints != null)
+                                foreach (var j in endpoints)
                                     if (p.Endpoints.Select(j) == null)
                                         p.Endpoints.Demote(j);
-
-                            // promote contact endpoint to top
-                            if (endpoint != null)
-                                p.Endpoints.Update(endpoint);
 
                             l.AddFirst(new KBucketItem<TKNodeId, TKPeerData>(nodeId, p));
                         }

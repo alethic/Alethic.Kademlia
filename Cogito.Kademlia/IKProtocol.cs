@@ -13,11 +13,6 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
-        /// Gets the engine associated with this protocol.
-        /// </summary>
-        IKEngine<TKNodeId> Engine { get; }
-
-        /// <summary>
         /// Gets the set of endpoints available for communication with this protocol.
         /// </summary>
         IEnumerable<IKEndpoint<TKNodeId>> Endpoints { get; }

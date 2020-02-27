@@ -10,6 +10,13 @@ namespace Cogito.Kademlia.Network
     public unsafe struct KIpPort : IEquatable<KIpPort>
     {
 
+        static readonly KIpPort any = new KIpPort(0);
+
+        /// <summary>
+        /// Gets the <see cref="KIpPort"/> that represents any port.
+        /// </summary>
+        public static KIpPort Any => any;
+
         /// <summary>
         /// Implicitly casts this instance as a <see cref="ushort"/>.
         /// </summary>

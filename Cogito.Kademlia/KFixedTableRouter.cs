@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cogito.Kademlia.Core;
-using Cogito.Linq;
 using Cogito.Memory;
 
 using Microsoft.Extensions.Logging;
@@ -65,7 +62,7 @@ namespace Cogito.Kademlia
 
         public const int DefaultKSize = 20;
 
-        readonly TKNodeId selfId;
+        readonly TKNodeId self;
         readonly TKPeerData selfData;
         readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly int k;
@@ -85,7 +82,7 @@ namespace Cogito.Kademlia
             if (k < 1)
                 throw new ArgumentOutOfRangeException("The value of k must be greater than or equal to 1.");
 
-            this.selfId = selfId;
+            this.self = selfId;
             this.selfData = selfData;
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.k = k;
@@ -100,7 +97,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the ID of the node itself.
         /// </summary>
-        public TKNodeId SelfId => selfId;
+        public TKNodeId Self => self;
 
         /// <summary>
         /// Gets the data of the node itself.
@@ -115,24 +112,24 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the bucket associated with the specified node ID.
         /// </summary>
-        /// <param name="nodeId"></param>
+        /// <param name="node"></param>
         /// <returns></returns>
-        internal KBucket<TKNodeId, TKPeerData> GetBucket(in TKNodeId nodeId)
+        internal KBucket<TKNodeId, TKPeerData> GetBucket(in TKNodeId node)
         {
-            var i = GetBucketIndex(selfId, nodeId);
-            logger?.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", nodeId, i);
+            var i = GetBucketIndex(self, node);
+            logger?.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", node, i);
             return buckets[i];
         }
 
         /// <summary>
         /// Gets the data for the peer within the table.
         /// </summary>
-        /// <param name="nodeId"></param>
+        /// <param name="peer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<TKPeerData> GetPeerDataAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
+        public ValueTask<TKPeerData> GetPeerDataAsync(in TKNodeId peer, CancellationToken cancellationToken)
         {
-            return GetBucket(nodeId).GetPeerDataAsync(nodeId, cancellationToken);
+            return GetBucket(peer).GetPeerDataAsync(peer, cancellationToken);
         }
 
         /// <summary>
@@ -142,35 +139,34 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> GetNextHopAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> SelectPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default)
         {
             logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
 
             // take first bucket; then append others; pretty inefficient
             var c = new KNodeIdDistanceComparer<TKNodeId>(key);
-            var l = Enumerable.Empty<KBucket<TKNodeId, TKPeerData>>().Append(buckets[GetBucketIndex(selfId, key)]).Concat(buckets).Distinct().SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints.ToArray())).ToArray();
+            var f = key.Equals(self) ? null : buckets[GetBucketIndex(self, key)];
+            var s = f == null ? Enumerable.Empty<KBucket<TKNodeId, TKPeerData>>() : new[] { f };
+            var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.Id, c).Take(k).Select(i => new KPeerEndpointInfo<TKNodeId>(i.Id, i.Data.Endpoints));
             return new ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>>(l);
         }
 
         /// <summary>
         /// Updates the endpoints for the peer within the table.
         /// </summary>
-        /// <param name="nodeId"></param>
-        /// <param name="endpoint"></param>
-        /// <param name="additional"></param>
+        /// <param name="peer"></param>
+        /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask UpdatePeerAsync(in TKNodeId nodeId, IKEndpoint<TKNodeId> endpoint, IEnumerable<IKEndpoint<TKNodeId>> additional, CancellationToken cancellationToken = default)
+        public ValueTask UpdatePeerAsync(in TKNodeId peer, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default)
         {
-            logger?.LogTrace("Received request to update peer {NodeId} with {Endpoint}.", nodeId, endpoint);
-
-            if (nodeId.Equals(SelfId))
+            if (peer.Equals(Self))
             {
-                logger?.LogError("Peer update request for self at {Endpoint}. Discarding.", endpoint);
+                logger?.LogError("Peer update request for self. Discarding.");
                 return new ValueTask(Task.CompletedTask);
             }
 
-            return GetBucket(nodeId).UpdatePeerAsync(nodeId, endpoint, additional, cancellationToken);
+            return GetBucket(peer).UpdatePeerAsync(peer, endpoints, cancellationToken);
         }
 
         /// <summary>

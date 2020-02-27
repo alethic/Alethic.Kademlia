@@ -52,16 +52,7 @@ namespace Cogito.Kademlia.Console
             await udp.StartAsync();
             await mcd.StartAsync();
             await pub.StartAsync();
-
-            try
-            {
-                await mcd.ConnectAsync();
-                await kad.StartAsync();
-            }
-            catch (Exception e)
-            {
-                log.LogError(e, "");
-            }
+            await kad.StartAsync();
 
             System.Console.WriteLine("Started...");
 
@@ -73,13 +64,18 @@ namespace Cogito.Kademlia.Console
                     case "exit":
                         cont = false;
                         break;
-                    case "show":
+                    case "id":
+                        System.Console.WriteLine("NodeId:" + kad.SelfId);
+                        break;
+                    case "peers":
                         foreach (var node in rtr)
                         {
                             System.Console.WriteLine("{0}", node.Key);
                             foreach (var ep in node.Value.Endpoints)
                                 System.Console.WriteLine("    {0}", ep);
                         }
+                        break;
+                    case "lookup":
                         break;
                     case "set":
                         await pub.SetAsync(KNodeId<KNodeId256>.Create(), Encoding.UTF8.GetBytes("test value"), null);

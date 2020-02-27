@@ -2,10 +2,10 @@
 {
 
     /// <summary>
-    /// Describes the data that comes along with a Kademlia response.
+    /// Provides <see cref="IKEndpoint{TKNodeId}"/> instances from IP primitives.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKResponseData<TKNodeId>
+    public interface IKProtocolResourceProvider<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 

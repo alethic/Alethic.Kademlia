@@ -83,6 +83,20 @@ namespace Cogito.Kademlia.Network
         }
 
         /// <summary>
+        /// Raised when a success is received.
+        /// </summary>
+        public event EventHandler<KEndpointSuccessEventArgs> Success;
+
+        /// <summary>
+        /// Raises the Success event.
+        /// </summary>
+        /// <param name="args"></param>
+        public void OnSuccess(KEndpointSuccessEventArgs args)
+        {
+            Success?.Invoke(this, args);
+        }
+
+        /// <summary>
         /// Raised when a timeout is received.
         /// </summary>
         public event EventHandler<KEndpointTimeoutEventArgs> Timeout;

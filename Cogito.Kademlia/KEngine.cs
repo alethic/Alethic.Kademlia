@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cogito.Linq;
 using Cogito.Threading;
 
 using Microsoft.Extensions.Logging;
@@ -51,7 +52,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the Node ID of the node itself.
         /// </summary>
-        public TKNodeId SelfId => router.SelfId;
+        public TKNodeId SelfId => router.Self;
 
         /// <summary>
         /// Gets the peer data of the node itself.
@@ -79,10 +80,11 @@ namespace Cogito.Kademlia
             logger.LogInformation("Bootstrapping network with connection to {Endpoints}.", endpoints);
 
             // ping node, which ensures availability and populates tables upon response
-            var r = await invoker.PingAsync(endpoints, cancellationToken);
+            var r = await invoker.PingAsync(new KEndpointSet<TKNodeId>(endpoints), cancellationToken);
             if (r.Status == KResponseStatus.Failure)
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
+            await router.UpdatePeerAsync(r.Sender, r.Body.Endpoints, cancellationToken);
             await lookup.LookupNodeAsync(SelfId, cancellationToken);
         }
 
@@ -186,6 +188,7 @@ namespace Cogito.Kademlia
         {
             while (cancellationToken.IsCancellationRequested == false)
             {
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 await RefreshAsync(cancellationToken);
                 await Task.Delay(TimeSpan.FromMinutes(60), cancellationToken);
             }
@@ -215,7 +218,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KPingResponse<TKNodeId>> OnPingAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, endpoint, request.Endpoints, cancellationToken);
+            await router.UpdatePeerAsync(sender, request.Endpoints.Prepend(endpoint), cancellationToken);
+
             return request.Respond(SelfData.Endpoints.ToArray());
         }
 
@@ -236,14 +240,15 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Invoked to handle incoming STORE requests.
         /// </summary>
-        /// <param name="source"></param>
+        /// <param name="sender"></param>
         /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(TKNodeId source, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KStoreResponse<TKNodeId>> OnStoreAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(source, endpoint, null, cancellationToken);
+            await router.UpdatePeerAsync(sender, endpoint.Yield(), cancellationToken);
+
             await store.SetAsync(request.Key, request.Value, request.Expiration);
             return request.Respond();
         }
@@ -272,8 +277,9 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindNodeResponse<TKNodeId>> OnFindNodeAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, endpoint, null, cancellationToken);
-            return request.Respond(await router.GetNextHopAsync(request.Key, router.K, cancellationToken));
+            await router.UpdatePeerAsync(sender, endpoint.Yield(), cancellationToken);
+
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken));
         }
 
         /// <summary>
@@ -300,9 +306,10 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, endpoint, null, cancellationToken);
+            await router.UpdatePeerAsync(sender, endpoint.Yield(), cancellationToken);
+
             var r = await store.GetAsync(request.Key);
-            return request.Respond(await router.GetNextHopAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration); // TODO respond with correct info
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration);
         }
 
     }

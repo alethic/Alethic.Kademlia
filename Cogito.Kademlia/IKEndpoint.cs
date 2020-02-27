@@ -51,6 +51,17 @@ namespace Cogito.Kademlia
         ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
 
         /// <summary>
+        /// Raised when a success occurs with the endpoint.
+        /// </summary>
+        event EventHandler<KEndpointSuccessEventArgs> Success;
+
+        /// <summary>
+        /// Raises the Success event.
+        /// </summary>
+        /// <param name="args"></param>
+        void OnSuccess(KEndpointSuccessEventArgs args);
+
+        /// <summary>
         /// Raised when a timeout occurs with the endpoint.
         /// </summary>
         event EventHandler<KEndpointTimeoutEventArgs> Timeout;

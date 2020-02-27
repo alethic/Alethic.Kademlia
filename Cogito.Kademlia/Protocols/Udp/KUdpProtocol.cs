@@ -22,32 +22,30 @@ namespace Cogito.Kademlia.Protocols.Udp
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
-    public class KUdpProtocol<TKNodeId, TKPeerData> : IKIpProtocol<TKNodeId>
+    public class KUdpProtocol<TKNodeId, TKPeerData> : IKIpProtocol<TKNodeId>, IKIpProtocolResourceProvider<TKNodeId>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(3);
+        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
         static readonly Random rnd = new Random();
 
         readonly ulong network;
         readonly IKEngine<TKNodeId, TKPeerData> engine;
-        readonly IKMessageDecoder<TKNodeId> decoder;
-        readonly IKMessageEncoder<TKNodeId> encoder;
-        readonly ushort port;
+        readonly IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder;
+        readonly IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder;
+        readonly KIpPort port;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
-
-        readonly KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>> pingQueue = new KIpResponseQueue<TKNodeId, KPingResponse<TKNodeId>>(DefaultTimeout);
-        readonly KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>> storeQueue = new KIpResponseQueue<TKNodeId, KStoreResponse<TKNodeId>>(DefaultTimeout);
-        readonly KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>> findNodeQueue = new KIpResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>>(DefaultTimeout);
-        readonly KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>> findValueQueue = new KIpResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>>(DefaultTimeout);
-
         readonly Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>>();
 
-        Socket socket;
-        SocketAsyncEventArgs recvArgs;
-        SocketAsyncEventArgs sendArgs;
+        readonly KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong> pingQueue = new KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong>(DefaultTimeout);
+        readonly KResponseQueue<TKNodeId, KStoreResponse<TKNodeId>, ulong> storeQueue = new KResponseQueue<TKNodeId, KStoreResponse<TKNodeId>, ulong>(DefaultTimeout);
+        readonly KResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>, ulong> findNodeQueue = new KResponseQueue<TKNodeId, KFindNodeResponse<TKNodeId>, ulong>(DefaultTimeout);
+        readonly KResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>, ulong> findValueQueue = new KResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>, ulong>(DefaultTimeout);
+
+        Socket sendSocket;
+        Dictionary<IPEndPoint, Socket> recvSockets;
 
         /// <summary>
         /// Initializes a new instance.
@@ -58,7 +56,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="decoder"></param>
         /// <param name="port"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId> encoder, IKMessageDecoder<TKNodeId> decoder, ushort port = 0, ILogger logger = null)
+        public KUdpProtocol(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, KIpPort port, ILogger logger = null)
         {
             this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -72,16 +70,6 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// Uniquely idenfies the traffic for this network from others.
         /// </summary>
         public ulong Network => network;
-
-        /// <summary>
-        /// Gets the engine associated with this protocol.
-        /// </summary>
-        public IKEngine<TKNodeId> Engine => engine;
-
-        /// <summary>
-        /// Gets the port number either currently listening on, or configured to listen on.
-        /// </summary>
-        public ushort Port => socket != null ? (ushort)((IPEndPoint)socket.LocalEndPoint).Port : port;
 
         /// <summary>
         /// Gets the set of endpoints through which this protocol is reachable.
@@ -124,26 +112,6 @@ namespace Cogito.Kademlia.Protocols.Udp
         }
 
         /// <summary>
-        /// Gets the local endpoints.
-        /// </summary>
-        /// <returns></returns>
-        IEnumerable<KIpEndpoint> GetLocalIpEndpoints(Socket socket)
-        {
-            foreach (var i in GetLocalIpAddresses())
-            {
-                switch (i.AddressFamily)
-                {
-                    case AddressFamily.InterNetwork:
-                        yield return new KIpEndpoint(new KIp4Address(i), port != 0 ? port : ((IPEndPoint)socket.LocalEndPoint).Port);
-                        break;
-                    case AddressFamily.InterNetworkV6:
-                        yield return new KIpEndpoint(new KIp6Address(i), port != 0 ? port : ((IPEndPoint)socket.LocalEndPoint).Port);
-                        break;
-                }
-            }
-        }
-
-        /// <summary>
         /// Starts the network.
         /// </summary>
         /// <param name="cancellationToken"></param>
@@ -152,45 +120,82 @@ namespace Cogito.Kademlia.Protocols.Udp
         {
             using (await sync.LockAsync())
             {
-                if (socket != null)
-                    throw new KProtocolException(KProtocolError.Invalid, "Protocol is already started.");
+                if (sendSocket != null || recvSockets != null)
+                    throw new KException("UDP protocol is already started.");
 
-                // establish UDP socket
-                logger?.LogInformation("Initializing UDP socket on {Port}.", port);
-                socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                socket.DualMode = true;
-                socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
-                socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                socket.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
+                // reset sockets
+                sendSocket = null;
+                recvSockets = new Dictionary<IPEndPoint, Socket>();
 
-                // reset local endpoint intelligence
-                endpoints.Clear();
-                foreach (var ip in GetLocalIpEndpoints(socket))
-                    endpoints[ip] = CreateEndpoint(ip);
-
-                // remove our previous endpoints
+                // remove our previous advertised endpoints; there should be none
                 foreach (var i in engine.SelfData.Endpoints.Where(i => i.Protocol == this).ToList())
                     engine.SelfData.Endpoints.Remove(i);
 
-                // add our endpoints
-                foreach (var i in endpoints.Values)
+                // establish UDP socket
+                sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                sendSocket.DualMode = true;
+                sendSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
+                sendSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
+                sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
+                logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+
+                // begin receiving
+                var sendRecvArgs = new SocketAsyncEventArgs();
+                sendRecvArgs.SetBuffer(new byte[8192], 0, 8192);
+                sendRecvArgs.Completed += SocketAsyncEventArgs_Completed;
+                BeginReceive(sendSocket, sendRecvArgs);
+
+                var recvPort = port;
+
+                // generate one socket per IP
+                foreach (var ip in GetLocalIpAddresses())
                 {
-                    logger?.LogInformation("Socket listening on {Endpoint}.", i);
-                    engine.SelfData.Endpoints.Demote(i);
+                    var socketOptionLevelIp = ip.AddressFamily switch
+                    {
+                        AddressFamily.InterNetwork => SocketOptionLevel.IP,
+                        AddressFamily.InterNetworkV6 => SocketOptionLevel.IPv6,
+                        _ => throw new InvalidOperationException(),
+                    };
+
+                    // establish UDP socket
+                    var recvSocket = new Socket(ip.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                    recvSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
+                    recvSocket.SetSocketOption(socketOptionLevelIp, SocketOptionName.PacketInformation, true);
+                    recvSocket.Bind(new IPEndPoint(ip, recvPort));
+
+                    // record relation between endpoint data and endpoint interface
+                    var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
+                    engine.SelfData.Endpoints.Demote(endpoints[ep] = CreateEndpoint(ep));
+                    logger?.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
+
+                    // following sockets will preserve port
+                    recvPort = ep.Port;
+
+                    // begin receiving
+                    var recvArgs = new SocketAsyncEventArgs();
+                    recvArgs.SetBuffer(new byte[8192], 0, 8192);
+                    recvArgs.Completed += SocketAsyncEventArgs_Completed;
+                    BeginReceive(recvSocket, recvArgs);
                 }
-
-                recvArgs = new SocketAsyncEventArgs();
-                recvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-                recvArgs.SetBuffer(new byte[8192], 0, 8192);
-                recvArgs.Completed += recvArgs_Completed;
-
-                sendArgs = new SocketAsyncEventArgs();
-                sendArgs.SetBuffer(new byte[8192], 0, 8192);
-                sendArgs.Completed += sendArgs_Completed;
-
-                logger?.LogInformation("Waiting for incoming packets.");
-                socket.ReceiveMessageFromAsync(recvArgs);
             }
+        }
+
+        /// <summary>
+        /// Initiates a receive for the specified socket.
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="args"></param>
+        void BeginReceive(Socket socket, SocketAsyncEventArgs args)
+        {
+            var any = socket.AddressFamily switch
+            {
+                AddressFamily.InterNetwork => IPAddress.Any,
+                AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
+                _ => throw new InvalidOperationException(),
+            };
+
+            args.RemoteEndPoint = new IPEndPoint(any, 0);
+            socket.ReceiveFromAsync(args);
         }
 
         /// <summary>
@@ -198,83 +203,72 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="args"></param>
-        void recvArgs_Completed(object sender, SocketAsyncEventArgs args)
+        void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs args)
         {
-            // should only be receiving packets from our message loop
-            if (args.LastOperation != SocketAsyncOperation.ReceiveMessageFrom)
-            {
-                logger?.LogTrace("Unexpected packet operation {Operation}.", args.LastOperation);
+            // check state of current socket
+            var socket = (Socket)sender;
+            if (socket.IsBound == false)
                 return;
-            }
 
-            logger?.LogInformation("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
-
-            // sometimes we receive no bytes
             if (args.BytesTransferred > 0)
             {
-                var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-                var b = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
-                var o = MemoryPool<byte>.Shared.Rent(b.Length);
-                var m = o.Memory.Slice(0, b.Length);
-                b.CopyTo(m.Span);
-                Task.Run(async () => { try { await OnReceiveAsync(p, m.Span, CancellationToken.None); } catch { } finally { o.Dispose(); } });
+                logger?.LogInformation("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
+
+                // obtain information about packet
+                var endpoint = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
+
+                // copy data into new buffer
+                var data = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
+                var lease = MemoryPool<byte>.Shared.Rent(data.Length);
+                var memory = lease.Memory.Slice(0, data.Length);
+                data.CopyTo(memory.Span);
+
+                Task.Run(async () => { try { await OnReceiveAsync(socket, endpoint, memory.Span, CancellationToken.None); } catch { } finally { lease.Dispose(); } });
             }
 
-            // continue receiving if socket still available
-            // this lock is blocking, but should be okay since this event handler can stall
-            using (sync.LockAsync().Result)
-            {
-                if (socket != null && socket.IsBound)
-                {
-                    recvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
-                    socket.ReceiveMessageFromAsync(recvArgs);
-                }
-            }
+            // wait for next packet
+            BeginReceive(socket, args);
         }
 
         /// <summary>
         /// Invoked when a datagram is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="packet"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveAsync(in KIpEndpoint endpoint, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveAsync(Socket socket, in KIpEndpoint endpoint, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
         {
-            // check for continued connection
-            var s = socket;
-            if (s == null || s.IsBound == false)
-                return new ValueTask(Task.CompletedTask);
-
             // decode incoming byte sequence
-            var l = decoder.Decode(this, new ReadOnlySequence<byte>(packet.ToArray()));
-            if (l.Network != network)
+            var sequence = decoder.Decode(this, new ReadOnlySequence<byte>(packet.ToArray()));
+            if (sequence.Network != network)
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
+                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", sequence.Network);
                 return new ValueTask(Task.CompletedTask);
             }
 
-            var t = new List<Task>();
+            var todo = new List<Task>();
 
             // dispatch individual messages into infrastructure
-            foreach (var m in l)
+            foreach (var message in sequence)
             {
-                t.Add(m switch
+                todo.Add(message switch
                 {
-                    KMessage<TKNodeId, KPingRequest<TKNodeId>> r => OnReceivePingRequestAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KPingResponse<TKNodeId>> r => OnReceivePingResponseAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KStoreRequest<TKNodeId>> r => OnReceiveStoreRequestAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KStoreResponse<TKNodeId>> r => OnReceiveStoreResponseAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KFindNodeRequest<TKNodeId>> r => OnReceiveFindNodeRequestAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KFindNodeResponse<TKNodeId>> r => OnReceiveFindNodeResponseAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KFindValueRequest<TKNodeId>> r => OnReceiveFindValueRequestAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KFindValueResponse<TKNodeId>> r => OnReceiveFindValueResponseAsync(endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KPingRequest<TKNodeId>> r => OnReceivePingRequestAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KPingResponse<TKNodeId>> r => OnReceivePingResponseAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KStoreRequest<TKNodeId>> r => OnReceiveStoreRequestAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KStoreResponse<TKNodeId>> r => OnReceiveStoreResponseAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KFindNodeRequest<TKNodeId>> r => OnReceiveFindNodeRequestAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KFindNodeResponse<TKNodeId>> r => OnReceiveFindNodeResponseAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KFindValueRequest<TKNodeId>> r => OnReceiveFindValueRequestAsync(socket, endpoint, r, cancellationToken).AsTask(),
+                    KMessage<TKNodeId, KFindValueResponse<TKNodeId>> r => OnReceiveFindValueResponseAsync(socket, endpoint, r, cancellationToken).AsTask(),
                     _ => Task.CompletedTask,
                 });
             }
 
             // return when all complete
-            return new ValueTask(Task.WhenAll(t));
+            return new ValueTask(Task.WhenAll(todo));
         }
 
         /// <summary>
@@ -293,142 +287,145 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <summary>
         /// Invoked when a PING request is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingRequest<TKNodeId>> request, CancellationToken cancellationToken)
+        async ValueTask OnReceivePingRequestAsync(Socket socket, KIpEndpoint endpoint, KMessage<TKNodeId, KPingRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "PING", request.Header.Magic, request.Header.Sender, endpoint);
-            await OnPingReplyAsync(endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
+            await OnPingReplyAsync(socket, endpoint, request.Header.Magic, await engine.OnPingAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnPingReplyAsync(in KIpEndpoint endpoint, ulong magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnPingReplyAsync(Socket socket, in KIpEndpoint endpoint, ulong magic, in KPingResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "PING", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
-            return SocketSendToAsync(b, endpoint, cancellationToken);
+            return SocketSendToAsync(socket, b, endpoint, cancellationToken);
         }
 
         /// <summary>
         /// Invoked when a STORE request is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask OnReceiveStoreRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KStoreRequest<TKNodeId>> request, CancellationToken cancellationToken)
+        async ValueTask OnReceiveStoreRequestAsync(Socket socket, KIpEndpoint endpoint, KMessage<TKNodeId, KStoreRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "STORE", request.Header.Magic, request.Header.Sender, endpoint);
-            await OnStoreReplyAsync(endpoint, request.Header.Magic, await engine.OnStoreAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
+            await OnStoreReplyAsync(socket, endpoint, request.Header.Magic, await engine.OnStoreAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnStoreReplyAsync(in KIpEndpoint endpoint, ulong magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnStoreReplyAsync(Socket socket, in KIpEndpoint endpoint, ulong magic, in KStoreResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "STORE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
-            return SocketSendToAsync(b, endpoint, cancellationToken);
+            return SocketSendToAsync(socket, b, endpoint, cancellationToken);
         }
 
         /// <summary>
         /// Invoked when a FIND_NODE request is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask OnReceiveFindNodeRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindNodeRequest<TKNodeId>> request, CancellationToken cancellationToken)
+        async ValueTask OnReceiveFindNodeRequestAsync(Socket socket, KIpEndpoint endpoint, KMessage<TKNodeId, KFindNodeRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.Magic, request.Header.Sender, endpoint);
-            await OnFindNodeReplyAsync(endpoint, request.Header.Magic, await engine.OnFindNodeAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
+            await OnFindNodeReplyAsync(socket, endpoint, request.Header.Magic, await engine.OnFindNodeAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnFindNodeReplyAsync(in KIpEndpoint endpoint, ulong magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnFindNodeReplyAsync(Socket socket, in KIpEndpoint endpoint, ulong magic, in KFindNodeResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_NODE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
-            return SocketSendToAsync(b, endpoint, cancellationToken);
+            return SocketSendToAsync(socket, b, endpoint, cancellationToken);
         }
 
         /// <summary>
         /// Invoked when a FIND_VALUE request is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask OnReceiveFindValueRequestAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindValueRequest<TKNodeId>> request, CancellationToken cancellationToken)
+        async ValueTask OnReceiveFindValueRequestAsync(Socket socket, KIpEndpoint endpoint, KMessage<TKNodeId, KFindValueRequest<TKNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.Magic, request.Header.Sender, endpoint);
-            await OnFindValueReplyAsync(endpoint, request.Header.Magic, await engine.OnFindValueAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
+            await OnFindValueReplyAsync(socket, endpoint, request.Header.Magic, await engine.OnFindValueAsync(request.Header.Sender, CreateEndpoint(endpoint), request.Body, cancellationToken), cancellationToken);
         }
 
-        ValueTask OnFindValueReplyAsync(in KIpEndpoint endpoint, ulong magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
+        ValueTask OnFindValueReplyAsync(Socket socket, in KIpEndpoint endpoint, ulong magic, in KFindValueResponse<TKNodeId> response, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Sending {Operation}:{Magic} reply to {Endpoint}.", "FIND_VALUE", magic, endpoint);
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(magic, response));
-            return SocketSendToAsync(b, endpoint, cancellationToken);
+            return SocketSendToAsync(socket, b, endpoint, cancellationToken);
         }
 
         /// <summary>
         /// Invoked with a PING response is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KPingResponse<TKNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceivePingResponseAsync(Socket socket, in KIpEndpoint endpoint, KMessage<TKNodeId, KPingResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            pingQueue.Respond(endpoint, response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
+            pingQueue.Respond(response.Header.Magic, new KResponse<TKNodeId, KPingResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
         /// Invoked with a STORE response is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveStoreResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KStoreResponse<TKNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreResponseAsync(Socket socket, in KIpEndpoint endpoint, KMessage<TKNodeId, KStoreResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            storeQueue.Respond(endpoint, response.Header.Magic, new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
+            storeQueue.Respond(response.Header.Magic, new KResponse<TKNodeId, KStoreResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
         /// Invoked with a FIND_NODE response is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindNodeResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindNodeResponse<TKNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeResponseAsync(Socket socket, in KIpEndpoint endpoint, KMessage<TKNodeId, KFindNodeResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            findNodeQueue.Respond(endpoint, response.Header.Magic, new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
+            findNodeQueue.Respond(response.Header.Magic, new KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
         /// Invoked with a FIND_VALUE response is received.
         /// </summary>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindValueResponseAsync(KIpEndpoint endpoint, KMessage<TKNodeId, KFindValueResponse<TKNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueResponseAsync(Socket socket, in KIpEndpoint endpoint, KMessage<TKNodeId, KFindValueResponse<TKNodeId>> response, CancellationToken cancellationToken)
         {
-            findValueQueue.Respond(endpoint, response.Header.Magic, new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
+            findValueQueue.Respond(response.Header.Magic, new KResponse<TKNodeId, KFindValueResponse<TKNodeId>>(CreateEndpoint(endpoint), response.Header.Sender, KResponseStatus.Success, response.Body));
             return new ValueTask(Task.CompletedTask);
-        }
-
-        void sendArgs_Completed(object sender, SocketAsyncEventArgs args)
-        {
-
         }
 
         /// <summary>
@@ -446,23 +443,24 @@ namespace Cogito.Kademlia.Protocols.Udp
                 // zero out our endpoint list
                 endpoints.Clear();
 
-                // shutdown socket
-                if (socket != null)
+                foreach (var socket in recvSockets.Values)
                 {
-                    // swap for null
-                    var s = socket;
-                    socket = null;
-
-                    try
+                    // shutdown socket
+                    if (socket != null)
                     {
-                        s.Close();
-                        s.Dispose();
-                    }
-                    catch (ObjectDisposedException)
-                    {
+                        try
+                        {
+                            socket.Close();
+                            socket.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
 
+                        }
                     }
                 }
+
+                recvSockets.Clear();
             }
         }
 
@@ -470,42 +468,39 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// Initiates a send of the buffered data to the endpoint.
         /// </summary>
         /// <param name="buffer"></param>
-        /// <param name="endpoint"></param>
+        /// <param name="target"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask SocketSendToAsync(ArrayBufferWriter<byte> buffer, KIpEndpoint endpoint, CancellationToken cancellationToken)
+        ValueTask SocketSendToAsync(Socket socket, ArrayBufferWriter<byte> buffer, KIpEndpoint target, CancellationToken cancellationToken)
         {
-            var s = socket;
-            if (s == null || s.IsBound == false)
-                throw new KProtocolException(KProtocolError.ProtocolNotAvailable, "Cannot send. Socket no longer available.");
-
             var z = new byte[buffer.WrittenCount];
             buffer.WrittenSpan.CopyTo(z);
-            return new ValueTask(s.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
+            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, target.ToIPEndPoint()));
         }
 
         /// <summary>
         /// Sends the given buffer to an endpoint and begins a wait on the specified reply queue.
         /// </summary>
         /// <typeparam name="TResponseData"></typeparam>
+        /// <param name="socket"></param>
         /// <param name="endpoint"></param>
         /// <param name="magic"></param>
         /// <param name="queue"></param>
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(KIpEndpoint endpoint, ulong magic, KIpResponseQueue<TKNodeId, TResponseData> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(Socket socket, KIpEndpoint endpoint, ulong magic, KResponseQueue<TKNodeId, TResponseData, ulong> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
             logger?.LogDebug("Queuing response wait for {Magic} to {Endpoint}.", magic, endpoint);
 
             var c = new CancellationTokenSource();
-            var t = queue.WaitAsync(endpoint, magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
+            var t = queue.WaitAsync(magic, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
 
             try
             {
                 logger?.LogDebug("Sending packet to {Endpoint} with {Magic}.", endpoint, magic);
-                await SocketSendToAsync(buffer, endpoint.ToIPEndPoint(), cancellationToken);
+                await SocketSendToAsync(socket, buffer, endpoint.ToIPEndPoint(), cancellationToken);
             }
             catch (Exception)
             {
@@ -536,7 +531,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, pingQueue, b, cancellationToken);
+            return await SendAndWaitAsync(sendSocket, ((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, pingQueue, b, cancellationToken);
         }
 
         /// <summary>
@@ -556,7 +551,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, storeQueue, b, cancellationToken);
+            return await SendAndWaitAsync(sendSocket, ((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, storeQueue, b, cancellationToken);
         }
 
         /// <summary>
@@ -576,7 +571,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, findNodeQueue, b, cancellationToken);
+            return await SendAndWaitAsync(sendSocket, ((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, findNodeQueue, b, cancellationToken);
         }
 
         /// <summary>
@@ -596,7 +591,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             var m = NewMagic();
             var b = new ArrayBufferWriter<byte>();
             encoder.Encode(this, b, PackageMessage(m, request));
-            return await SendAndWaitAsync(((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, findValueQueue, b, cancellationToken);
+            return await SendAndWaitAsync(sendSocket, ((KIpProtocolEndpoint<TKNodeId>)endpoint).Endpoint, m, findValueQueue, b, cancellationToken);
         }
 
     }

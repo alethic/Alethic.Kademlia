@@ -15,6 +15,16 @@ namespace Cogito.Kademlia.Network
     public readonly struct KIpEndpoint : IEquatable<KIpEndpoint>
     {
 
+        public static bool operator ==(KIpEndpoint a, KIpEndpoint b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(KIpEndpoint a, KIpEndpoint b)
+        {
+            return !a.Equals(b);
+        }
+
         /// <summary>
         /// Returns the address used to describe any IPv4 endpoint.
         /// </summary>
@@ -222,8 +232,8 @@ namespace Cogito.Kademlia.Network
         {
             return protocol switch
             {
-                KIpAddressFamily.IPv4 => ipv4.ToString() + ":" + port,
-                KIpAddressFamily.IPv6 => ipv6.ToString() + ":" + port,
+                KIpAddressFamily.IPv4 => $"{ipv4}:{port}",
+                KIpAddressFamily.IPv6 => $"[{ipv6}]:{port}",
                 _ => null,
             };
         }

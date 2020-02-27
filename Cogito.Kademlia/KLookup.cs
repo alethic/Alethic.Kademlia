@@ -181,7 +181,7 @@ namespace Cogito.Kademlia
             var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, kill.Token);
 
             // find our own closest peers to seed from
-            var init = await router.GetNextHopAsync(key, alpha, cancellationToken);
+            var init = await router.SelectPeersAsync(key, alpha, cancellationToken);
 
             // tracks the peers remaining to query sorted by distance
             var todo = new C5.IntervalHeap<KPeerEndpointInfo<TKNodeId>>(router.K, new FuncComparer<KPeerEndpointInfo<TKNodeId>, TKNodeId>(i => i.Id, comp));
@@ -203,7 +203,7 @@ namespace Cogito.Kademlia
                     {
                         // schedule new node to query
                         var peer = todo.DeleteMin();
-                        if (peer.Id.Equals(router.SelfId) == false)
+                        if (peer.Id.Equals(router.Self) == false)
                             wait.Add(func(peer, key, stop.Token).AsTask().ContinueWith((r, o) => r.Result, peer));
                     }
 
@@ -251,7 +251,7 @@ namespace Cogito.Kademlia
                             foreach (var i in find.Result.Peers)
                             {
                                 // received node is closer than current
-                                if (i.Id.Equals(router.SelfId) == false)
+                                if (i.Id.Equals(router.Self) == false)
                                 {
                                     if (done.Add(i.Id))
                                     {

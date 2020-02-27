@@ -58,7 +58,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null, null);
+                await t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null);
         }
 
         [TestMethod]
@@ -68,12 +68,12 @@ namespace Cogito.Kademlia.Tests
             var t = new KFixedTableRouter<KNodeId32>(s, new FakeEndpointInvoker<KNodeId32>());
 
             for (int i = 1; i <= 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
+                await t.UpdatePeerAsync(new KNodeId32((uint)i), null);
 
             var c = t.Count;
 
             for (int i = 1; i <= 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId32((uint)i), null, null);
+                await t.UpdatePeerAsync(new KNodeId32((uint)i), null);
 
             t.Count.Should().Be(c);
         }
@@ -87,7 +87,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null, null).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId32((uint)r.Next(int.MinValue, int.MaxValue)), null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -100,7 +100,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null, null);
+                await t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null);
         }
 
         [TestMethod]
@@ -112,7 +112,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null, null).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId64((ulong)r.NextInt64()), null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -124,7 +124,7 @@ namespace Cogito.Kademlia.Tests
             var t = new KFixedTableRouter<KNodeId128>(s, new FakeEndpointInvoker<KNodeId128>());
 
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null);
+                await t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null);
         }
 
         [TestMethod]
@@ -135,7 +135,7 @@ namespace Cogito.Kademlia.Tests
 
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null, null).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId128(Guid.NewGuid()), null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -148,7 +148,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null, null);
+                await t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null);
         }
 
         [TestMethod]
@@ -160,7 +160,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null, null).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId160((ulong)r.NextInt64(), (ulong)r.NextInt64(), (uint)r.Next(int.MinValue, int.MaxValue)), null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -173,7 +173,7 @@ namespace Cogito.Kademlia.Tests
 
             var r = new Random();
             for (int i = 0; i < 262144 * 8; i++)
-                await t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null, null);
+                await t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null);
         }
 
         [TestMethod]
@@ -185,7 +185,7 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                l.Add(t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null, null).AsTask());
+                l.Add(t.UpdatePeerAsync(new KNodeId256((ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64(), (ulong)r.NextInt64()), null).AsTask());
 
             await Task.WhenAll(l);
         }
@@ -199,9 +199,9 @@ namespace Cogito.Kademlia.Tests
             var r = new Random();
             var l = new List<Task>();
             for (int i = 0; i < 1024; i++)
-                await t.UpdatePeerAsync(KNodeId<KNodeId32>.Create(), null, null);
+                await t.UpdatePeerAsync(KNodeId<KNodeId32>.Create(), null);
 
-            var z = await t.GetNextHopAsync(KNodeId<KNodeId32>.Create(), 200);
+            var z = await t.SelectPeersAsync(KNodeId<KNodeId32>.Create(), 200);
             var o = z.ToList();
         }
 
