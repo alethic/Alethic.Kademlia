@@ -72,28 +72,7 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Publishes the given value to the K closest nodes.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        async Task PublishValueAsync(TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, CancellationToken cancellationToken)
-        {
-            logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, expiration);
-
-            // store in local store
-            var s = await store.SetAsync(key, value, expiration);
-
-            // publish to top K remote nodes
-            var r = await lookup.LookupNodeAsync(key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, cancellationToken).AsTask());
-            await Task.WhenAll(t);
-        }
-
-        /// <summary>
-        /// Publishers the given value with the given key. If <paramref name="value"/> is null, the key is removed.
+        /// Configures the given value with the given key to be periodically published. If the value is <c>null</c>, it is removed from the publisher.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
@@ -121,6 +100,27 @@ namespace Cogito.Kademlia
             }
 
             return new KPublisherSetResult<TKNodeId>(KPublisherSetResultStatus.Success);
+        }
+
+        /// <summary>
+        /// Publishes the given value to the K closest nodes.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task PublishValueAsync(TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, CancellationToken cancellationToken)
+        {
+            logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, expiration);
+
+            // store in local store
+            var s = await store.SetAsync(key, value, expiration);
+
+            // publish to top K remote nodes
+            var r = await lookup.LookupNodeAsync(key, cancellationToken);
+            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, cancellationToken).AsTask());
+            await Task.WhenAll(t);
         }
 
         /// <summary>
