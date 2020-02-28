@@ -26,14 +26,19 @@ namespace Cogito.Kademlia.Network
         }
 
         /// <summary>
+        /// Unspecified protocol any address.
+        /// </summary>
+        public static readonly KIpEndpoint Any = new KIpEndpoint();
+
+        /// <summary>
         /// Returns the address used to describe any IPv4 endpoint.
         /// </summary>
-        public static readonly KIpEndpoint Ip4Any = new KIpEndpoint(KIp4Address.Any, 0);
+        public static readonly KIpEndpoint AnyV4 = new KIpEndpoint(KIp4Address.Any, 0);
 
         /// <summary>
         /// Returns the address used to describe any IPv6 endpoint.
         /// </summary>
-        public static readonly KIpEndpoint Ip6Any = new KIpEndpoint(KIp6Address.Any, 0);
+        public static readonly KIpEndpoint AnyV6 = new KIpEndpoint(KIp6Address.Any, 0);
 
         /// <summary>
         /// Reads a <see cref="KIpEndpoint"/> from the given span.
@@ -112,6 +117,18 @@ namespace Cogito.Kademlia.Network
             this.protocol = KIpAddressFamily.IPv6;
             this.ipv4 = new KIp4Address();
             this.ipv6 = ipv6;
+            this.port = port;
+        }
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="port"></param>
+        public KIpEndpoint(in KIpPort port)
+        {
+            this.protocol = KIpAddressFamily.Unknown;
+            this.ipv6 = default;
+            this.ipv4 = default;
             this.port = port;
         }
 

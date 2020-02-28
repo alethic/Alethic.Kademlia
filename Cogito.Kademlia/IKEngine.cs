@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -40,15 +39,15 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask ConnectAsync(IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+        ValueTask ConnectAsync(IKEndpointSet<TKNodeId> endpoints, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Attempts to connect the engine to one of the specified endpoints.
         /// </summary>
-        /// <param name="endpoints"></param>
+        /// <param name="endpoint"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoints, CancellationToken cancellationToken = default);
+        ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Invoked to handle incoming PING requests.

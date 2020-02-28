@@ -86,9 +86,13 @@ namespace Cogito.Kademlia
                 {
                     using (rw.BeginWriteLock())
                     {
-                        logger?.LogTrace("Peer {NodeId} exists, moving to head.", nodeId);
-                        l.Remove(i);
-                        l.AddFirst(i);
+                        // move to first if not already there
+                        if (l.First != i)
+                        {
+                            logger?.LogTrace("Peer {NodeId} exists, moving to head.", nodeId);
+                            l.Remove(i);
+                            l.AddFirst(i);
+                        }
 
                         // incorporate new additional endpoints into end of set
                         if (endpoints != null)
@@ -148,12 +152,16 @@ namespace Cogito.Kademlia
                         {
                             using (rw.BeginWriteLock())
                             {
-                                // remove from list if not already done (async operation could have overlapped)
-                                if (n.List != null)
-                                    l.Remove(n);
+                                // will move to first if not already there
+                                if (l.First != n)
+                                {
+                                    // remove if not already removed
+                                    if (n.List != null)
+                                        l.Remove(n);
 
-                                // node goes to head
-                                l.AddFirst(n.Value);
+                                    // node goes to head
+                                    l.AddFirst(n.Value);
+                                }
                             }
                         }
                     }

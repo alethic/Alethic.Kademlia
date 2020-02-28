@@ -38,27 +38,7 @@ namespace Cogito.Kademlia
         {
             // add source endpoints to set
             foreach (var i in source)
-                Demote(i);
-        }
-
-        /// <summary>
-        /// Invoked when a communication successfully happens over an endpoint.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args"></param>
-        void Endpoint_Success(object sender, KEndpointSuccessEventArgs args)
-        {
-            Update((IKEndpoint<TKNodeId>)sender);
-        }
-
-        /// <summary>
-        /// Invoked when a communication attempt times out over an endpoint.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="args"></param>
-        void Endpoint_Timeout(object sender, KEndpointTimeoutEventArgs args)
-        {
-            Demote((IKEndpoint<TKNodeId>)sender);
+                Insert(i);
         }
 
         /// <summary>
@@ -68,52 +48,19 @@ namespace Cogito.Kademlia
         public IKEndpoint<TKNodeId> Acquire()
         {
             using (sync.BeginReadLock())
-                return dict.First.Key;
+                return dict.Count > 0 ? dict.First.Key : null;
         }
 
         bool AddFirst(IKEndpoint<TKNodeId> endpoint, KEndpointInfo<TKNodeId> info)
         {
             using (sync.BeginWriteLock())
-            {
-                if (dict.AddFirst(endpoint, info))
-                {
-                    endpoint.Success += Endpoint_Success;
-                    endpoint.Timeout += Endpoint_Timeout;
-                    return true;
-                }
-            }
-
-            return false;
+                return dict.AddFirst(endpoint, info);
         }
 
         bool AddLast(IKEndpoint<TKNodeId> endpoint, KEndpointInfo<TKNodeId> info)
         {
             using (sync.BeginWriteLock())
-            {
-                if (dict.AddLast(endpoint, info))
-                {
-                    endpoint.Success += Endpoint_Success;
-                    endpoint.Timeout += Endpoint_Timeout;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        bool Remove(IKEndpoint<TKNodeId> endpoint)
-        {
-            using (sync.BeginWriteLock())
-            {
-                if (dict.Remove(endpoint))
-                {
-                    endpoint.Success -= Endpoint_Success;
-                    endpoint.Timeout -= Endpoint_Timeout;
-                    return true;
-                }
-            }
-
-            return false;
+                return dict.AddLast(endpoint, info);
         }
 
         public KEndpointInfo<TKNodeId> Insert(IKEndpoint<TKNodeId> endpoint)
@@ -159,10 +106,15 @@ namespace Cogito.Kademlia
                 return dict.TryGetValue(endpoint, out var info) ? info : null;
         }
 
-        KEndpointInfo<TKNodeId> IKEndpointSet<TKNodeId>.Remove(IKEndpoint<TKNodeId> endpoint)
+        public KEndpointInfo<TKNodeId> Remove(IKEndpoint<TKNodeId> endpoint)
         {
             using (sync.BeginUpgradableReadLock())
-                return dict.TryGetValue(endpoint, out var info) && Remove(endpoint) ? info : null;
+                if (dict.TryGetValue(endpoint, out var info))
+                    using (sync.BeginWriteLock())
+                        if (dict.Remove(endpoint))
+                            return info;
+
+            return default;
         }
 
         public IEnumerator<IKEndpoint<TKNodeId>> GetEnumerator()
@@ -182,15 +134,7 @@ namespace Cogito.Kademlia
         public void Dispose()
         {
             using (sync.BeginWriteLock())
-            {
-                foreach (var item in dict)
-                {
-                    item.Key.Success -= Endpoint_Success;
-                    item.Key.Timeout -= Endpoint_Timeout;
-                }
-
                 dict.Clear();
-            }
 
             GC.SuppressFinalize(this);
         }

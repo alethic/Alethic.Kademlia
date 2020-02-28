@@ -47,8 +47,8 @@ namespace Cogito.Kademlia.Console
             var str = new KInMemoryStore<KNodeId256>(logger: log);
             var kad = new KEngine<KNodeId256, KPeerData<KNodeId256>>(rtr, ink, lup, str, logger: log);
             var pub = new KInMemoryPublisher<KNodeId256>(ink, lup, str, logger: log);
-            var udp = new KUdpProtocol<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, enc, dec, 0, log);
-            var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("224.168.100.2")), 1283), log);
+            var udp = new KUdpProtocol<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, enc, dec, KIpEndpoint.Any, log);
+            var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("239.255.83.54")), 1283), log);
             await udp.StartAsync();
             await mcd.StartAsync();
             await pub.StartAsync();

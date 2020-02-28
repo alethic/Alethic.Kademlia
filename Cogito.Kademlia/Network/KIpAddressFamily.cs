@@ -8,6 +8,11 @@
     {
 
         /// <summary>
+        /// Unspecified protocol.
+        /// </summary>
+        Unknown = 0,
+
+        /// <summary>
         /// Protocol is IPv4.
         /// </summary>
         IPv4 = 1,

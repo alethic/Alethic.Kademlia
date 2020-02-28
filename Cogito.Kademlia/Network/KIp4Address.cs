@@ -13,6 +13,30 @@ namespace Cogito.Kademlia.Network
     public unsafe struct KIp4Address : IEquatable<KIp4Address>
     {
 
+        public static bool operator ==(KIp4Address a, KIp4Address b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(KIp4Address a, KIp4Address b)
+        {
+            return !a.Equals(b);
+        }
+
+        public static KIp4Address Parse(ReadOnlySpan<char> text)
+        {
+#if NETSTANDARD2_0 || NET47
+            return new KIp4Address(IPAddress.Parse(text.ToString()));
+#else
+            return new KIp4Address(IPAddress.Parse(text));
+#endif
+        }
+
+        public static KIp4Address Parse(string text)
+        {
+            return new KIp4Address(IPAddress.Parse(text));
+        }
+
         /// <summary>
         /// Returns the address used to describe any thing.
         /// </summary>

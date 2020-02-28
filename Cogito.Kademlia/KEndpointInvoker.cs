@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,8 +18,11 @@ namespace Cogito.Kademlia
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
+        static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(1);
+
         readonly TKNodeId self;
         readonly TKPeerData data;
+        readonly TimeSpan defaultTimeout;
         readonly ILogger logger;
 
         /// <summary>
@@ -29,10 +31,11 @@ namespace Cogito.Kademlia
         /// <param name="self"></param>
         /// <param name="data"></param>
         /// <param name="logger"></param>
-        public KEndpointInvoker(in TKNodeId self, TKPeerData data, ILogger logger = null)
+        public KEndpointInvoker(in TKNodeId self, TKPeerData data, TimeSpan? defaultTimeout = null, ILogger logger = null)
         {
             this.self = self;
             this.data = data;
+            this.defaultTimeout = defaultTimeout ?? DefaultTimeout;
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -99,9 +102,13 @@ namespace Cogito.Kademlia
         async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpointSet<TKNodeId> endpoints, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func, CancellationToken cancellationToken)
             where TResponseBody : struct, IKResponseData<TKNodeId>
         {
+            // replace token with linked timeout
+            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(defaultTimeout).Token, cancellationToken).Token;
+
+            // continue until timeout
             while (cancellationToken.IsCancellationRequested == false && endpoints.Acquire() is IKEndpoint<TKNodeId> endpoint)
             {
-                var r = await TryAsync(endpoint, func);
+                var r = await TryAsync(endpoints, endpoint, func);
                 if (r.Status == KResponseStatus.Success)
                     return r;
             }
@@ -114,7 +121,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpoint<TKNodeId> endpoint, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
+        async ValueTask<KResponse<TKNodeId, TResponseBody>> TryAsync<TResponseBody>(IKEndpointSet<TKNodeId> endpoints, IKEndpoint<TKNodeId> endpoint, Func<IKEndpoint<TKNodeId>, ValueTask<KResponse<TKNodeId, TResponseBody>>> func)
             where TResponseBody : struct, IKResponseData<TKNodeId>
         {
             try
@@ -124,14 +131,19 @@ namespace Cogito.Kademlia
                 if (r.Status == KResponseStatus.Success)
                 {
                     logger?.LogTrace("Success contacting {Endpoint}.", endpoint);
-                    endpoint.OnSuccess(new KEndpointSuccessEventArgs());
+                    endpoints.Update(endpoint);
                     return r;
+                }
+                else
+                {
+                    logger?.LogWarning("Failure from endpoint: {Endpoint}.", endpoint);
+                    endpoints.Demote(endpoint);
                 }
             }
             catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
             {
                 logger?.LogWarning("Endpoint not available: {Endpoint}.", endpoint);
-                endpoint.OnTimeout(new KEndpointTimeoutEventArgs());
+                endpoints.Demote(endpoint);
             }
 
             return default;

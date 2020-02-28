@@ -12,9 +12,9 @@
         /// <summary>
         /// Obtains a <see cref="IKEndpoint{TKNodeId}"/> from an IP address.
         /// </summary>
-        /// <param name="ep"></param>
+        /// <param name="endpoint"></param>
         /// <returns></returns>
-        KIpProtocolEndpoint<TKNodeId> CreateEndpoint(in KIpEndpoint ep);
+        IKEndpoint<TKNodeId> CreateEndpoint(in KIpEndpoint endpoint);
 
     }
 

@@ -20,12 +20,12 @@ namespace Cogito.Kademlia.Protocols.Udp
     /// Listens for multicast PING requests on a multicast group and provides Connect operations for joining a UDP Kademlia network.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KUdpMulticastDiscovery<TKNodeId, TKPeerData> : IKIpProtocolResourceProvider<TKNodeId>
+    public class KUdpMulticastDiscovery<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
         static readonly Random rnd = new Random();
 
         readonly ulong network;
@@ -80,16 +80,6 @@ namespace Cogito.Kademlia.Protocols.Udp
         public IEnumerable<IKEndpoint<TKNodeId>> Endpoints => Enumerable.Empty<IKEndpoint<TKNodeId>>();
 
         /// <summary>
-        /// Returns an endpoint suitable for usage with this protocol.
-        /// </summary>
-        /// <param name="endpoint"></param>
-        /// <returns></returns>
-        public KIpProtocolEndpoint<TKNodeId> CreateEndpoint(in KIpEndpoint endpoint)
-        {
-            return protocol.CreateEndpoint(endpoint);
-        }
-
-        /// <summary>
         /// Gets the next magic value.
         /// </summary>
         /// <returns></returns>
@@ -103,8 +93,8 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// </summary>
         KIpEndpoint IpAny => endpoint.Protocol switch
         {
-            KIpAddressFamily.IPv4 => KIpEndpoint.Ip4Any,
-            KIpAddressFamily.IPv6 => KIpEndpoint.Ip6Any,
+            KIpAddressFamily.IPv4 => KIpEndpoint.AnyV4,
+            KIpAddressFamily.IPv6 => KIpEndpoint.AnyV6,
             _ => throw new InvalidOperationException(),
         };
 
@@ -306,12 +296,16 @@ namespace Cogito.Kademlia.Protocols.Udp
                     logger?.LogInformation("Initiating periodic multicast bootstrap.");
                     await ConnectAsync(cancellationToken);
                 }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
                 catch (Exception e)
                 {
                     logger?.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                await Task.Delay(TimeSpan.FromMinutes(15), cancellationToken);
             }
         }
 
@@ -321,8 +315,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
         {
+            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(DefaultTimeout).Token, cancellationToken).Token;
+
             try
             {
+                // only allow connect to run for so long
+
+                // ping the received endpoints
                 var r = await PingAsync(new KPingRequest<TKNodeId>(engine.SelfData.Endpoints.ToArray()), cancellationToken);
                 if (r.Status == KResponseStatus.Failure)
                 {
@@ -330,8 +329,12 @@ namespace Cogito.Kademlia.Protocols.Udp
                     return;
                 }
 
-                // initiate connection to retrieved endpoints
-                await engine.ConnectAsync(r.Body.Endpoints);
+                // initiate connection to received endpoints
+                await engine.ConnectAsync(new KEndpointSet<TKNodeId>(r.Body.Endpoints), cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
             }
             catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
             {

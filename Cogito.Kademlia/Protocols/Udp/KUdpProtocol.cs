@@ -27,14 +27,14 @@ namespace Cogito.Kademlia.Protocols.Udp
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
         static readonly Random rnd = new Random();
 
         readonly ulong network;
         readonly IKEngine<TKNodeId, TKPeerData> engine;
         readonly IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder;
         readonly IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder;
-        readonly KIpPort port;
+        readonly KIpEndpoint listen;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
         readonly Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TKNodeId>>();
@@ -45,7 +45,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         readonly KResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>, ulong> findValueQueue = new KResponseQueue<TKNodeId, KFindValueResponse<TKNodeId>, ulong>(DefaultTimeout);
 
         Socket sendSocket;
-        Dictionary<IPEndPoint, Socket> recvSockets;
+        List<Socket> recvSockets;
 
         /// <summary>
         /// Initializes a new instance.
@@ -54,15 +54,15 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="engine"></param>
         /// <param name="encoder"></param>
         /// <param name="decoder"></param>
-        /// <param name="port"></param>
+        /// <param name="listen"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, KIpPort port, ILogger logger = null)
+        public KUdpProtocol(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, KIpEndpoint? listen = null, ILogger logger = null)
         {
             this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.encoder = encoder ?? throw new ArgumentNullException(nameof(encoder));
             this.decoder = decoder ?? throw new ArgumentNullException(nameof(decoder));
-            this.port = port;
+            this.listen = listen ?? KIpEndpoint.AnyV6;
             this.logger = logger;
         }
 
@@ -87,6 +87,16 @@ namespace Cogito.Kademlia.Protocols.Udp
         }
 
         /// <summary>
+        /// Creates a new <see cref="KIpProtocolEndpoint{TKNodeId}"/> for the given <see cref="KIpEndpoint"/>.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <returns></returns>
+        IKEndpoint<TKNodeId> IKIpProtocolResourceProvider<TKNodeId>.CreateEndpoint(in KIpEndpoint endpoint)
+        {
+            return CreateEndpoint(endpoint);
+        }
+
+        /// <summary>
         /// Gets the next magic value.
         /// </summary>
         /// <returns></returns>
@@ -106,7 +116,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                 foreach (var i in NetworkInterface.GetAllNetworkInterfaces())
                     if (i.OperationalStatus == OperationalStatus.Up)
                         foreach (var j in i.GetIPProperties().UnicastAddresses)
-                            if (IPAddress.IsLoopback(j.Address) == false && j.Address.IsIPv4MappedToIPv6 == false && j.Address.IsIPv6Multicast == false && j.Address.IsIPv6SiteLocal == false)
+                            if (j.Address.IsIPv4MappedToIPv6 == false && j.Address.IsIPv6Multicast == false && j.Address.IsIPv6SiteLocal == false)
                                 if (h.Add(j.Address))
                                     yield return j.Address;
         }
@@ -125,30 +135,66 @@ namespace Cogito.Kademlia.Protocols.Udp
 
                 // reset sockets
                 sendSocket = null;
-                recvSockets = new Dictionary<IPEndPoint, Socket>();
+                recvSockets = new List<Socket>();
 
                 // remove our previous advertised endpoints; there should be none
                 foreach (var i in engine.SelfData.Endpoints.Where(i => i.Protocol == this).ToList())
                     engine.SelfData.Endpoints.Remove(i);
 
-                // establish UDP socket
-                sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                sendSocket.DualMode = true;
-                sendSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
-                sendSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.PacketInformation, true);
-                sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
-                logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                // listen protocol determines send socket binding
+                switch (listen.Protocol)
+                {
+                    case KIpAddressFamily.Unknown:
+                        // establish UDP socket
+                        sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                        sendSocket.DualMode = true;
+                        sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
+                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        break;
+                    case KIpAddressFamily.IPv4:
+                        // establish UDP socket
+                        sendSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                        sendSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
+                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        break;
+                    case KIpAddressFamily.IPv6:
+                        // establish UDP socket
+                        sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
+                        sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
+                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        break;
+                }
 
                 // begin receiving
-                var sendRecvArgs = new SocketAsyncEventArgs();
-                sendRecvArgs.SetBuffer(new byte[8192], 0, 8192);
-                sendRecvArgs.Completed += SocketAsyncEventArgs_Completed;
-                BeginReceive(sendSocket, sendRecvArgs);
+                BeginReceive(sendSocket);
 
-                var recvPort = port;
+                var recvPort = (ushort)listen.Port;
+                var ipListen = GetLocalIpAddresses();
+
+                // listening on specific V4 address
+                if (listen.Protocol == KIpAddressFamily.IPv4)
+                {
+                    // listen only on V4
+                    ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetwork);
+
+                    // listen only on specific address
+                    if (listen.V4 != KIp4Address.Any)
+                        ipListen = ipListen.Where(i => new KIp4Address(i) == listen.V4);
+                }
+
+                // listening on specific V6 address
+                if (listen.Protocol == KIpAddressFamily.IPv6)
+                {
+                    // listen only on V6
+                    ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetworkV6);
+
+                    // listen only on specific address
+                    if (listen.V6 != KIp6Address.Any)
+                        ipListen = ipListen.Where(i => new KIp6Address(i) == listen.V6);
+                }
 
                 // generate one socket per IP
-                foreach (var ip in GetLocalIpAddresses())
+                foreach (var ip in ipListen)
                 {
                     var socketOptionLevelIp = ip.AddressFamily switch
                     {
@@ -159,9 +205,9 @@ namespace Cogito.Kademlia.Protocols.Udp
 
                     // establish UDP socket
                     var recvSocket = new Socket(ip.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                    recvSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, true);
-                    recvSocket.SetSocketOption(socketOptionLevelIp, SocketOptionName.PacketInformation, true);
+                    recvSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, recvPort == 0);
                     recvSocket.Bind(new IPEndPoint(ip, recvPort));
+                    recvSockets.Add(recvSocket);
 
                     // record relation between endpoint data and endpoint interface
                     var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
@@ -172,10 +218,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                     recvPort = ep.Port;
 
                     // begin receiving
-                    var recvArgs = new SocketAsyncEventArgs();
-                    recvArgs.SetBuffer(new byte[8192], 0, 8192);
-                    recvArgs.Completed += SocketAsyncEventArgs_Completed;
-                    BeginReceive(recvSocket, recvArgs);
+                    BeginReceive(recvSocket);
                 }
             }
         }
@@ -185,17 +228,21 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// </summary>
         /// <param name="socket"></param>
         /// <param name="args"></param>
-        void BeginReceive(Socket socket, SocketAsyncEventArgs args)
+        void BeginReceive(Socket socket)
         {
-            var any = socket.AddressFamily switch
+            var args = new SocketAsyncEventArgs();
+            args.SetBuffer(new byte[8192], 0, 8192);
+            args.Completed += SocketAsyncEventArgs_Completed;
+            args.RemoteEndPoint = new IPEndPoint(socket.AddressFamily switch
             {
                 AddressFamily.InterNetwork => IPAddress.Any,
                 AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
                 _ => throw new InvalidOperationException(),
-            };
+            }, 0);
 
-            args.RemoteEndPoint = new IPEndPoint(any, 0);
-            socket.ReceiveFromAsync(args);
+            // queue wait for packet
+            if (socket.ReceiveFromAsync(args) == false)
+                SocketAsyncEventArgs_Completed(socket, args);
         }
 
         /// <summary>
@@ -205,29 +252,36 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="args"></param>
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs args)
         {
-            // check state of current socket
-            var socket = (Socket)sender;
-            if (socket.IsBound == false)
-                return;
-
-            if (args.BytesTransferred > 0)
+            try
             {
-                logger?.LogInformation("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
+                // check state of current socket
+                var socket = (Socket)sender;
+                if (socket.IsBound == false)
+                    return;
 
-                // obtain information about packet
-                var endpoint = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
+                if (args.BytesTransferred > 0)
+                {
+                    logger?.LogInformation("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
 
-                // copy data into new buffer
-                var data = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
-                var lease = MemoryPool<byte>.Shared.Rent(data.Length);
-                var memory = lease.Memory.Slice(0, data.Length);
-                data.CopyTo(memory.Span);
+                    // obtain information about packet
+                    var endpoint = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
 
-                Task.Run(async () => { try { await OnReceiveAsync(socket, endpoint, memory.Span, CancellationToken.None); } catch { } finally { lease.Dispose(); } });
+                    // copy data into new buffer
+                    var data = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
+                    var lease = MemoryPool<byte>.Shared.Rent(data.Length);
+                    var memory = lease.Memory.Slice(0, data.Length);
+                    data.CopyTo(memory.Span);
+
+                    Task.Run(async () => { try { await OnReceiveAsync(socket, endpoint, memory.Span, CancellationToken.None); } catch { } finally { lease.Dispose(); } });
+                }
+
+                // wait for next packet
+                BeginReceive(socket);
             }
+            catch (Exception e)
+            {
 
-            // wait for next packet
-            BeginReceive(socket, args);
+            }
         }
 
         /// <summary>
@@ -443,7 +497,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                 // zero out our endpoint list
                 endpoints.Clear();
 
-                foreach (var socket in recvSockets.Values)
+                foreach (var socket in recvSockets)
                 {
                     // shutdown socket
                     if (socket != null)
