@@ -195,7 +195,9 @@ namespace Cogito.Kademlia.Protocols.Udp
                 recvPort = ep.Port;
 
                 // begin receiving
-                BeginReceive(recvSocket);
+                var recvArgs = new SocketAsyncEventArgs();
+                recvArgs.Completed += SocketAsyncEventArgs_Completed;
+                BeginReceive(recvSocket, recvArgs);
             }
 
             // dispose of sockets not marked off in keep
@@ -270,7 +272,9 @@ namespace Cogito.Kademlia.Protocols.Udp
                 }
 
                 // begin receiving from send socket
-                BeginReceive(sendSocket);
+                var sendArgs = new SocketAsyncEventArgs();
+                sendArgs.Completed += SocketAsyncEventArgs_Completed;
+                BeginReceive(sendSocket, sendArgs);
 
                 // configure receive sockets and update on IP address change
                 NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
@@ -294,14 +298,13 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// </summary>
         /// <param name="socket"></param>
         /// <param name="args"></param>
-        void BeginReceive(Socket socket)
+        void BeginReceive(Socket socket, SocketAsyncEventArgs args)
         {
             // allocate new buffer to receive into
             var buff = ArrayPool<byte>.Shared.Rent(8192);
 
-            var args = new SocketAsyncEventArgs();
+            // reconfigure event args
             args.SetBuffer(buff, 0, buff.Length);
-            args.Completed += SocketAsyncEventArgs_Completed;
             args.RemoteEndPoint = new IPEndPoint(socket.AddressFamily switch
             {
                 AddressFamily.InterNetwork => IPAddress.Any,
@@ -347,13 +350,28 @@ namespace Cogito.Kademlia.Protocols.Udp
                     var b = args.Buffer;
                     var m = b.AsMemory().Slice(0, args.BytesTransferred);
 
-                    // schedule receive which release buffer lease
-                    Task.Run(async () => { try { await OnReceiveAsync(socket, endpoint, m.Span, CancellationToken.None); } catch { } finally { ArrayPool<byte>.Shared.Return(b); } });
+                    // schedule receive on task pool
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await OnReceiveAsync(socket, endpoint, m.Span, CancellationToken.None);
+                        }
+                        catch (Exception e)
+                        {
+                            logger?.LogError(e, "Unhandled exception dispatching incoming packet.");
+                        }
+                        finally
+                        {
+                            // return the buffer to the pool
+                            ArrayPool<byte>.Shared.Return(b);
+                        }
+                    });
                 }
 
                 // wait for next packet
                 if (socket.IsBound)
-                    BeginReceive(socket);
+                    BeginReceive(socket, args);
             }
             catch (SocketException e)
             {
