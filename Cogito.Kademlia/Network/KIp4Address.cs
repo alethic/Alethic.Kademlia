@@ -13,6 +13,16 @@ namespace Cogito.Kademlia.Network
     public unsafe struct KIp4Address : IEquatable<KIp4Address>
     {
 
+        public static implicit operator IPAddress(KIp4Address address)
+        {
+            return address.ToIPAddress();
+        }
+
+        public static implicit operator KIp4Address(IPAddress address)
+        {
+            return new KIp4Address(address);
+        }
+
         public static bool operator ==(KIp4Address a, KIp4Address b)
         {
             return a.Equals(b);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -45,10 +46,10 @@ namespace Cogito.Kademlia.Console
             var rtr = new KFixedTableRouter<KNodeId256, KPeerData<KNodeId256>>(slf, dat, ink, logger: log);
             var lup = new KLookup<KNodeId256>(rtr, ink, logger: log);
             var str = new KInMemoryStore<KNodeId256>(logger: log);
-            var kad = new KEngine<KNodeId256, KPeerData<KNodeId256>>(rtr, ink, lup, str, logger: log);
             var pub = new KInMemoryPublisher<KNodeId256>(ink, lup, str, logger: log);
+            var kad = new KEngine<KNodeId256, KPeerData<KNodeId256>>(rtr, ink, lup, str, logger: log);
             var udp = new KUdpProtocol<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, enc, dec, KIpEndpoint.Any, log);
-            var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(new KIp4Address(IPAddress.Parse("239.255.83.54")), 1283), log);
+            var mcd = new KUdpMulticastDiscovery<KNodeId256, KPeerData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(KIp4Address.Parse("239.255.83.54"), 1283), log);
             await udp.StartAsync();
             await mcd.StartAsync();
             await pub.StartAsync();
@@ -59,7 +60,9 @@ namespace Cogito.Kademlia.Console
             var cont = true;
             while (cont)
             {
-                switch (System.Console.ReadLine())
+                var cmd = System.Console.ReadLine().Split(' ');
+
+                switch (cmd[0])
                 {
                     case "exit":
                         cont = false;
@@ -75,10 +78,22 @@ namespace Cogito.Kademlia.Console
                                 System.Console.WriteLine("    {0}", ep);
                         }
                         break;
-                    case "lookup":
+                    case "pub":
+                        {
+                            var key = KNodeId<KNodeId256>.Read(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(cmd[1])));
+                            var val = Encoding.UTF8.GetBytes(cmd[2]);
+                            await pub.SetAsync(key, val, null);
+                        }
                         break;
-                    case "set":
-                        await pub.SetAsync(KNodeId<KNodeId256>.Create(), Encoding.UTF8.GetBytes("test value"), null);
+                    case "get":
+                        {
+                            var key = KNodeId<KNodeId256>.Read(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(cmd[1])));
+                            var val = (await str.GetAsync(key)).Value ?? (await lup.LookupValueAsync(key)).Value;
+                            if (val != null)
+                                System.Console.WriteLine("Value: {0}", Encoding.UTF8.GetString(val.Value.ToArray()));
+                            else
+                                System.Console.WriteLine("Value missing.");
+                        }
                         break;
                     case "ping":
                         break;

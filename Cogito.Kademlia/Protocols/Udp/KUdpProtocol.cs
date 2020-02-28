@@ -554,7 +554,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             try
             {
                 logger?.LogDebug("Sending packet to {Endpoint} with {Magic}.", endpoint, magic);
-                await SocketSendToAsync(socket, buffer, endpoint.ToIPEndPoint(), cancellationToken);
+                await SocketSendToAsync(socket, buffer, endpoint, cancellationToken);
             }
             catch (Exception)
             {

@@ -87,7 +87,7 @@ namespace Cogito.Kademlia
                 cache.Remove(key);
             }
 
-            return new ValueTask<KStoreSetResult<TKNodeId>>(new KStoreSetResult<TKNodeId>(KStoreSetResultStatus.Success));
+            return new ValueTask<KStoreSetResult<TKNodeId>>(new KStoreSetResult<TKNodeId>(key, KStoreSetResultStatus.Success));
         }
 
         /// <summary>
@@ -98,9 +98,9 @@ namespace Cogito.Kademlia
         public ValueTask<KStoreGetResult<TKNodeId>> GetAsync(in TKNodeId key)
         {
             if (cache.TryGetValue<Entry>(key, out var v))
-                return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(v.Value, v.Expiration));
+                return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(key, v.Value, v.Expiration));
             else
-                return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(null, null));
+                return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(key, null, null));
         }
 
     }

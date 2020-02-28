@@ -16,7 +16,7 @@ namespace Cogito.Kademlia
     /// Provides an implementation of a Kademlia network engine. The <see cref="KEngine{TKNodeId, TKPeerData}"/>
     /// class implements the core runtime logic of a Kademlia node.
     /// </summary>
-    public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>, IKDistributedTable<TKNodeId>
+    public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
@@ -108,29 +108,6 @@ namespace Cogito.Kademlia
         public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
         {
             return new ValueTask(Task.WhenAll(Enumerable.Range(1, KNodeId<TKNodeId>.SizeOf * 8 - 1).Select(i => KNodeId<TKNodeId>.Randomize(SelfId, i)).Select(i => lookup.LookupNodeAsync(i, cancellationToken).AsTask())));
-        }
-
-        /// <summary>
-        /// Gets the value for the specified key.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<ReadOnlyMemory<byte>?> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Sets the value for the specified key.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask SetValueAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
         }
 
         /// <summary>

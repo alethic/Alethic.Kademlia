@@ -9,16 +9,23 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
+        readonly TKNodeId key;
         readonly KStoreSetResultStatus status;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="status"></param>
-        public KStoreSetResult(KStoreSetResultStatus status)
+        public KStoreSetResult(in TKNodeId key, KStoreSetResultStatus status)
         {
+            this.key = key;
             this.status = status;
         }
+
+        /// <summary>
+        /// Gets the key that was set.
+        /// </summary>
+        public TKNodeId Key => key;
 
         /// <summary>
         /// Gets the status of the store operation.

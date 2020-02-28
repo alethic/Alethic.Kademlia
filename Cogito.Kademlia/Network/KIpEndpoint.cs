@@ -15,6 +15,16 @@ namespace Cogito.Kademlia.Network
     public readonly struct KIpEndpoint : IEquatable<KIpEndpoint>
     {
 
+        public static implicit operator IPEndPoint(KIpEndpoint endpoint)
+        {
+            return endpoint.ToIPEndPoint();
+        }
+
+        public static implicit operator KIpEndpoint(IPEndPoint endpoint)
+        {
+            return new KIpEndpoint(endpoint);
+        }
+
         public static bool operator ==(KIpEndpoint a, KIpEndpoint b)
         {
             return a.Equals(b);
@@ -70,16 +80,6 @@ namespace Cogito.Kademlia.Network
         public static void Write(KIpEndpoint self, Span<byte> target)
         {
             MemoryMarshal.Write(target, ref self);
-        }
-
-        public static implicit operator IPEndPoint(KIpEndpoint ep)
-        {
-            return ep.ToIPEndPoint();
-        }
-
-        public static implicit operator KIpEndpoint(IPEndPoint ep)
-        {
-            return new KIpEndpoint(ep);
         }
 
         [FieldOffset(0)]
