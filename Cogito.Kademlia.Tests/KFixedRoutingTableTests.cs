@@ -24,7 +24,7 @@ namespace Cogito.Kademlia.Tests
                 return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default)
             {
                 return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>();
             }
