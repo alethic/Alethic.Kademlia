@@ -18,8 +18,9 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="version"></param>
         /// <returns></returns>
-        ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration);
+        ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version);
 
         /// <summary>
         /// Gets the value from the value store.

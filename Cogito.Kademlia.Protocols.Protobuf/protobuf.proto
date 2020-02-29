@@ -58,12 +58,14 @@ message StoreRequest {
     bytes key = 1;
     bytes value = 2;
     google.protobuf.Duration ttl = 3;
+    uint64 version = 4;
 }
 
 message StoreResponse {
     enum StoreResponseStatus {
-        Stored = 0;
-        NotStored = 1;
+        Unknown = 0;
+        Stored = 1;
+        Conflict = 2;
     }
 
     bytes key = 1;
@@ -93,5 +95,6 @@ message FindValueResponse {
     FindValueResponseStatus status = 3;
     bytes value = 4;
     google.protobuf.Duration ttl = 5;
+    uint64 version = 6;
 }
 

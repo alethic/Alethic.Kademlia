@@ -9,20 +9,27 @@
     {
 
         readonly TKNodeId key;
+        readonly KStoreResponseStatus status;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
-        public KStoreResponse(TKNodeId key)
+        public KStoreResponse(in TKNodeId key, KStoreResponseStatus status)
         {
             this.key = key;
+            this.status = status;
         }
 
         /// <summary>
         /// Gets the key to store.
         /// </summary>
         public TKNodeId Key => key;
+
+        /// <summary>
+        /// Gets the result of the STORE operation.
+        /// </summary>
+        public KStoreResponseStatus Status => status;
 
     }
 

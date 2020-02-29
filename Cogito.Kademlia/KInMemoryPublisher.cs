@@ -27,16 +27,19 @@ namespace Cogito.Kademlia
 
             public byte[] Value;
             public DateTimeOffset Expiration;
+            public ulong Version;
 
             /// <summary>
             /// Initializes a new instance.
             /// </summary>
             /// <param name="value"></param>
             /// <param name="expiration"></param>
-            public Entry(byte[] value, DateTimeOffset expiration)
+            /// <param name="version"></param>
+            public Entry(byte[] value, DateTimeOffset expiration, ulong version)
             {
                 Value = value;
                 Expiration = expiration;
+                Version = version;
             }
 
         }
@@ -77,29 +80,34 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="version"></param>
         /// <returns></returns>
-        public ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default)
+        public ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default)
         {
-            return SetAsync(key, value, expiration, cancellationToken);
+            return SetAsync(key, value, expiration, version, cancellationToken);
         }
 
-        async ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken)
+        async ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken)
         {
             if (value != null)
             {
+                // prepare defaults
                 expiration = expiration ?? DateTimeOffset.UtcNow.Add(defaultTimeToLive);
-                var entry = new Entry(value.Value.ToArray(), expiration.Value);
+                version = version ?? 0;
+
+                // generate new entry
+                var entry = new Entry(value.Value.ToArray(), expiration.Value, version.Value);
                 entries[key] = entry;
 
                 // publishes the value immediately
-                await PublishValueAsync(key, value.Value, expiration.Value, cancellationToken);
+                await PublishValueAsync(key, value.Value, expiration.Value, version.Value, cancellationToken);
             }
             else
             {
                 entries.TryRemove(key, out var _);
             }
 
-            return new KPublisherSetResult<TKNodeId>(KPublisherSetResultStatus.Success);
+            return new KPublisherSetResult<TKNodeId>(key, KPublisherSetResultStatus.Success);
         }
 
         /// <summary>
@@ -108,18 +116,19 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async Task PublishValueAsync(TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, CancellationToken cancellationToken)
+        async Task PublishValueAsync(TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, ulong version, CancellationToken cancellationToken)
         {
             logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, expiration);
 
             // store in local store
-            var s = await store.SetAsync(key, value, expiration);
+            var s = await store.SetAsync(key, value, expiration, version);
 
             // publish to top K remote nodes
             var r = await lookup.LookupNodeAsync(key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, cancellationToken).AsTask());
+            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, version, cancellationToken).AsTask());
             await Task.WhenAll(t);
         }
 
@@ -131,9 +140,9 @@ namespace Cogito.Kademlia
         public ValueTask<KPublisherGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
             if (entries.TryGetValue(key, out var v))
-                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(v.Value, v.Expiration));
+                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(key, v.Value, v.Expiration));
             else
-                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(null, null));
+                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(key, null, null));
         }
 
         /// <summary>
@@ -194,7 +203,7 @@ namespace Cogito.Kademlia
                 try
                 {
                     logger?.LogInformation("Initiating periodic publish of values.");
-                    await Task.WhenAll(entries.Select(i => PublishValueAsync(i.Key, i.Value.Value, i.Value.Expiration, cancellationToken)));
+                    await Task.WhenAll(entries.Select(i => PublishValueAsync(i.Key, i.Value.Value, i.Value.Expiration, i.Value.Version, cancellationToken)));
                 }
                 catch (Exception e)
                 {

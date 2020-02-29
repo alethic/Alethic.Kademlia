@@ -9,7 +9,7 @@
     {
 
         /// <summary>
-        /// Gets the list of endpoints.
+        /// Gets the set of endpoints.
         /// </summary>
         IKEndpointSet<TKNodeId> Endpoints { get; }
 

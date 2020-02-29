@@ -28,9 +28,10 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default);
+        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Attempts to execute a FIND_NODE request against each of the provided endpoints.

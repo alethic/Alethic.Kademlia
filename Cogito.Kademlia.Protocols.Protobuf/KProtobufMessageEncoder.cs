@@ -3,7 +3,6 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
-
 using Cogito.Kademlia.Network;
 
 using Google.Protobuf;
@@ -120,6 +119,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             r.Key = Encode(resources, request.Key);
             r.Value = request.Value != null ? ByteString.CopyFrom(request.Value.Value.ToArray()) : null;
             r.Ttl = request.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(request.Expiration.Value - DateTimeOffset.UtcNow).TotalSeconds } : null;
+            r.Version = request.Version ?? 0;
             return r;
         }
 
@@ -127,7 +127,19 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             var r = new StoreResponse();
             r.Key = Encode(resources, response.Key);
+            r.Status = Encode(resources, response.Status);
             return r;
+        }
+
+        StoreResponse.Types.StoreResponseStatus Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreResponseStatus status)
+        {
+            return status switch
+            {
+                KStoreResponseStatus.Unknown => StoreResponse.Types.StoreResponseStatus.Unknown,
+                KStoreResponseStatus.Stored => StoreResponse.Types.StoreResponseStatus.Stored,
+                KStoreResponseStatus.Conflict => StoreResponse.Types.StoreResponseStatus.Conflict,
+                _ => StoreResponse.Types.StoreResponseStatus.Unknown,
+            };
         }
 
         FindNodeRequest Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KFindNodeRequest<TKNodeId> request)

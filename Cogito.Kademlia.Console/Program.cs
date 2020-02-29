@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -81,8 +82,8 @@ namespace Cogito.Kademlia.Console
                     case "pub":
                         {
                             var key = KNodeId<KNodeId256>.Read(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(cmd[1])));
-                            var val = Encoding.UTF8.GetBytes(cmd[2]);
-                            await pub.SetAsync(key, val, null);
+                            var val = Encoding.UTF8.GetBytes(string.Join(" ", cmd.Skip(2)));
+                            await pub.SetAsync(key, val, null, null);
                         }
                         break;
                     case "get":

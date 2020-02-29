@@ -14,17 +14,17 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Creates a response to the given request.
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
+        /// <param name="status"></param>
         /// <returns></returns>
-        public KStoreResponse<TKNodeId> Respond()
+        public KStoreResponse<TKNodeId> Respond(KStoreResponseStatus status)
         {
-            return new KStoreResponse<TKNodeId>(key);
+            return new KStoreResponse<TKNodeId>(key, status);
         }
 
         readonly TKNodeId key;
         readonly ReadOnlyMemory<byte>? value;
         readonly DateTimeOffset? expiration;
+        readonly ulong? version;
 
         /// <summary>
         /// Initializes a new instance.
@@ -32,11 +32,13 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
-        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+        /// <param name="version"></param>
+        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
         {
             this.key = key;
             this.value = value;
             this.expiration = expiration;
+            this.version = version;
         }
 
         /// <summary>
@@ -53,6 +55,11 @@ namespace Cogito.Kademlia
         /// Time at which the value will expire.
         /// </summary>
         public DateTimeOffset? Expiration => expiration;
+
+        /// <summary>
+        /// Version of the data to store. Later version override older versions.
+        /// </summary>
+        public ulong? Version => version;
 
     }
 

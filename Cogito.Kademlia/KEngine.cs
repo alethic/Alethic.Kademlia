@@ -226,8 +226,8 @@ namespace Cogito.Kademlia
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
-            await store.SetAsync(request.Key, request.Value, request.Expiration);
-            return request.Respond();
+            await store.SetAsync(request.Key, request.Value, request.Expiration, request.Version);
+            return request.Respond(KStoreResponseStatus.Stored);
         }
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace Cogito.Kademlia
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
             var r = await store.GetAsync(request.Key);
-            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration);
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration, r.Version);
         }
 
     }

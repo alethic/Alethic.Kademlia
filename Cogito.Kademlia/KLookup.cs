@@ -28,17 +28,21 @@ namespace Cogito.Kademlia
             readonly IEnumerable<KPeerEndpointInfo<TKNodeId>> peers;
             readonly ReadOnlyMemory<byte>? value;
             readonly DateTimeOffset? expiration;
+            readonly ulong? version;
 
             /// <summary>
             /// Initializes a new instance.
             /// </summary>
             /// <param name="peers"></param>
             /// <param name="value"></param>
-            public FindResult(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+            /// <param name="expiration"></param>
+            /// <param name="version"></param>
+            public FindResult(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
             {
                 this.peers = peers;
                 this.value = value;
                 this.expiration = expiration;
+                this.version = version;
             }
 
             /// <summary>
@@ -56,6 +60,11 @@ namespace Cogito.Kademlia
             /// </summary>
             public DateTimeOffset? Expiration => expiration;
 
+            /// <summary>
+            /// Optionally gets the version of the value.
+            /// </summary>
+            public ulong? Version => version;
+
         }
 
         /// <summary>
@@ -69,6 +78,7 @@ namespace Cogito.Kademlia
             readonly KPeerEndpointInfo<TKNodeId>? source;
             readonly ReadOnlyMemory<byte>? value;
             readonly DateTimeOffset? expiration;
+            readonly ulong? version;
 
             /// <summary>
             /// Initializes a new instance.
@@ -77,13 +87,16 @@ namespace Cogito.Kademlia
             /// <param name="peers"></param>
             /// <param name="source"></param>
             /// <param name="value"></param>
-            public LookupResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, in KPeerEndpointInfo<TKNodeId>? source, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+            /// <param name="expiration">sss</param>
+            /// <param name="version"></param>
+            public LookupResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, in KPeerEndpointInfo<TKNodeId>? source, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
             {
                 this.key = key;
                 this.peers = peers;
                 this.source = source;
                 this.value = value;
                 this.expiration = expiration;
+                this.version = version;
             }
 
             /// <summary>
@@ -110,6 +123,11 @@ namespace Cogito.Kademlia
             /// Gets the expiration timestamp of the retrieved value.
             /// </summary>
             public DateTimeOffset? Expiration => expiration;
+
+            /// <summary>
+            /// Gets the version of the discovered value.
+            /// </summary>
+            public ulong? Version => Version;
 
         }
 
@@ -179,7 +197,7 @@ namespace Cogito.Kademlia
 
             // value was returned, store at closest node
             if (r.Value != null)
-                await CacheAsync(r.Peers.Take(1), key, r.Value.Value, r.Expiration.Value, cancellationToken);
+                await CacheAsync(r.Peers.Take(1), key, r.Value.Value, r.Expiration.Value, r.Version.Value, cancellationToken);
 
             return new KLookupValueResult<TKNodeId>(r.Key, r.Peers, r.Source, r.Value);
         }
@@ -193,9 +211,9 @@ namespace Cogito.Kademlia
         /// <param name="expiration"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task CacheAsync(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, CancellationToken cancellationToken)
+        Task CacheAsync(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, ulong version, CancellationToken cancellationToken)
         {
-            return Task.WhenAll(peers.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, cancellationToken).AsTask()));
+            return Task.WhenAll(peers.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, version, cancellationToken).AsTask()));
         }
 
         /// <summary>
@@ -270,7 +288,7 @@ namespace Cogito.Kademlia
 
                         // method returned the value; we can stop looking and return the value and our path
                         if (find.Result.Value != null)
-                            return new LookupResult(key, path, peer, find.Result.Value, find.Result.Expiration);
+                            return new LookupResult(key, path, peer, find.Result.Value, find.Result.Expiration, find.Result.Version);
 
                         // task returned more peers, lets begin working on them
                         if (find.Result.Peers != null)
@@ -324,7 +342,7 @@ namespace Cogito.Kademlia
             }
 
             // we never found anything; return the path we took, but that's it
-            return new LookupResult(key, path, null, null, null);
+            return new LookupResult(key, path, null, null, null, null);
         }
 
         /// <summary>
@@ -339,9 +357,9 @@ namespace Cogito.Kademlia
         {
             var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
-                return new FindResult(r.Body.Peers, null, null);
+                return new FindResult(r.Body.Peers, null, null, null);
 
-            return new FindResult(null, null, null);
+            return new FindResult(null, null, null, null);
         }
 
         /// <summary>
@@ -356,9 +374,9 @@ namespace Cogito.Kademlia
         {
             var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
-                return new FindResult(r.Body.Peers, r.Body.Value, r.Body.Expiration);
+                return new FindResult(r.Body.Peers, r.Body.Value, r.Body.Expiration, r.Body.Version);
 
-            return new FindResult(null, null, null);
+            return new FindResult(null, null, null, null);
         }
 
     }

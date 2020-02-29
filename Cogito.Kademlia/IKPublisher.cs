@@ -19,9 +19,10 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
+        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, CancellationToken cancellationToken = default);
+        ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the value in the publisher.

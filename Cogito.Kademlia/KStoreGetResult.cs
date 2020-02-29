@@ -14,17 +14,21 @@ namespace Cogito.Kademlia
         readonly TKNodeId key;
         readonly ReadOnlyMemory<byte>? value;
         readonly DateTimeOffset? expiration;
+        readonly ulong? version;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="key"></param>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
-        public KStoreGetResult(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+        /// <param name="version"></param>
+        public KStoreGetResult(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
         {
             this.key = key;
             this.value = value;
             this.expiration = expiration;
+            this.version = version;
         }
 
         /// <summary>
@@ -41,6 +45,11 @@ namespace Cogito.Kademlia
         /// Gets the time at which the value will expire, if a value with expiration exists.
         /// </summary>
         public DateTimeOffset? Expiration => expiration;
+
+        /// <summary>
+        /// Gets the version of the value.
+        /// </summary>
+        public ulong? Version => version;
 
     }
 

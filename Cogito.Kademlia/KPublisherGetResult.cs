@@ -11,6 +11,7 @@ namespace Cogito.Kademlia
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
+        readonly TKNodeId key;
         readonly ReadOnlyMemory<byte>? value;
         readonly DateTimeOffset? expiration;
 
@@ -19,11 +20,17 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="value"></param>
         /// <param name="expiration"></param>
-        public KPublisherGetResult(ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+        public KPublisherGetResult(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
         {
+            this.key = key;
             this.value = value;
             this.expiration = expiration;
         }
+
+        /// <summary>
+        /// Gets the key that is associated with the retrieved value.
+        /// </summary>
+        public TKNodeId Key => key;
 
         /// <summary>
         /// Gets the value retrieved from the store. If no value exists, <c>null</c> is returned.

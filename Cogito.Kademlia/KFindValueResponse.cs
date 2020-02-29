@@ -14,19 +14,23 @@ namespace Cogito.Kademlia
         readonly KPeerEndpointInfo<TKNodeId>[] peers;
         readonly ReadOnlyMemory<byte>? value;
         readonly DateTimeOffset? expiration;
+        readonly ulong? version;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
-        /// <param name="value"></param>
         /// <param name="peers"></param>
-        public KFindValueResponse(in TKNodeId key, KPeerEndpointInfo<TKNodeId>[] peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration)
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <param name="version"></param>
+        public KFindValueResponse(in TKNodeId key, KPeerEndpointInfo<TKNodeId>[] peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
         {
             this.key = key;
             this.peers = peers;
             this.value = value;
             this.expiration = expiration ?? throw new ArgumentNullException(nameof(expiration));
+            this.version = version;
         }
 
         /// <summary>
@@ -48,6 +52,11 @@ namespace Cogito.Kademlia
         /// Gets the date and time at which the value expires.
         /// </summary>
         public DateTimeOffset? Expiration => expiration;
+
+        /// <summary>
+        /// Gets the version of the retrieved value.
+        /// </summary>
+        public ulong? Version => version;
 
     }
 
