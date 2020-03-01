@@ -129,9 +129,29 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             return new KStoreRequest<TKNodeId>(
                 DecodeNodeId(resources, request.Key),
-                request.Value?.ToByteArray(),
-                request.Ttl != null ? DateTimeOffset.UtcNow + request.Ttl.ToTimeSpan() : (DateTimeOffset?)null,
-                request.Version);
+                Decode(resources, request.Mode),
+                request.HasValue ?
+                    new KValueInfo(
+                        request.Value.Data.ToByteArray(),
+                        request.Value.Version,
+                        DateTime.UtcNow + request.Value.Ttl.ToTimeSpan()) :
+                    (KValueInfo?)null);
+        }
+
+        /// <summary>
+        /// Decodes a <see cref="StoreRequest.Types.StoreRequestMode" />.
+        /// </summary>
+        /// <param name="resources"></param>
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        KStoreRequestMode Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreRequest.Types.StoreRequestMode mode)
+        {
+            return mode switch
+            {
+                StoreRequest.Types.StoreRequestMode.Primary => KStoreRequestMode.Primary,
+                StoreRequest.Types.StoreRequestMode.Replica => KStoreRequestMode.Replica,
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         /// <summary>
@@ -142,7 +162,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         /// <returns></returns>
         KStoreResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreResponse response)
         {
-            return new KStoreResponse<TKNodeId>(DecodeNodeId(resources, response.Key), Decode(resources, response.Status));
+            return new KStoreResponse<TKNodeId>(Decode(resources, response.Status));
         }
 
         /// <summary>
@@ -155,10 +175,9 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             return status switch
             {
-                StoreResponse.Types.StoreResponseStatus.Unknown => KStoreResponseStatus.Unknown,
-                StoreResponse.Types.StoreResponseStatus.Stored => KStoreResponseStatus.Stored,
-                StoreResponse.Types.StoreResponseStatus.Conflict => KStoreResponseStatus.Conflict,
-                _ => KStoreResponseStatus.Unknown,
+                StoreResponse.Types.StoreResponseStatus.Invalid => KStoreResponseStatus.Invalid,
+                StoreResponse.Types.StoreResponseStatus.Success => KStoreResponseStatus.Success,
+                _ => throw new InvalidOperationException(),
             };
         }
 
@@ -181,7 +200,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         /// <returns></returns>
         KFindNodeResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindNodeResponse response)
         {
-            return new KFindNodeResponse<TKNodeId>(DecodeNodeId(resources, response.Key), Decode(resources, response.Peers).ToArray());
+            return new KFindNodeResponse<TKNodeId>(Decode(resources, response.Peers).ToArray());
         }
 
         /// <summary>
@@ -204,10 +223,13 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         KFindValueResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindValueResponse response)
         {
             return new KFindValueResponse<TKNodeId>(
-                DecodeNodeId(resources, response.Key),
                 Decode(resources, response.Peers).ToArray(),
-                response.Value?.ToByteArray(), response.Ttl != null ? DateTimeOffset.UtcNow + response.Ttl.ToTimeSpan() : (DateTimeOffset?)null,
-                response.Version);
+                response.HasValue ?
+                    new KValueInfo(
+                        response.Value.ToByteArray(),
+                        response.Value.Version,
+                        DateTime.UtcNow + response.Value.Ttl.ToTimeSpan()) :
+                    (KValueInfo?)null);
         }
 
         /// <summary>

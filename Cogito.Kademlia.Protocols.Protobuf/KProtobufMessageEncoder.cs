@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
+
 using Cogito.Kademlia.Network;
 
 using Google.Protobuf;
@@ -117,16 +118,31 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             var r = new StoreRequest();
             r.Key = Encode(resources, request.Key);
-            r.Value = request.Value != null ? ByteString.CopyFrom(request.Value.Value.ToArray()) : null;
-            r.Ttl = request.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(request.Expiration.Value - DateTimeOffset.UtcNow).TotalSeconds } : null;
-            r.Version = request.Version ?? 0;
+            r.Mode = Encode(resources, request.Mode);
+            if (request.Value is KValueInfo value)
+            {
+                r.HasValue = true;
+                r.Value = new ValueInfo();
+                r.Value.Data = ByteString.CopyFrom(value.Data.ToArray());
+                r.Value.Version = value.Version;
+                r.Value.Ttl = new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(value.Expiration - DateTime.UtcNow).TotalSeconds };
+            }
             return r;
+        }
+
+        StoreRequest.Types.StoreRequestMode Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreRequestMode mode)
+        {
+            return mode switch
+            {
+                KStoreRequestMode.Primary => StoreRequest.Types.StoreRequestMode.Primary,
+                KStoreRequestMode.Replica => StoreRequest.Types.StoreRequestMode.Replica,
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         StoreResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreResponse<TKNodeId> response)
         {
             var r = new StoreResponse();
-            r.Key = Encode(resources, response.Key);
             r.Status = Encode(resources, response.Status);
             return r;
         }
@@ -135,10 +151,9 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             return status switch
             {
-                KStoreResponseStatus.Unknown => StoreResponse.Types.StoreResponseStatus.Unknown,
-                KStoreResponseStatus.Stored => StoreResponse.Types.StoreResponseStatus.Stored,
-                KStoreResponseStatus.Conflict => StoreResponse.Types.StoreResponseStatus.Conflict,
-                _ => StoreResponse.Types.StoreResponseStatus.Unknown,
+                KStoreResponseStatus.Invalid => StoreResponse.Types.StoreResponseStatus.Invalid,
+                KStoreResponseStatus.Success => StoreResponse.Types.StoreResponseStatus.Success,
+                _ => throw new InvalidOperationException(),
             };
         }
 
@@ -152,7 +167,6 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         FindNodeResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KFindNodeResponse<TKNodeId> response)
         {
             var r = new FindNodeResponse();
-            r.Key = Encode(resources, response.Key);
             r.Peers.Add(Encode(resources, response.Peers));
             return r;
         }
@@ -167,8 +181,14 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         FindValueResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KFindValueResponse<TKNodeId> response)
         {
             var r = new FindValueResponse();
-            r.Key = Encode(resources, response.Key);
-            r.Value = response.Value != null ? ByteString.CopyFrom(response.Value.Value.ToArray()) : null;
+            if (response.Value != null)
+            {
+                r.HasValue = true;
+                r.Value = new ValueInfo();
+                r.Value.Data = ByteString.CopyFrom(response.Value.Value.Data.ToArray());
+                r.Value.Version = response.Value.Value.Version;
+                r.Value.Ttl = response.Value.Value.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(response.Value.Value.Expiration - DateTime.UtcNow).TotalSeconds } : null;
+            }
             r.Peers.Add(Encode(resources, response.Peers));
             return r;
         }

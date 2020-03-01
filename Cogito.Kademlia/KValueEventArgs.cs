@@ -1,11 +1,13 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Descsribes the results of a store get operation.
+    /// Describes an event that occurred to a value.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KStoreGetResult<TKNodeId>
+    public class KValueEventArgs<TKNodeId> : EventArgs
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
@@ -17,19 +19,19 @@
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public KStoreGetResult(in TKNodeId key, KValueInfo? value)
+        public KValueEventArgs(in TKNodeId key, in KValueInfo? value)
         {
             this.key = key;
             this.value = value;
         }
 
         /// <summary>
-        /// Gets the key that was retrieved.
+        /// Gets the key that was changed.
         /// </summary>
         public TKNodeId Key => key;
 
         /// <summary>
-        /// Gets the value retrieved from the store. If no value exists, <c>null</c> is returned.
+        /// Gets the new value information.
         /// </summary>
         public KValueInfo? Value => value;
 

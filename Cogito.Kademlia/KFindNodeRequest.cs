@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public KFindNodeResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers)
         {
-            return new KFindNodeResponse<TKNodeId>(key, peers);
+            return new KFindNodeResponse<TKNodeId>(peers);
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public KFindNodeResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers)
         {
-            return new KFindNodeResponse<TKNodeId>(key, peers.ToArray());
+            return new KFindNodeResponse<TKNodeId>(peers.ToArray());
         }
 
         readonly TKNodeId key;

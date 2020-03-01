@@ -4,9 +4,8 @@
     public enum KStoreResponseStatus
     {
 
-        Unknown = 0,
-        Stored = 1,
-        Conflict = 2,
+        Success = 0,
+        Invalid = 1,
 
     }
 

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace Cogito.Kademlia
@@ -18,12 +17,10 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="peers"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
+        public KFindValueResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers, KValueInfo? value)
         {
-            return new KFindValueResponse<TKNodeId>(key, peers, value, expiration, version);
+            return new KFindValueResponse<TKNodeId>(peers, value);
         }
 
         /// <summary>
@@ -31,12 +28,10 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="peers"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
+        public KFindValueResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, KValueInfo? value)
         {
-            return new KFindValueResponse<TKNodeId>(key, peers.ToArray(), value, expiration, version);
+            return new KFindValueResponse<TKNodeId>(peers.ToArray(), value);
         }
 
         readonly TKNodeId key;

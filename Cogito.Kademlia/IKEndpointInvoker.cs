@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -26,12 +25,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoints"></param>
         /// <param name="key"></param>
+        /// <param name="mode"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default);
+        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, KValueInfo? value, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Attempts to execute a FIND_NODE request against each of the provided endpoints.
@@ -40,7 +38,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Attempts to execute a FIND_VALUE request against each of the provided endpoints.
@@ -49,7 +47,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default);
 
     }
 

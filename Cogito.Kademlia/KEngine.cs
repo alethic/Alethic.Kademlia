@@ -226,8 +226,23 @@ namespace Cogito.Kademlia
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
-            await store.SetAsync(request.Key, request.Value, request.Expiration, request.Version);
-            return request.Respond(KStoreResponseStatus.Stored);
+            await store.SetAsync(request.Key, ToStoreMode(request.Mode), request.Value, cancellationToken);
+            return request.Respond(KStoreResponseStatus.Success);
+        }
+
+        /// <summary>
+        /// Converts the store request mode into the store setter mode.
+        /// </summary>
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        KStoreValueMode ToStoreMode(KStoreRequestMode mode)
+        {
+            return mode switch
+            {
+                KStoreRequestMode.Primary => KStoreValueMode.Primary,
+                KStoreRequestMode.Replica => KStoreValueMode.Replica,
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         /// <summary>
@@ -286,7 +301,7 @@ namespace Cogito.Kademlia
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
             var r = await store.GetAsync(request.Key);
-            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value, r.Expiration, r.Version);
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value);
         }
 
     }

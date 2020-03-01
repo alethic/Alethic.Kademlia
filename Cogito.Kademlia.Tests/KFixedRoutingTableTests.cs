@@ -24,17 +24,17 @@ namespace Cogito.Kademlia.Tests
                 return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, KValueInfo? value, CancellationToken cancellationToken = default)
             {
                 return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
             {
                 return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
             {
                 return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>();
             }

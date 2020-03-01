@@ -56,13 +56,13 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoints"></param>
         /// <param name="key"></param>
+        /// <param name="mode"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, KValueInfo? value, CancellationToken cancellationToken = default)
         {
-            var r = new KStoreRequest<TKNodeId>(key, value, expiration, version);
+            var r = new KStoreRequest<TKNodeId>(key, mode, value);
             return TryAsync(endpoints, ep => ep.StoreAsync(r, cancellationToken), cancellationToken);
         }
 
@@ -73,7 +73,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
         {
             var r = new KFindNodeRequest<TKNodeId>(key);
             return TryAsync(endpoints, ep => ep.FindNodeAsync(r, cancellationToken), cancellationToken);
@@ -86,7 +86,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
         {
             var r = new KFindValueRequest<TKNodeId>(key);
             return TryAsync(endpoints, ep => ep.FindValueAsync(r, cancellationToken), cancellationToken);

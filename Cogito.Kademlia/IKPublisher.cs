@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -14,23 +13,29 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
-        /// Sets the value in the publisher.
+        /// Adds a value for the key to the publisher.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default);
+        ValueTask<bool> AddAsync(in TKNodeId key, in KValueInfo value, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Gets the value in the publisher.
+        /// Removes the value for the specified key from the publisher.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KPublisherGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<bool> RemoveAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the value for the specified key from the publisher.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
 
     }
 

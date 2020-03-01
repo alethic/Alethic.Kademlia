@@ -55,21 +55,24 @@ message PingResponse {
 }
 
 message StoreRequest {
+    enum StoreRequestMode {
+        Primary = 0;
+        Replica = 1;
+    }
+
     bytes key = 1;
-    bytes value = 2;
-    google.protobuf.Duration ttl = 3;
-    uint64 version = 4;
+    StoreRequestMode mode = 2;
+    bool has_value = 3;
+    ValueInfo value = 4;
 }
 
 message StoreResponse {
     enum StoreResponseStatus {
-        Unknown = 0;
-        Stored = 1;
-        Conflict = 2;
+        Invalid = 0;
+        Success = 1;
     }
 
-    bytes key = 1;
-    StoreResponseStatus status = 2;
+    StoreResponseStatus status = 1;
 }
 
 message FindNodeRequest {
@@ -77,8 +80,7 @@ message FindNodeRequest {
 }
 
 message FindNodeResponse {
-    bytes key = 1;
-    repeated Peer peers = 2;
+    repeated Peer peers = 1;
 }
 
 message FindValueRequest {
@@ -86,15 +88,13 @@ message FindValueRequest {
 }
 
 message FindValueResponse {
-    enum FindValueResponseStatus {
-        Found = 0;
-        NotFound = 1;
-    }
-    bytes key = 1;
-    repeated Peer peers = 2;
-    FindValueResponseStatus status = 3;
-    bytes value = 4;
-    google.protobuf.Duration ttl = 5;
-    uint64 version = 6;
+    repeated Peer peers = 1;
+    bool has_value = 2;
+    ValueInfo value = 3;
 }
 
+message ValueInfo {
+    bytes data = 1;
+    uint64 version = 2;
+    google.protobuf.Duration ttl = 3;
+}

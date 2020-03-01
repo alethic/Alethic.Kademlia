@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cogito.Kademlia
@@ -16,18 +17,24 @@ namespace Cogito.Kademlia
         /// Sets the value in the value store.
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="mode"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version);
+        ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the value from the value store.
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KStoreGetResult<TKNodeId>> GetAsync(in TKNodeId key);
+        ValueTask<KStoreGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Invoked when a value is changed.
+        /// </summary>
+        event EventHandler<KValueEventArgs<TKNodeId>> ValueChanged;
 
     }
 

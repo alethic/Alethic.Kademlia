@@ -15,7 +15,7 @@ namespace Cogito.Kademlia
         readonly TKNodeId key;
         readonly IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes;
         readonly KPeerEndpointInfo<TKNodeId>? source;
-        readonly ReadOnlyMemory<byte>? value;
+        readonly KValueInfo? value;
 
         /// <summary>
         /// Initializes a new instance.
@@ -24,7 +24,7 @@ namespace Cogito.Kademlia
         /// <param name="nodes"></param>
         /// <param name="source"></param>
         /// <param name="value"></param>
-        public KLookupValueResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? source, ReadOnlyMemory<byte>? value)
+        public KLookupValueResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? source, KValueInfo? value)
         {
             this.key = key;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
@@ -62,7 +62,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the resulting value if any.
         /// </summary>
-        public ReadOnlyMemory<byte>? Value => value;
+        public KValueInfo? Value => value;
 
     }
 

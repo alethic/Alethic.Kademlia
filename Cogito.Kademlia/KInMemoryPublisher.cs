@@ -22,24 +22,18 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Represents an entry in the publisher.
         /// </summary>
-        struct Entry
+        readonly struct Entry
         {
 
-            public byte[] Value;
-            public DateTimeOffset Expiration;
-            public ulong Version;
+            public readonly KValueInfo Value;
 
             /// <summary>
             /// Initializes a new instance.
             /// </summary>
             /// <param name="value"></param>
-            /// <param name="expiration"></param>
-            /// <param name="version"></param>
-            public Entry(byte[] value, DateTimeOffset expiration, ulong version)
+            public Entry(KValueInfo value)
             {
                 Value = value;
-                Expiration = expiration;
-                Version = version;
             }
 
         }
@@ -49,7 +43,7 @@ namespace Cogito.Kademlia
         readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly IKLookup<TKNodeId> lookup;
         readonly IKStore<TKNodeId> store;
-        readonly TimeSpan defaultTimeToLive;
+        readonly TimeSpan frequency;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
         readonly ConcurrentDictionary<TKNodeId, Entry> entries = new ConcurrentDictionary<TKNodeId, Entry>();
@@ -63,14 +57,14 @@ namespace Cogito.Kademlia
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
         /// <param name="store"></param>
-        /// <param name="defaultTimeToLive"></param>
+        /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryPublisher(IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, TimeSpan? defaultTimeToLive = null, ILogger logger = null)
+        public KInMemoryPublisher(IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, TimeSpan? frequency = null, ILogger logger = null)
         {
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
             this.store = store ?? throw new ArgumentNullException(nameof(store));
-            this.defaultTimeToLive = defaultTimeToLive ?? DefaultTimeToLive;
+            this.frequency = frequency ?? TimeSpan.FromHours(1);
             this.logger = logger;
         }
 
@@ -79,70 +73,63 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <returns></returns>
-        public ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken = default)
+        public ValueTask<bool> AddAsync(in TKNodeId key, in KValueInfo value, CancellationToken cancellationToken = default)
         {
-            return SetAsync(key, value, expiration, version, cancellationToken);
+            return AddAsync(key, value, cancellationToken);
         }
 
-        async ValueTask<KPublisherSetResult<TKNodeId>> SetAsync(TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version, CancellationToken cancellationToken)
+        async ValueTask<bool> AddAsync(TKNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
-            if (value != null)
+            using (await sync.LockAsync())
             {
-                // prepare defaults
-                expiration = expiration ?? DateTimeOffset.UtcNow.Add(defaultTimeToLive);
-                version = version ?? 0;
+                // must explicitly remove if required
+                if (entries.ContainsKey(key))
+                    return false;
 
                 // generate new entry
-                var entry = new Entry(value.Value.ToArray(), expiration.Value, version.Value);
+                var entry = new Entry(value);
                 entries[key] = entry;
 
                 // publishes the value immediately
-                await PublishValueAsync(key, value.Value, expiration.Value, version.Value, cancellationToken);
-            }
-            else
-            {
-                entries.TryRemove(key, out var _);
-            }
+                await PublishValueAsync(key, value, cancellationToken);
 
-            return new KPublisherSetResult<TKNodeId>(key, KPublisherSetResultStatus.Success);
+                return true;
+            }
         }
 
         /// <summary>
-        /// Publishes the given value to the K closest nodes.
+        /// Removes the specified key from the publisher.
         /// </summary>
         /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async Task PublishValueAsync(TKNodeId key, ReadOnlyMemory<byte> value, DateTimeOffset expiration, ulong version, CancellationToken cancellationToken)
+        public ValueTask<bool> RemoveAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, expiration);
+            return RemoveAsync(key, cancellationToken);
+        }
 
-            // store in local store
-            var s = await store.SetAsync(key, value, expiration, version);
-
-            // publish to top K remote nodes
-            var r = await lookup.LookupNodeAsync(key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, value, expiration, version, cancellationToken).AsTask());
-            await Task.WhenAll(t);
+        async ValueTask<bool> RemoveAsync(TKNodeId key, CancellationToken cancellationToken)
+        {
+            using (await sync.LockAsync())
+                return entries.TryRemove(key, out var _);
         }
 
         /// <summary>
         /// Gets the value with the given key.
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KPublisherGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
-            if (entries.TryGetValue(key, out var v))
-                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(key, v.Value, v.Expiration));
-            else
-                return new ValueTask<KPublisherGetResult<TKNodeId>>(new KPublisherGetResult<TKNodeId>(key, null, null));
+            return GetAsync(key, cancellationToken);
+        }
+
+        async ValueTask<KValueInfo?> GetAsync(TKNodeId key, CancellationToken cancellationToken)
+        {
+            using (await sync.LockAsync())
+                return entries.TryGetValue(key, out var v) ? v.Value : (KValueInfo?)null;
         }
 
         /// <summary>
@@ -192,6 +179,28 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
+        /// Publishes the given value to the K closest nodes.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiration"></param>
+        /// <param name="version"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async Task PublishValueAsync(TKNodeId key, KValueInfo value, CancellationToken cancellationToken)
+        {
+            logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, value.Expiration);
+
+            // cache in local store
+            var s = await store.SetAsync(key, KStoreValueMode.Replica, value);
+
+            // publish to top K remote nodes
+            var r = await lookup.LookupNodeAsync(key, cancellationToken);
+            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, KStoreRequestMode.Primary, value, cancellationToken).AsTask());
+            await Task.WhenAll(t);
+        }
+
+        /// <summary>
         /// Periodically publishes key/value pairs to the appropriate nodes.
         /// </summary>
         /// <param name="cancellationToken"></param>
@@ -203,14 +212,14 @@ namespace Cogito.Kademlia
                 try
                 {
                     logger?.LogInformation("Initiating periodic publish of values.");
-                    await Task.WhenAll(entries.Select(i => PublishValueAsync(i.Key, i.Value.Value, i.Value.Expiration, i.Value.Version, cancellationToken)));
+                    await Task.WhenAll(entries.Select(i => PublishValueAsync(i.Key, i.Value.Value, cancellationToken)));
                 }
                 catch (Exception e)
                 {
                     logger?.LogError(e, "Unexpected exception occurred publishing values.");
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                await Task.Delay(frequency, cancellationToken);
             }
         }
 

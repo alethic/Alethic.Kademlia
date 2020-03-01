@@ -8,24 +8,16 @@
         where TKNodeId : unmanaged, IKNodeId<TKNodeId>
     {
 
-        readonly TKNodeId key;
         readonly KPeerEndpointInfo<TKNodeId>[] peers;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="key"></param>
         /// <param name="peers"></param>
-        public KFindNodeResponse(in TKNodeId key, KPeerEndpointInfo<TKNodeId>[] peers)
+        public KFindNodeResponse(KPeerEndpointInfo<TKNodeId>[] peers)
         {
-            this.key = key;
             this.peers = peers;
         }
-
-        /// <summary>
-        /// Gets the node ID that was searched for.
-        /// </summary>
-        public TKNodeId Key => key;
 
         /// <summary>
         /// Gets the set of peers and their endpoints returned by the lookup.

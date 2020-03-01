@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Cogito.Kademlia
+﻿namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -18,27 +16,24 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public KStoreResponse<TKNodeId> Respond(KStoreResponseStatus status)
         {
-            return new KStoreResponse<TKNodeId>(key, status);
+            return new KStoreResponse<TKNodeId>(status);
         }
 
         readonly TKNodeId key;
-        readonly ReadOnlyMemory<byte>? value;
-        readonly DateTimeOffset? expiration;
-        readonly ulong? version;
+        readonly KStoreRequestMode mode;
+        readonly KValueInfo? value;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
+        /// <param name="mode"></param>
         /// <param name="value"></param>
-        /// <param name="expiration"></param>
-        /// <param name="version"></param>
-        public KStoreRequest(in TKNodeId key, ReadOnlyMemory<byte>? value, DateTimeOffset? expiration, ulong? version)
+        public KStoreRequest(in TKNodeId key, KStoreRequestMode mode, KValueInfo? value)
         {
             this.key = key;
+            this.mode = mode;
             this.value = value;
-            this.expiration = expiration;
-            this.version = version;
         }
 
         /// <summary>
@@ -47,19 +42,14 @@ namespace Cogito.Kademlia
         public TKNodeId Key => key;
 
         /// <summary>
+        /// Gets the mode of the store request.
+        /// </summary>
+        public KStoreRequestMode Mode => mode;
+
+        /// <summary>
         /// Specifies the value to be stored with the key.
         /// </summary>
-        public ReadOnlyMemory<byte>? Value => value;
-
-        /// <summary>
-        /// Time at which the value will expire.
-        /// </summary>
-        public DateTimeOffset? Expiration => expiration;
-
-        /// <summary>
-        /// Version of the data to store. Later version override older versions.
-        /// </summary>
-        public ulong? Version => version;
+        public KValueInfo? Value => value;
 
     }
 
