@@ -163,9 +163,9 @@ namespace Cogito.Kademlia
         {
             var r = await LookupAsync(key, FindValueAsync, cancellationToken);
 
-            // value was returned, store at closest node
-            if (r.Value != null)
-                await CacheAsync(r.Peers.Take(cache), key, r.Value.Value, cancellationToken);
+            // value was returned, store at first path member
+            if (r.Value is KValueInfo value)
+                await CacheAsync(r.Peers.Take(cache), key, value, cancellationToken);
 
             return new KLookupValueResult<TKNodeId>(r.Key, r.Peers, r.Source, r.Value);
         }
@@ -342,8 +342,6 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<FindResult> FindNodeAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
-            await Task.Yield();
-
             var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return new FindResult(r.Body.Peers, null);
@@ -361,8 +359,6 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<FindResult> FindValueAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
-            await Task.Yield();
-
             var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return new FindResult(r.Body.Peers, r.Body.Value);
