@@ -242,8 +242,10 @@ namespace Cogito.Kademlia
                         // skip failed tasks
                         if (find.Exception != null)
                         {
-                            // ignore timeouts
+                            // ignore various cancellation exceptions
                             if (find.Exception.InnerException is TimeoutException)
+                                continue;
+                            if (find.Exception.InnerException is OperationCanceledException)
                                 continue;
 
                             logger?.LogError(find.Exception, "Received error from lookup task.");
