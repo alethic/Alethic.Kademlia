@@ -92,7 +92,7 @@ namespace Cogito.Kademlia.Console
                     case "get":
                         {
                             var key = KNodeId<KNodeId256>.Read(SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(cmd[1])));
-                            var val = (await str.GetAsync(key)).Value ?? (await lup.LookupValueAsync(key)).Value;
+                            var val = await kad.GetValueAsync(key);
                             if (val != null)
                                 System.Console.WriteLine("Value: {0}", Encoding.UTF8.GetString(val.Value.Data.ToArray()));
                             else

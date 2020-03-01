@@ -103,12 +103,12 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
+        public ValueTask<bool> SetAsync(in TKNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
         {
             return SetAsync(key, mode, value, cancellationToken);
         }
 
-        async ValueTask<KStoreSetResult<TKNodeId>> SetAsync(TKNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken)
+        async ValueTask<bool> SetAsync(TKNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken)
         {
             // do some work before entering lock
             var now = DateTime.UtcNow;
@@ -132,7 +132,7 @@ namespace Cogito.Kademlia
                         if (record.Entry.Version >= value.Value.Version && record.Entry.Mode <= mode)
                         {
                             logger?.LogInformation("Ignoring value for {Key}: Verison {OldVersion} >= {NewVersion}.", key, record.Entry.Version, value.Value.Version);
-                            return new KStoreSetResult<TKNodeId>(key, KStoreSetResultStatus.Failure);
+                            return false;
                         }
 
                         // will end up refreshing in queues
@@ -154,7 +154,7 @@ namespace Cogito.Kademlia
 
                         logger?.LogInformation("Storing {Key} as {Mode} in memory store with expiration at {ExpireTime}.", key, mode, expireTime);
                         var entry = new Entry(key, mode, value.Value.Data.ToArray(), value.Value.Version, value.Value.Expiration, expireTime, replicateTime);
-                        
+
                         // add to del queue
                         delQueue.Add(ref delQueueHandle, entry);
 
@@ -189,7 +189,7 @@ namespace Cogito.Kademlia
                     }
                 }
 
-                return new KStoreSetResult<TKNodeId>(key, KStoreSetResultStatus.Success);
+                return true;
             }
         }
 
@@ -223,14 +223,14 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KStoreGetResult<TKNodeId>> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
         {
             using (slim.BeginReadLock())
             {
                 if (entries.TryGetValue(key, out var v) && v.Entry.Expiration > DateTime.UtcNow)
-                    return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(key, new KValueInfo(v.Entry.Value, v.Entry.Version, v.Entry.Expiration)));
+                    return new ValueTask<KValueInfo?>(new KValueInfo(v.Entry.Value, v.Entry.Version, v.Entry.Expiration));
                 else
-                    return new ValueTask<KStoreGetResult<TKNodeId>>(new KStoreGetResult<TKNodeId>(key, null));
+                    return new ValueTask<KValueInfo?>((KValueInfo?)null);
             }
         }
 

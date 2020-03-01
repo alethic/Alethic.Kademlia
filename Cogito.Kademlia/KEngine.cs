@@ -116,7 +116,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync())
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
@@ -134,7 +134,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync())
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (runCts != null)
                 {
@@ -302,6 +302,22 @@ namespace Cogito.Kademlia
 
             var r = await store.GetAsync(request.Key);
             return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value);
+        }
+
+        /// <summary>
+        /// Gets the value of the key from the network.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KValueInfo?> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        {
+            return GetValueAsync(key, cancellationToken);
+        }
+
+        async ValueTask<KValueInfo?> GetValueAsync(TKNodeId key, CancellationToken cancellationToken)
+        {
+            return await store.GetAsync(key, cancellationToken) ?? (await lookup.LookupValueAsync(key, cancellationToken)).Value;
         }
 
     }

@@ -50,6 +50,14 @@ namespace Cogito.Kademlia
         ValueTask ConnectAsync(IKEndpoint<TKNodeId> endpoint, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Gets the value for the specified key currently stored in the Kademlia network.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<KValueInfo?> GetValueAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Invoked to handle incoming PING requests.
         /// </summary>
         /// <param name="sender"></param>
