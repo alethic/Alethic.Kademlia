@@ -17,7 +17,7 @@
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public KStoreGetResult(in TKNodeId key, KValueInfo? value)
+        public KStoreGetResult(in TKNodeId key, in KValueInfo? value)
         {
             this.key = key;
             this.value = value;

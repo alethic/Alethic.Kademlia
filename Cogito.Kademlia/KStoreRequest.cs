@@ -29,7 +29,7 @@
         /// <param name="key"></param>
         /// <param name="mode"></param>
         /// <param name="value"></param>
-        public KStoreRequest(in TKNodeId key, KStoreRequestMode mode, KValueInfo? value)
+        public KStoreRequest(in TKNodeId key, KStoreRequestMode mode, in KValueInfo? value)
         {
             this.key = key;
             this.mode = mode;

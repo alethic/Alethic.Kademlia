@@ -103,7 +103,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken = default)
+        public ValueTask<KStoreSetResult<TKNodeId>> SetAsync(in TKNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
         {
             return SetAsync(key, mode, value, cancellationToken);
         }

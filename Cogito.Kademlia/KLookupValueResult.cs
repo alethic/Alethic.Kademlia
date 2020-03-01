@@ -24,7 +24,7 @@ namespace Cogito.Kademlia
         /// <param name="nodes"></param>
         /// <param name="source"></param>
         /// <param name="value"></param>
-        public KLookupValueResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? source, KValueInfo? value)
+        public KLookupValueResult(in TKNodeId key, IEnumerable<KPeerEndpointInfo<TKNodeId>> nodes, in KPeerEndpointInfo<TKNodeId>? source, in KValueInfo? value)
         {
             this.key = key;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));

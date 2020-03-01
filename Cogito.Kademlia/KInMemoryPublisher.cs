@@ -31,7 +31,7 @@ namespace Cogito.Kademlia
             /// Initializes a new instance.
             /// </summary>
             /// <param name="value"></param>
-            public Entry(KValueInfo value)
+            public Entry(in KValueInfo value)
             {
                 Value = value;
             }

@@ -60,7 +60,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, KValueInfo? value, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
         {
             var r = new KStoreRequest<TKNodeId>(key, mode, value);
             return TryAsync(endpoints, ep => ep.StoreAsync(r, cancellationToken), cancellationToken);

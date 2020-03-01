@@ -16,7 +16,7 @@
         /// </summary>
         /// <param name="peers"></param>
         /// <param name="value"></param>
-        public KFindValueResponse(KPeerEndpointInfo<TKNodeId>[] peers, KValueInfo? value)
+        public KFindValueResponse(KPeerEndpointInfo<TKNodeId>[] peers, in KValueInfo? value)
         {
             this.peers = peers;
             this.value = value;
