@@ -226,7 +226,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
                 Decode(resources, response.Peers).ToArray(),
                 response.HasValue ?
                     new KValueInfo(
-                        response.Value.ToByteArray(),
+                        response.Value.Data.ToByteArray(),
                         response.Value.Version,
                         DateTime.UtcNow + response.Value.Ttl.ToTimeSpan()) :
                     (KValueInfo?)null);

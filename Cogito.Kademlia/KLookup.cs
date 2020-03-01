@@ -165,7 +165,7 @@ namespace Cogito.Kademlia
 
             // value was returned, store at closest node
             if (r.Value != null)
-                await CacheAsync(r.Peers.Take(1), key, r.Value.Value, cancellationToken);
+                await CacheAsync(r.Peers.Take(cache), key, r.Value.Value, cancellationToken);
 
             return new KLookupValueResult<TKNodeId>(r.Key, r.Peers, r.Source, r.Value);
         }
@@ -225,7 +225,7 @@ namespace Cogito.Kademlia
                         // schedule new node to query
                         var peer = todo.DeleteMin();
                         if (peer.Id.Equals(router.Self) == false)
-                            wait.Add(func(peer, key, stop.Token).AsTask().ContinueWith((r, o) => r.Result, peer));
+                            wait.Add(func(peer, key, stop.Token).AsTask().ContinueWith((r, o) => r.Result, peer, TaskContinuationOptions.OnlyOnRanToCompletion));
                     }
 
                     // we have at least one task in the task pool to wait for
@@ -342,6 +342,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<FindResult> FindNodeAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
+            await Task.Yield();
+
             var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return new FindResult(r.Body.Peers, null);
@@ -359,6 +361,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<FindResult> FindValueAsync(KPeerEndpointInfo<TKNodeId> peer, TKNodeId key, CancellationToken cancellationToken)
         {
+            await Task.Yield();
+
             var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success)
                 return new FindResult(r.Body.Peers, r.Body.Value);

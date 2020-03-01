@@ -21,7 +21,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
 
         public void Encode(IKIpProtocolResourceProvider<TKNodeId> resources, IBufferWriter<byte> buffer, KMessageSequence<TKNodeId> sequence)
         {
-            var m = new MemoryStream();
+            var m = new MemoryStream(1024);
 
             // generate packet
             var p = new Packet();
@@ -123,7 +123,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             {
                 r.HasValue = true;
                 r.Value = new ValueInfo();
-                r.Value.Data = ByteString.CopyFrom(value.Data.ToArray());
+                r.Value.Data = ByteString.CopyFrom(value.Data);
                 r.Value.Version = value.Version;
                 r.Value.Ttl = new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(value.Expiration - DateTime.UtcNow).TotalSeconds };
             }
@@ -181,13 +181,13 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         FindValueResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KFindValueResponse<TKNodeId> response)
         {
             var r = new FindValueResponse();
-            if (response.Value != null)
+            if (response.Value is KValueInfo value)
             {
                 r.HasValue = true;
                 r.Value = new ValueInfo();
-                r.Value.Data = ByteString.CopyFrom(response.Value.Value.Data.ToArray());
-                r.Value.Version = response.Value.Value.Version;
-                r.Value.Ttl = response.Value.Value.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(response.Value.Value.Expiration - DateTime.UtcNow).TotalSeconds } : null;
+                r.Value.Data = ByteString.CopyFrom(value.Data);
+                r.Value.Version = value.Version;
+                r.Value.Ttl = value.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(value.Expiration - DateTime.UtcNow).TotalSeconds } : null;
             }
             r.Peers.Add(Encode(resources, response.Peers));
             return r;

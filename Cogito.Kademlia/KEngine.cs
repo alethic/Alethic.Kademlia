@@ -301,7 +301,7 @@ namespace Cogito.Kademlia
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
             var r = await store.GetAsync(request.Key);
-            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r.Value);
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r);
         }
 
         /// <summary>

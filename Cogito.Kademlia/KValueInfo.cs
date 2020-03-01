@@ -9,7 +9,7 @@ namespace Cogito.Kademlia
     public readonly struct KValueInfo
     {
 
-        readonly ReadOnlyMemory<byte> data;
+        readonly byte[] data;
         readonly ulong version;
         readonly DateTime expiration;
 
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// <param name="data"></param>
         /// <param name="version"></param>
         /// <param name="expiration"></param>
-        public KValueInfo(ReadOnlyMemory<byte> data, ulong version, DateTime expiration)
+        public KValueInfo(byte[] data, ulong version, DateTime expiration)
         {
             this.data = data;
             this.version = version;
@@ -29,7 +29,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the actual underlying value data.
         /// </summary>
-        public ReadOnlyMemory<byte> Data => data;
+        public byte[] Data => data;
 
         /// <summary>
         /// Gets the version of the value.
