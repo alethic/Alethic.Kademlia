@@ -232,7 +232,7 @@ namespace Cogito.Kademlia
                     if (wait.Count > 0)
                     {
                         // wait for first finished task
-                        var find = await Task.WhenAny(wait);
+                        var find = await TaskWhenAny(wait);
                         wait.Remove(find);
 
                         // skip cancelled tasks
@@ -310,6 +310,24 @@ namespace Cogito.Kademlia
 
             // we never found anything; return the path we took, but that's it
             return new LookupResult(key, path, null, null);
+        }
+
+        /// <summary>
+        /// Waits for any of the tasks to complete, but traps cancellation exceptions.
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="tasks"></param>
+        /// <returns></returns>
+        async Task<Task<TResult>> TaskWhenAny<TResult>(IEnumerable<Task<TResult>> tasks)
+        {
+            try
+            {
+                return await Task.WhenAny(tasks);
+            }
+            catch (TaskCanceledException e)
+            {
+                return (Task<TResult>)e.Task;
+            }
         }
 
         /// <summary>
