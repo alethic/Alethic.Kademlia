@@ -10,7 +10,7 @@ namespace Cogito.Kademlia.Network
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KIpProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KIpProtocolEndpoint<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly IKProtocol<TKNodeId> protocol;

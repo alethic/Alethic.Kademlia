@@ -16,7 +16,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KLookup<TKNodeId> : IKLookup<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>

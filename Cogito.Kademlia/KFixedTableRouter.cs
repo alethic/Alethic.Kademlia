@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KFixedTableRouter<TKNodeId> : KFixedTableRouter<TKNodeId, KPeerData<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     public class KFixedTableRouter<TKNodeId, TKPeerData> : KFixedTableRouter, IKRouter<TKNodeId, TKPeerData>, IEnumerable<KeyValuePair<TKNodeId, TKPeerData>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 
@@ -204,7 +204,7 @@ namespace Cogito.Kademlia
         /// <param name="other"></param>
         /// <returns></returns>
         internal static int GetBucketIndex<TKNodeId>(in TKNodeId self, in TKNodeId other)
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
             if (self.Equals(other))
                 throw new ArgumentException("Cannot get bucket for own node.");

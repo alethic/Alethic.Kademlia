@@ -14,7 +14,7 @@ namespace Cogito.Kademlia.Network
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TResponseData"></typeparam>
     public class KResponseQueue<TKNodeId, TResponseData, TKey>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TResponseData : struct, IKResponseData<TKNodeId>
     {
 

@@ -9,7 +9,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public readonly struct KPingRequest<TKNodeId> : IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>

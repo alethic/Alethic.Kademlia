@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     class KBucket<TKNodeId, TKPeerData> : IEnumerable<KBucketItem<TKNodeId, TKPeerData>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKPeerData : IKEndpointProvider<TKNodeId>, new()
     {
 

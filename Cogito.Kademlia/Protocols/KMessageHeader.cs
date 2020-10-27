@@ -6,7 +6,7 @@
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public readonly struct KMessageHeader<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly TKNodeId sender;

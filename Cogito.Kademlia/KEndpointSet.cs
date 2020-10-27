@@ -15,7 +15,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KEndpointSet<TKNodeId> : IKEndpointSet<TKNodeId>, IDisposable
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly OrderedDictionary<IKEndpoint<TKNodeId>, KEndpointInfo<TKNodeId>> dict;

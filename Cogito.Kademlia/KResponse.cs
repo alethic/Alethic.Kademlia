@@ -5,7 +5,7 @@
     /// Base class of node protocol responses.
     /// </summary>
     public readonly struct KResponse<TKNodeId, TKResponseBody>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKResponseBody : struct, IKResponseData<TKNodeId>
     {
 

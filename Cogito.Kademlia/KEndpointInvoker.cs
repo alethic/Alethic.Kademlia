@@ -14,7 +14,7 @@ namespace Cogito.Kademlia
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     public class KEndpointInvoker<TKNodeId, TKPeerData> : IKEndpointInvoker<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 

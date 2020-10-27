@@ -7,7 +7,7 @@
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TBody"></typeparam>
     public readonly struct KMessage<TKNodeId, TBody> : IKMessage<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TBody : struct, IKMessageBody<TKNodeId>
     {
 

@@ -9,7 +9,7 @@ namespace Cogito.Kademlia.Protocols
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public readonly struct KMessageSequence<TKNodeId> : IEnumerable<IKMessage<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly ulong network;

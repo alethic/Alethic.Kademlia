@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public interface IKEndpointSet<TKNodeId> : IEnumerable<IKEndpoint<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>

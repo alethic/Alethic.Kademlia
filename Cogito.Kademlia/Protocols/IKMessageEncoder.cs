@@ -7,7 +7,7 @@ namespace Cogito.Kademlia.Protocols
     /// Defines an instance capable of decoding messages to a buffer.
     /// </summary>
     public interface IKMessageEncoder<TKNodeId> : IKMessageEncoder<TKNodeId, IKProtocolResourceProvider<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
 
@@ -18,7 +18,7 @@ namespace Cogito.Kademlia.Protocols
     /// Defines an instance capable of decoding messages to a buffer.
     /// </summary>
     public interface IKMessageEncoder<TKNodeId, in TKProtocolResourceProvider>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKProtocolResourceProvider : IKProtocolResourceProvider<TKNodeId>
     {
 

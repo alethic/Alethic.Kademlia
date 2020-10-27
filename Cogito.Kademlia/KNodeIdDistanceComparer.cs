@@ -10,7 +10,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public readonly struct KNodeIdDistanceComparer<TKNodeId> : IComparer<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly TKNodeId n;

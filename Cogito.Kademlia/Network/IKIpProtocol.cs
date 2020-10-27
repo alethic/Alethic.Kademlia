@@ -6,7 +6,7 @@
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public interface IKIpProtocol<TKNodeId> : IKProtocol<TKNodeId>, IKIpProtocolResourceProvider<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
 

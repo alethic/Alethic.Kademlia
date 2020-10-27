@@ -6,7 +6,7 @@
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KPeerData<TKNodeId> : IKEndpointProvider<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly KEndpointSet<TKNodeId> endpoints;

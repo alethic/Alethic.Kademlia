@@ -16,7 +16,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KProtobufMessageEncoder<TKNodeId> : IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         public void Encode(IKIpProtocolResourceProvider<TKNodeId> resources, IBufferWriter<byte> buffer, KMessageSequence<TKNodeId> sequence)

@@ -9,7 +9,7 @@ namespace Cogito.Kademlia
     /// Provides required operations for node communication within Kademlia.
     /// </summary>
     public interface IKProtocol<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>

@@ -11,7 +11,7 @@ namespace Cogito.Kademlia
     /// Represents a generic 160-bit Node ID.
     /// </summary>
     [StructLayout(LayoutKind.Explicit)]
-    public unsafe struct KNodeId160 : IKNodeId<KNodeId160>
+    public unsafe struct KNodeId160
     {
 
         const int SIZE = 20;

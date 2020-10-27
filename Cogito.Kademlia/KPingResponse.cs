@@ -6,7 +6,7 @@
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public readonly struct KPingResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly IKEndpoint<TKNodeId>[] endpoints;

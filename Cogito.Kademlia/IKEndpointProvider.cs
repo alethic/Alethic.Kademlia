@@ -5,7 +5,7 @@
     /// Provides <see cref="IKEndpoint{TKNodeId}"/> instances.
     /// </summary>
     public interface IKEndpointProvider<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         /// <summary>

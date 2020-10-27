@@ -16,7 +16,7 @@ namespace Cogito.Kademlia.Tests
     {
 
         class FakeEndpointInvoker<TKNodeId> : IKEndpointInvoker<TKNodeId>
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
 
             public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpointSet<TKNodeId> endpoints, CancellationToken cancellationToken = default)

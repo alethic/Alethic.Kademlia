@@ -5,7 +5,7 @@
     /// Describes a response to a FIND_NODE request.
     /// </summary>
     public readonly struct KFindNodeResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly KPeerEndpointInfo<TKNodeId>[] peers;

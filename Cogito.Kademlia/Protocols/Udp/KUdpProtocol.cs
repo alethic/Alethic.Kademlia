@@ -23,7 +23,7 @@ namespace Cogito.Kademlia.Protocols.Udp
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     public class KUdpProtocol<TKNodeId, TKPeerData> : IKIpProtocol<TKNodeId>, IKIpProtocolResourceProvider<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 

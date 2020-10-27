@@ -15,7 +15,7 @@ namespace Cogito.Kademlia
     /// Provides methods for interacting with a KNodeId.
     /// </summary>
     public static class KNodeId<TKNodeId>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         static readonly int szz = Unsafe.SizeOf<TKNodeId>();
@@ -148,7 +148,6 @@ namespace Cogito.Kademlia
 
     }
 
-
     /// <summary>
     /// Provides methods for interacting with a KNodeId.
     /// </summary>
@@ -160,7 +159,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <returns></returns>
         public static TKNodeId Create<TKNodeId>()
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
             return KNodeId<TKNodeId>.Create();
         }
@@ -171,7 +170,7 @@ namespace Cogito.Kademlia
         /// <param name="self"></param>
         /// <param name="writer"></param>
         public static void Write<TKNodeId>(this TKNodeId self, IBufferWriter<byte> writer)
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
             KNodeId<TKNodeId>.Write(self, writer);
         }
@@ -182,7 +181,7 @@ namespace Cogito.Kademlia
         /// <param name="self"></param>
         /// <param name="target"></param>
         public static void Write<TKNodeId>(this TKNodeId self, Span<byte> target)
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
             KNodeId<TKNodeId>.Write(self, target);
         }
@@ -195,7 +194,7 @@ namespace Cogito.Kademlia
         /// <param name="r"></param>
         /// <param name="o"></param>
         public static void CalculateDistance<TKNodeId>(in TKNodeId l, in TKNodeId r, Span<byte> o)
-            where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+            where TKNodeId : unmanaged
         {
             KNodeId<TKNodeId>.CalculateDistance(l, r, o);
         }

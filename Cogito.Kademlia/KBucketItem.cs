@@ -7,7 +7,7 @@
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TKPeerData"></typeparam>
     public readonly struct KBucketItem<TKNodeId, TKPeerData>
-        where TKNodeId :  IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
     {
 
         readonly TKNodeId id;

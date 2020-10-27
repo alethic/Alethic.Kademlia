@@ -17,7 +17,7 @@ namespace Cogito.Kademlia
     /// class implements the core runtime logic of a Kademlia node.
     /// </summary>
     public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>
-        where TKNodeId : unmanaged, IKNodeId<TKNodeId>
+        where TKNodeId : unmanaged
         where TKPeerData : IKEndpointProvider<TKNodeId>
     {
 
