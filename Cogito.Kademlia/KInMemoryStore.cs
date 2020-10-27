@@ -29,9 +29,7 @@ namespace Cogito.Kademlia
 
             public TKNodeId Key;
             public KStoreValueMode Mode;
-            public byte[] Value;
-            public ulong Version;
-            public DateTime Expiration;
+            public KValueInfo Value;
             public DateTime ExpireTime;
             public DateTime? ReplicateTime;
 
@@ -41,18 +39,13 @@ namespace Cogito.Kademlia
             /// <param name="key"></param>
             /// <param name="mode"></param>
             /// <param name="value"></param>
-            /// <param name="version"></param>
-            /// <param name="expiration"></param>
             /// <param name="expireTime"></param>
             /// <param name="replicateTime"></param>
-            public Entry(in TKNodeId key, KStoreValueMode mode, byte[] value, ulong version, DateTime expiration, DateTime expireTime, DateTime? replicateTime)
+            public Entry(in TKNodeId key, KStoreValueMode mode, KValueInfo value, DateTime expireTime, DateTime? replicateTime)
             {
                 Key = key;
                 Mode = mode;
                 Value = value;
-                Version = version;
-                Expiration = expiration;
-                ExpireTime = expireTime;
                 ReplicateTime = replicateTime;
             }
 
@@ -129,9 +122,9 @@ namespace Cogito.Kademlia
                         repQueueHandle = record.RepQueueHandle;
 
                         // record already exists but with a greater version, we will not replace
-                        if (record.Entry.Version >= value.Value.Version && record.Entry.Mode <= mode)
+                        if (record.Entry.Value.Version >= value.Value.Version && record.Entry.Mode <= mode)
                         {
-                            logger?.LogInformation("Ignoring value for {Key}: Verison {OldVersion} >= {NewVersion}.", key, record.Entry.Version, value.Value.Version);
+                            logger?.LogInformation("Ignoring value for {Key}: Verison {OldVersion} >= {NewVersion}.", key, record.Entry.Value.Version, value.Value.Version);
                             return false;
                         }
 
@@ -153,7 +146,7 @@ namespace Cogito.Kademlia
                         var replicateTime = mode == KStoreValueMode.Primary ? now + frequency : (DateTime?)null;
 
                         logger?.LogInformation("Storing {Key} as {Mode} in memory store with expiration at {ExpireTime}.", key, mode, expireTime);
-                        var entry = new Entry(key, mode, value.Value.Data.ToArray(), value.Value.Version, value.Value.Expiration, expireTime, replicateTime);
+                        var entry = new Entry(key, mode, value.Value, expireTime, replicateTime);
 
                         // add to del queue
                         delQueue.Add(ref delQueueHandle, entry);
@@ -227,8 +220,8 @@ namespace Cogito.Kademlia
         {
             using (slim.BeginReadLock())
             {
-                if (entries.TryGetValue(key, out var v) && v.Entry.Expiration > DateTime.UtcNow)
-                    return new ValueTask<KValueInfo?>(new KValueInfo(v.Entry.Value, v.Entry.Version, v.Entry.Expiration));
+                if (entries.TryGetValue(key, out var v) && v.Entry.Value.Expiration > DateTime.UtcNow)
+                    return new ValueTask<KValueInfo?>(v.Entry.Value);
                 else
                     return new ValueTask<KValueInfo?>((KValueInfo?)null);
             }
@@ -399,11 +392,11 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async Task ReplicateAsync(Entry entry, CancellationToken cancellationToken)
         {
-            logger?.LogInformation("Replicating key {Key} with expiration of {Expiration}.", entry.Key, entry.Expiration);
+            logger?.LogInformation("Replicating key {Key} with expiration of {Expiration}.", entry.Key, entry.Value.Expiration);
 
             // publish to top K remote nodes
             var r = await lookup.LookupNodeAsync(entry.Key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, entry.Key, KStoreRequestMode.Primary, new KValueInfo(entry.Value, entry.Version, entry.Expiration), cancellationToken).AsTask());
+            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, entry.Key, KStoreRequestMode.Primary, entry.Value, cancellationToken).AsTask());
             await Task.WhenAll(t);
         }
 
