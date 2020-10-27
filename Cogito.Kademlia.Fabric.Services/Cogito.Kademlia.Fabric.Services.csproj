@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <ServerGarbageCollection>True</ServerGarbageCollection>
+        <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+        <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+        <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+        <UpdateServiceFabricManifestEnabled>False</UpdateServiceFabricManifestEnabled>
+        <ServicePackagePath>PackageRoot</ServicePackagePath>
+        <ServicePackagePrefix>$(MSBuildProjectName)</ServicePackagePrefix>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <PublishSingleFile>true</PublishSingleFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Autofac" Version="5.1.2" />
+        <PackageReference Include="Cogito.Autofac.DependencyInjection" Version="2.2.5" />
+        <PackageReference Include="Cogito.Extensions.Configuration.Autofac" Version="2.0.7" />
+        <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.5" />
+        <PackageReference Include="Cogito.ServiceFabric.Autofac" Version="2.0.32" />
+        <PackageReference Include="Cogito.ServiceFabric.Configuration.Autofac" Version="2.0.32" />
+        <PackageReference Include="Cogito.ServiceFabric.Services.Autofac" Version="2.0.32" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Cogito.Kademlia.Protocols.Protobuf\Cogito.Kademlia.Protocols.Protobuf.csproj" />
+      <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
+    </ItemGroup>
+
+</Project>
