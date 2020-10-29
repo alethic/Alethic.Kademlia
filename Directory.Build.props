@@ -1,13 +1,16 @@
 <Project>
     <PropertyGroup>
         <Authors>Jerome Haltom</Authors>
-        <Company>Jerome Haltom</Company>
-        <RepositoryUrl>https://github.com/wasabii/Cogito.Kademlia</RepositoryUrl>
+        <Company>Alethic Solutions</Company>
+        <RepositoryUrl>https://github.com/alethic/Cogito.Kademlia</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageLicenseUrl></PackageLicenseUrl>
-        <PackageProjectUrl>https://github.com/wasabii/Cogito.Kademlia</PackageProjectUrl>
-        <PackageIconUrl>https://cloverluxussc.blob.core.windows.net/public/cogito-nuget-icon.png</PackageIconUrl>
         <PackageTags>kademlia</PackageTags>
+        <PackageProjectUrl>https://github.com/alethic/Cogito.Kademlia</PackageProjectUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageIcon>icon.png</PackageIcon>
         <LangVersion>8.0</LangVersion>
     </PropertyGroup>
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="" />
+    </ItemGroup>
 </Project>
