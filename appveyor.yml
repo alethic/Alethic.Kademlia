@@ -3,8 +3,7 @@ configuration: Release
 platform: Any CPU
 
 install:
-  - choco install gitversion.portable -pre -y
-  - nuget sources add -Name github -Source %nuget_github_feed% -UserName %nuget_github_user% -Password %nuget_github_pass%
+  - choco install gitversion.portable -y
 
 before_build:
   - ps: gitversion /l console /output buildserver
@@ -26,9 +25,10 @@ artifacts:
 
 deploy:
   provider: NuGet
-  server: $(nuget_github_feed)
-  username: $(nuget_github_user)
-  api_key: $(nuget_github_pass)
+  server: https://nuget.pkg.github.com/alethic/index.json
+  username: wasabii
+  api_key:
+    secure: u7+1z/CZGBli+CiDxHSQetMjE1dbaf1f9eJtSCb8wifl7s1+AdnhWjnsjGQaEsAw
   skip_symbols: false
   symbol_server:
   artifact: /.*\.nupkg/
