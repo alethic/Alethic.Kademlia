@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Net
 {
 
     /// <summary>

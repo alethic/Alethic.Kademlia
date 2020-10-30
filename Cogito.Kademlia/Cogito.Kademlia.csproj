@@ -9,17 +9,18 @@
 
     <ItemGroup>
         <PackageReference Include="C5" Version="2.5.3" />
-        <PackageReference Include="Cogito.Core" Version="3.1.13" />
-        <PackageReference Include="Cogito.Memory" Version="3.1.13" />
+        <PackageReference Include="Cogito.Core" Version="3.1.18" />
+        <PackageReference Include="Cogito.Memory" Version="3.1.18" />
         <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.0" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="3.1.2" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="3.1.2" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.2" />
-        <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.2" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="3.1.9" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="3.1.9" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.9" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.9" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.9" />
         <PackageReference Include="System.Collections" Version="4.3.0" />
-        <PackageReference Include="System.Memory" Version="4.5.3" />
+        <PackageReference Include="System.Memory" Version="4.5.4" />
         <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
-        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.3" />
+        <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
     </ItemGroup>
 
 </Project>

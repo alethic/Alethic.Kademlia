@@ -1,4 +1,4 @@
-﻿namespace Cogito.Kademlia.Network
+﻿namespace Cogito.Kademlia.Net
 {
 
     /// <summary>

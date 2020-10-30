@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Net
 {
 
     /// <summary>

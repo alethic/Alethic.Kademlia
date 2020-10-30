@@ -8,9 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
-using Cogito.Kademlia.Network;
+using Cogito.Kademlia.Net;
+using Cogito.Linq;
 using Cogito.Threading;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Cogito.Kademlia.Protocols.Udp
@@ -20,24 +22,28 @@ namespace Cogito.Kademlia.Protocols.Udp
     /// Listens for multicast PING requests on a multicast group and provides Connect operations for joining a UDP Kademlia network.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KUdpMulticastDiscovery<TKNodeId, TKPeerData>
+    public class KUdpMulticastDiscovery<TKNodeId, TKNodeData> : IHostedService
         where TKNodeId : unmanaged
-        where TKPeerData : IKEndpointProvider<TKNodeId>
+        where TKNodeData : IKEndpointProvider<TKNodeId>
     {
 
+        static readonly KIpEndpoint DefaultEndpoint = new KIpEndpoint(KIp4Address.Parse("239.255.83.54"), 1283);
+        static readonly TimeSpan DefaultFrequency = TimeSpan.FromSeconds(600);
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
         static readonly Random rnd = new Random();
 
         readonly ulong network;
-        readonly IKEngine<TKNodeId, TKPeerData> engine;
+        readonly IKEngine<TKNodeId, TKNodeData> engine;
         readonly IKIpProtocol<TKNodeId> protocol;
         readonly IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder;
         readonly IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder;
         readonly KIpEndpoint endpoint;
+        readonly TimeSpan frequency;
+        readonly TimeSpan timeout;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
 
-        readonly KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong> pingQueue = new KResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong>(DefaultTimeout);
+        readonly KRequestResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong> pingQueue;
 
         Socket mcastSocket;
         SocketAsyncEventArgs mcastRecvArgs;
@@ -57,16 +63,22 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="encoder"></param>
         /// <param name="decoder"></param>
         /// <param name="endpoint"></param>
+        /// <param name="frequency"></param>
+        /// <param name="timeout"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(ulong network, IKEngine<TKNodeId, TKPeerData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, in KIpEndpoint endpoint, ILogger logger = null)
+        public KUdpMulticastDiscovery(ulong network, IKEngine<TKNodeId, TKNodeData> engine, IKIpProtocol<TKNodeId> protocol, IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> encoder, IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>> decoder, KIpEndpoint? endpoint = null, TimeSpan? frequency = null, TimeSpan? timeout = null, ILogger logger = null)
         {
             this.network = network;
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.encoder = encoder ?? throw new ArgumentNullException(nameof(encoder));
             this.decoder = decoder ?? throw new ArgumentNullException(nameof(decoder));
-            this.endpoint = endpoint;
-            this.logger = logger;
+            this.endpoint = endpoint ?? DefaultEndpoint;
+            this.frequency = frequency ?? DefaultFrequency;
+            this.timeout = timeout ?? DefaultTimeout;
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            pingQueue = new KRequestResponseQueue<TKNodeId, KPingResponse<TKNodeId>, ulong>(this.timeout);
         }
 
         /// <summary>
@@ -105,7 +117,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync())
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
@@ -305,7 +317,7 @@ namespace Cogito.Kademlia.Protocols.Udp
                     logger?.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
                 }
 
-                await Task.Delay(TimeSpan.FromMinutes(15), cancellationToken);
+                await Task.Delay(frequency, cancellationToken);
             }
         }
 
@@ -412,7 +424,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(ulong magic, KResponseQueue<TKNodeId, TResponseData, ulong> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TKNodeId, TResponseData>> SendAndWaitAsync<TResponseData>(ulong magic, KRequestResponseQueue<TKNodeId, TResponseData, ulong> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
             where TResponseData : struct, IKResponseData<TKNodeId>
         {
             logger?.LogDebug("Queuing response wait for {Magic}.", magic);
@@ -448,7 +460,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         KMessageSequence<TKNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKMessageBody<TKNodeId>
         {
-            return new KMessageSequence<TKNodeId>(network, new[] { (IKMessage<TKNodeId>)new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
+            return new KMessageSequence<TKNodeId>(network, new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body).Yield<IKMessage<TKNodeId>>());
         }
 
         /// <summary>

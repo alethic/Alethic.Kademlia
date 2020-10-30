@@ -10,15 +10,15 @@ namespace Cogito.Kademlia
     /// provide lookups.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKPeerData"></typeparam>
-    public interface IKRouter<TKNodeId, TKPeerData> : IKRouter<TKNodeId>
+    /// <typeparam name="TKNodeData"></typeparam>
+    public interface IKRouter<TKNodeId, TKNodeData> : IKRouter<TKNodeId>
         where TKNodeId : unmanaged
     {
 
         /// <summary>
         /// Gets the peer data of the node itself.
         /// </summary>
-        TKPeerData SelfData { get; }
+        TKNodeData SelfData { get; }
 
         /// <summary>
         /// Gets the data associated with the specified peer.
@@ -26,7 +26,7 @@ namespace Cogito.Kademlia
         /// <param name="id"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<TKPeerData> GetPeerDataAsync(in TKNodeId id, CancellationToken cancellationToken = default);
+        ValueTask<TKNodeData> GetNodeDataAsync(in TKNodeId id, CancellationToken cancellationToken = default);
 
     }
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Microsoft.Extensions.Logging;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Protocols
 {
 
     /// <summary>
@@ -13,7 +13,7 @@ namespace Cogito.Kademlia.Network
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     /// <typeparam name="TResponseData"></typeparam>
-    public class KResponseQueue<TKNodeId, TResponseData, TKey>
+    public class KRequestResponseQueue<TKNodeId, TResponseData, TKey>
         where TKNodeId : unmanaged
         where TResponseData : struct, IKResponseData<TKNodeId>
     {
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia.Network
         /// </summary>
         /// <param name="timeout"></param>
         /// <param name="logger"></param>
-        public KResponseQueue(TimeSpan timeout, ILogger logger = null)
+        public KRequestResponseQueue(TimeSpan timeout, ILogger logger = null)
         {
             this.timeout = timeout;
             this.logger = logger;

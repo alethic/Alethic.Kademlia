@@ -7,21 +7,22 @@ using System.Threading.Tasks;
 using Cogito.Linq;
 using Cogito.Threading;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Provides an implementation of a Kademlia network engine. The <see cref="KEngine{TKNodeId, TKPeerData}"/>
+    /// Provides an implementation of a Kademlia network engine. The <see cref="KEngine{TKNodeId, TKNodeData}"/>
     /// class implements the core runtime logic of a Kademlia node.
     /// </summary>
-    public class KEngine<TKNodeId, TKPeerData> : IKEngine<TKNodeId, TKPeerData>
+    public class KEngine<TKNodeId, TKNodeData> : IKEngine<TKNodeId, TKNodeData>, IHostedService
         where TKNodeId : unmanaged
-        where TKPeerData : IKEndpointProvider<TKNodeId>
+        where TKNodeData : IKEndpointProvider<TKNodeId>
     {
 
-        readonly IKRouter<TKNodeId, TKPeerData> router;
+        readonly IKRouter<TKNodeId, TKNodeData> router;
         readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly IKLookup<TKNodeId> lookup;
         readonly IKStore<TKNodeId> store;
@@ -39,7 +40,7 @@ namespace Cogito.Kademlia
         /// <param name="lookup"></param>
         /// <param name="store"></param>
         /// <param name="logger"></param>
-        public KEngine(IKRouter<TKNodeId, TKPeerData> router, IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, ILogger logger = null)
+        public KEngine(IKRouter<TKNodeId, TKNodeData> router, IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, ILogger logger = null)
         {
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
@@ -56,12 +57,12 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the peer data of the node itself.
         /// </summary>
-        public TKPeerData SelfData => router.SelfData;
+        public TKNodeData SelfData => router.SelfData;
 
         /// <summary>
         /// Gets the router associated with the engine.
         /// </summary>
-        public IKRouter<TKNodeId, TKPeerData> Router => router;
+        public IKRouter<TKNodeId, TKNodeData> Router => router;
 
         /// <summary>
         /// Gets the lookup engine that provides for node traversal.
@@ -278,25 +279,25 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming FIND_VALUE requests.
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="endpoint"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KFindValueResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindValueAsync(in TKNodeId sender, IKEndpoint<TKNodeId> endpoint, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+        ValueTask<KFindValueResponse<TKNodeId>> IKEngine<TKNodeId>.OnFindValueAsync(in TKNodeId sender, IKEndpoint<TKNodeId> source, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_VALUE", sender);
-            return OnFindValueAsync(sender, endpoint, request, cancellationToken);
+            return OnFindValueAsync(sender, source, request, cancellationToken);
         }
 
         /// <summary>
         /// Invoked to handle incoming FIND_VALUE requests.
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="endpoint"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId sender, IKEndpoint<TKNodeId> endpoint, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KFindValueResponse<TKNodeId>> OnFindValueAsync(TKNodeId sender, IKEndpoint<TKNodeId> source, KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 

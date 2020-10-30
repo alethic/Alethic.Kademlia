@@ -22,6 +22,8 @@ Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Cogito.Kademlia.Fabric", "C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Fabric.Services", "Cogito.Kademlia.Fabric.Services\Cogito.Kademlia.Fabric.Services.csproj", "{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.InMemory", "Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj", "{017F47BC-A037-42F3-9203-0237021B6AC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,20 +5,20 @@
     /// Represents an item within a bucket.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKPeerData"></typeparam>
-    public readonly struct KBucketItem<TKNodeId, TKPeerData>
+    /// <typeparam name="TKNodeData"></typeparam>
+    public readonly struct KBucketItem<TKNodeId, TKNodeData>
         where TKNodeId : unmanaged
     {
 
         readonly TKNodeId id;
-        readonly TKPeerData data;
+        readonly TKNodeData data;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KBucketItem(in TKNodeId id, in TKPeerData data)
+        public KBucketItem(in TKNodeId id, in TKNodeData data)
         {
             this.id = id;
             this.data = data;
@@ -32,7 +32,7 @@
         /// <summary>
         /// Gets the set of known endpoints of the peer.
         /// </summary>
-        public TKPeerData Data => data;
+        public TKNodeData Data => data;
 
     }
 

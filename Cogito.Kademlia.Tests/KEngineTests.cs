@@ -2,7 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-using Cogito.Kademlia.Network;
+using Cogito.Kademlia.InMemory;
+using Cogito.Kademlia.Net;
 using Cogito.Kademlia.Protocols.Protobuf;
 using Cogito.Kademlia.Protocols.Udp;
 
@@ -25,21 +26,21 @@ namespace Cogito.Kademlia.Tests
             var enc = new KProtobufMessageEncoder<KNodeId32>();
             var dec = new KProtobufMessageDecoder<KNodeId32>();
             var kid = new KNodeId32[s];
-            var dat = new KPeerData<KNodeId32>[s];
-            var krt = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>[s];
-            var kad = new KEngine<KNodeId32, KPeerData<KNodeId32>>[s];
-            var udp = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>[s];
+            var dat = new KNodeData<KNodeId32>[s];
+            var krt = new KFixedTableRouter<KNodeId32, KNodeData<KNodeId32>>[s];
+            var kad = new KEngine<KNodeId32, KNodeData<KNodeId32>>[s];
+            var udp = new KUdpProtocol<KNodeId32, KNodeData<KNodeId32>>[s];
 
             for (int i = 0; i < s; i++)
             {
                 kid[i] = KNodeId<KNodeId32>.Create();
-                dat[i] = new KPeerData<KNodeId32>();
-                var inv = new KEndpointInvoker<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], logger: log.CreateLogger($"Instance {i}"));
-                krt[i] = new KFixedTableRouter<KNodeId32, KPeerData<KNodeId32>>(kid[i], dat[i], inv, logger: log.CreateLogger($"Instance {i}"));
+                dat[i] = new KNodeData<KNodeId32>();
+                var inv = new KEndpointInvoker<KNodeId32, KNodeData<KNodeId32>>(kid[i], dat[i], logger: log.CreateLogger($"Instance {i}"));
+                krt[i] = new KFixedTableRouter<KNodeId32, KNodeData<KNodeId32>>(kid[i], dat[i], inv, logger: log.CreateLogger($"Instance {i}"));
                 var lku = new KLookup<KNodeId32>(krt[i], inv, logger: log.CreateLogger($"Instance {i}"));
                 var str = new KInMemoryStore<KNodeId32>(krt[i], inv, lku, logger: log.CreateLogger($"Instance {i}"));
-                kad[i] = new KEngine<KNodeId32, KPeerData<KNodeId32>>(krt[i], inv, lku, str, logger: log.CreateLogger($"Instance {i}"));
-                udp[i] = new KUdpProtocol<KNodeId32, KPeerData<KNodeId32>>(13442, kad[i], enc, dec, null, logger: log.CreateLogger($"Instance {i}"));
+                kad[i] = new KEngine<KNodeId32, KNodeData<KNodeId32>>(krt[i], inv, lku, str, logger: log.CreateLogger($"Instance {i}"));
+                udp[i] = new KUdpProtocol<KNodeId32, KNodeData<KNodeId32>>(13442, kad[i], enc, dec, null, logger: log.CreateLogger($"Instance {i}"));
                 await udp[i].StartAsync();
             }
 

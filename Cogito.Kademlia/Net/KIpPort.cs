@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Net
 {
 
     /// <summary>

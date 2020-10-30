@@ -3,7 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 
-using Cogito.Kademlia.Network;
+using Cogito.Kademlia.Net;
 
 using Google.Protobuf;
 using Google.Protobuf.Collections;

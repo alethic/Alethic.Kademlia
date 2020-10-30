@@ -33,7 +33,7 @@ namespace Cogito.Kademlia
             /// </summary>
             /// <param name="peers"></param>
             /// <param name="value"></param>
-            public FindResult(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, in KValueInfo? value)
+            public FindResult(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, KValueInfo? value)
             {
                 this.peers = peers;
                 this.value = value;

@@ -5,7 +5,7 @@
     /// Describes a standard featureful peer data implementation.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KPeerData<TKNodeId> : IKEndpointProvider<TKNodeId>
+    public class KNodeData<TKNodeId> : IKEndpointProvider<TKNodeId>
         where TKNodeId : unmanaged
     {
 
@@ -14,7 +14,7 @@
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        public KPeerData()
+        public KNodeData()
         {
             endpoints = new KEndpointSet<TKNodeId>();
         }

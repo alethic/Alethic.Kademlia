@@ -12,16 +12,16 @@ namespace Cogito.Kademlia
     /// Provides the high level operations against endpoints.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKPeerData"></typeparam>
-    public class KEndpointInvoker<TKNodeId, TKPeerData> : IKEndpointInvoker<TKNodeId>
+    /// <typeparam name="TKNodeData"></typeparam>
+    public class KEndpointInvoker<TKNodeId, TKNodeData> : IKEndpointInvoker<TKNodeId>
         where TKNodeId : unmanaged
-        where TKPeerData : IKEndpointProvider<TKNodeId>
+        where TKNodeData : IKEndpointProvider<TKNodeId>
     {
 
         static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(1);
 
         readonly TKNodeId self;
-        readonly TKPeerData data;
+        readonly TKNodeData data;
         readonly TimeSpan defaultTimeout;
         readonly ILogger logger;
 
@@ -31,7 +31,7 @@ namespace Cogito.Kademlia
         /// <param name="self"></param>
         /// <param name="data"></param>
         /// <param name="logger"></param>
-        public KEndpointInvoker(in TKNodeId self, TKPeerData data, TimeSpan? defaultTimeout = null, ILogger logger = null)
+        public KEndpointInvoker(TKNodeId self, TKNodeData data, TimeSpan? defaultTimeout = null, ILogger logger = null)
         {
             this.self = self;
             this.data = data;

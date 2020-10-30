@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 
-namespace Cogito.Kademlia.Network
+namespace Cogito.Kademlia.Net
 {
 
     /// <summary>

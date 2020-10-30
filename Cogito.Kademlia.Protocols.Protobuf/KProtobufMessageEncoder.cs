@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 
-using Cogito.Kademlia.Network;
+using Cogito.Kademlia.Net;
 
 using Google.Protobuf;
 

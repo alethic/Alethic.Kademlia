@@ -6,12 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cogito.Autofac" Version="2.2.5" />
-    <PackageReference Include="Cogito.Autofac.DependencyInjection" Version="2.2.5" />
-    <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.5" />
+    <PackageReference Include="Cogito.Autofac" Version="3.0.7" />
+    <PackageReference Include="Cogito.Autofac.DependencyInjection" Version="3.0.7" />
+    <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.20" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.9" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj" />
     <ProjectReference Include="..\Cogito.Kademlia.Protocols.Protobuf\Cogito.Kademlia.Protocols.Protobuf.csproj" />
     <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
   </ItemGroup>

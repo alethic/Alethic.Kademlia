@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 
 using Cogito.Threading;
 
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Cogito.Kademlia
+namespace Cogito.Kademlia.InMemory
 {
 
     /// <summary>
     /// Provides a <see cref="IKPublisher{TKNodeId}"/> implementation that keeps published items in memory.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KInMemoryPublisher<TKNodeId> : IKPublisher<TKNodeId>
+    public class KInMemoryPublisher<TKNodeId> : IKPublisher<TKNodeId>, IHostedService
         where TKNodeId : unmanaged
     {
 

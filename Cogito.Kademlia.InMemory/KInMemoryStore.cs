@@ -8,16 +8,17 @@ using Cogito.Collections;
 using Cogito.Threading;
 
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Cogito.Kademlia
+namespace Cogito.Kademlia.InMemory
 {
 
     /// <summary>
     /// Provides a <see cref="IKStore{TKNodeId}"/> implementation that uses an <see cref="IMemoryCache"/> instance as a backing store.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KInMemoryStore<TKNodeId> : IKStore<TKNodeId>
+    public class KInMemoryStore<TKNodeId> : IKStore<TKNodeId>, IHostedService
         where TKNodeId : unmanaged
     {
 
