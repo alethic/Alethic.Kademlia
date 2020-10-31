@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.InMemory;
 using Cogito.Kademlia.Net;
-using Cogito.Kademlia.Protocols.Protobuf;
+using Cogito.Kademlia.Protobuf;
 using Cogito.Kademlia.Protocols.Udp;
 using Cogito.ServiceFabric.Services.Autofac;
 
@@ -45,7 +45,7 @@ namespace Cogito.Kademlia.Fabric.Services
             var pub = new KInMemoryPublisher<KNodeId256>(ink, lup, str, logger: logger);
             var kad = new KEngine<KNodeId256, KNodeData<KNodeId256>>(rtr, ink, lup, str, logger: logger);
             var udp = new KUdpProtocol<KNodeId256, KNodeData<KNodeId256>>(2848441, kad, enc, dec, KIpEndpoint.Any, logger);
-            var mcd = new KUdpMulticastDiscovery<KNodeId256, KNodeData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(KIp4Address.Parse("239.255.83.54"), 1283), logger);
+            var mcd = new KUdpMulticastDiscovery<KNodeId256, KNodeData<KNodeId256>>(2848441, kad, udp, enc, dec, new KIpEndpoint(KIp4Address.Parse("239.255.83.54"), 1283), logger: logger);
 
             await udp.StartAsync(cancellationToken);
             await str.StartAsync(cancellationToken);

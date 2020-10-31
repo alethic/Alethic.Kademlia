@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Autofac;
 
 using Cogito.Autofac;
 using Cogito.Kademlia.InMemory;
+using Cogito.Threading;
 
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 
@@ -17,31 +21,32 @@ namespace Cogito.Kademlia.Tests.InMemory
     public class KInMemoryProtocolTests
     {
 
+        static void RegisterKademlia(ContainerBuilder builder, KNodeId256 selfId)
+        {
+            var data = new KNodeData<KNodeId256>();
+            var parm = new[] { new TypedParameter(typeof(KNodeId256), selfId), new TypedParameter(typeof(KNodeData<KNodeId256>), data) };
+
+            builder.RegisterType<KEndpointInvoker<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KFixedTableRouter<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KLookup<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KInMemoryStore<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KInMemoryPublisher<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KEngine<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KInMemoryProtocol<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+        }
+
         [TestMethod]
         public async Task Foo()
         {
-            var bld = new ContainerBuilder();
-            bld.RegisterAllAssemblyModules();
-            var cnt = bld.Build();
+            var builder = new ContainerBuilder();
+            builder.RegisterAllAssemblyModules();
+            using var container = builder.Build();
 
-            var brk = new KInMemoryProtocolBroker<KNodeId256>();
-
-            var log = cnt.Resolve<ILogger>();
-            var slf = KNodeId<KNodeId256>.Create();
-            var dat = new KNodeData<KNodeId256>();
-            var ink = new KEndpointInvoker<KNodeId256, KNodeData<KNodeId256>>(slf, dat, logger: log);
-            var rtr = new KFixedTableRouter<KNodeId256, KNodeData<KNodeId256>>(slf, dat, ink, logger: log);
-            var lup = new KLookup<KNodeId256>(rtr, ink, logger: log);
-            var str = new KInMemoryStore<KNodeId256>(rtr, ink, lup, TimeSpan.FromMinutes(1), logger: log);
-            var pub = new KInMemoryPublisher<KNodeId256>(ink, lup, str, logger: log);
-            var kad = new KEngine<KNodeId256, KNodeData<KNodeId256>>(rtr, ink, lup, str, logger: log);
-            var prt = new KInMemoryProtocol<KNodeId256>(kad, brk, log);
-            await str.StartAsync();
-            await prt.StartAsync();
-            await pub.StartAsync();
-            await kad.StartAsync();
-
+            var scopes = Enumerable.Range(0, 128).Select(i => container.BeginLifetimeScope(b => RegisterKademlia(b, KNodeId<KNodeId256>.Create()))).ToList();
+            await scopes.ForEachAsync(async i => await i.Resolve<IEnumerable<IHostedService>>().ForEachAsync(j => j.StartAsync(CancellationToken.None)));
             await Task.Delay(TimeSpan.FromMinutes(1));
+
+            await scopes.ForEachAsync(async i => await i.Resolve<IEnumerable<IHostedService>>().ForEachAsync(j => j.StopAsync(CancellationToken.None)));
         }
 
     }

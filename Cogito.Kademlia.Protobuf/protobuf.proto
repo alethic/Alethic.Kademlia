@@ -3,7 +3,7 @@ syntax = "proto3";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
-option csharp_namespace = "Cogito.Kademlia.Protocols.Protobuf";
+option csharp_namespace = "Cogito.Kademlia.Protobuf";
 
 message Packet {
     uint64 network = 1;

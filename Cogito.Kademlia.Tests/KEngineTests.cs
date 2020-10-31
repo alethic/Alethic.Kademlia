@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.InMemory;
 using Cogito.Kademlia.Net;
-using Cogito.Kademlia.Protocols.Protobuf;
+using Cogito.Kademlia.Protobuf;
 using Cogito.Kademlia.Protocols.Udp;
 
 using Microsoft.Extensions.Logging;

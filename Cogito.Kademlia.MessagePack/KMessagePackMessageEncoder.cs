@@ -2,37 +2,29 @@
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 
+using Cogito.Kademlia.MessagePack.Structures;
 using Cogito.Kademlia.Net;
+using Cogito.Kademlia.Protocols;
 
-using Google.Protobuf;
-
-namespace Cogito.Kademlia.Protocols.Protobuf
+namespace Cogito.Kademlia.MessagePack
 {
 
     /// <summary>
     /// Implements a <see cref="IKMessageEncoder{TKNodeId}"/> using Google's Protocol Buffers.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public class KProtobufMessageEncoder<TKNodeId> : IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
+    public class KMessagePackMessageEncoder<TKNodeId> : IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
         where TKNodeId : unmanaged
     {
 
         public void Encode(IKIpProtocolResourceProvider<TKNodeId> resources, IBufferWriter<byte> buffer, KMessageSequence<TKNodeId> sequence)
         {
-            var m = new MemoryStream(1024);
-
-            // generate packet
             var p = new Packet();
             p.Network = sequence.Network;
-            p.Messages.AddRange(Encode(resources, sequence));
-            p.WriteTo(m);
-
-            // reset and dump stream into buffer writer
-            m.Position = 0;
-            m.ToArray().CopyTo(buffer.GetMemory((int)m.Length));
-            buffer.Advance((int)m.Length);
+            p.Messages = Encode(resources, sequence).ToArray();
+            global::MessagePack.MessagePackSerializer.Serialize(buffer, p);
         }
 
         IEnumerable<Message> Encode(IKIpProtocolResourceProvider<TKNodeId> resources, IEnumerable<IKMessage<TKNodeId>> messages)
@@ -49,28 +41,28 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             switch (message.Body)
             {
                 case KPingRequest<TKNodeId> request:
-                    m.PingRequest = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KPingResponse<TKNodeId> request:
-                    m.PingResponse = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KStoreRequest<TKNodeId> request:
-                    m.StoreRequest = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KStoreResponse<TKNodeId> request:
-                    m.StoreResponse = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KFindNodeRequest<TKNodeId> request:
-                    m.FindNodeRequest = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KFindNodeResponse<TKNodeId> request:
-                    m.FindNodeResponse = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KFindValueRequest<TKNodeId> request:
-                    m.FindValueRequest = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 case KFindValueResponse<TKNodeId> request:
-                    m.FindValueResponse = Encode(resources, request);
+                    m.Body = Encode(resources, request);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -79,17 +71,11 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             return m;
         }
 
-        ByteString Encode(IKIpProtocolResourceProvider<TKNodeId> resources, TKNodeId nodeId)
+        byte[] Encode(IKIpProtocolResourceProvider<TKNodeId> resources, TKNodeId nodeId)
         {
-#if NET47
             var a = new byte[KNodeId<TKNodeId>.SizeOf];
             nodeId.Write(a);
-            return ByteString.CopyFrom(a);
-#else
-            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
-            nodeId.Write(a);
-            return ByteString.CopyFrom(a);
-#endif
+            return a;
         }
 
         Header Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KMessageHeader<TKNodeId> header)
@@ -103,14 +89,14 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         PingRequest Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KPingRequest<TKNodeId> request)
         {
             var r = new PingRequest();
-            r.Endpoints.Add(Encode(resources, request.Endpoints));
+            r.Endpoints = Encode(resources, request.Endpoints).ToArray();
             return r;
         }
 
         PingResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KPingResponse<TKNodeId> response)
         {
             var r = new PingResponse();
-            r.Endpoints.Add(Encode(resources, response.Endpoints));
+            r.Endpoints = Encode(resources, response.Endpoints).ToArray();
             return r;
         }
 
@@ -123,19 +109,19 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             {
                 r.HasValue = true;
                 r.Value = new ValueInfo();
-                r.Value.Data = ByteString.CopyFrom(value.Data);
+                r.Value.Data = value.Data;
                 r.Value.Version = value.Version;
-                r.Value.Ttl = new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(value.Expiration - DateTime.UtcNow).TotalSeconds };
+                r.Value.Ttl = value.Expiration - DateTime.UtcNow;
             }
             return r;
         }
 
-        StoreRequest.Types.StoreRequestMode Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreRequestMode mode)
+        StoreRequestMode Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreRequestMode mode)
         {
             return mode switch
             {
-                KStoreRequestMode.Primary => StoreRequest.Types.StoreRequestMode.Primary,
-                KStoreRequestMode.Replica => StoreRequest.Types.StoreRequestMode.Replica,
+                KStoreRequestMode.Primary => StoreRequestMode.Primary,
+                KStoreRequestMode.Replica => StoreRequestMode.Replica,
                 _ => throw new InvalidOperationException(),
             };
         }
@@ -147,12 +133,12 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             return r;
         }
 
-        StoreResponse.Types.StoreResponseStatus Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreResponseStatus status)
+        StoreResponseStatus Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KStoreResponseStatus status)
         {
             return status switch
             {
-                KStoreResponseStatus.Invalid => StoreResponse.Types.StoreResponseStatus.Invalid,
-                KStoreResponseStatus.Success => StoreResponse.Types.StoreResponseStatus.Success,
+                KStoreResponseStatus.Invalid => StoreResponseStatus.Invalid,
+                KStoreResponseStatus.Success => StoreResponseStatus.Success,
                 _ => throw new InvalidOperationException(),
             };
         }
@@ -167,7 +153,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         FindNodeResponse Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KFindNodeResponse<TKNodeId> response)
         {
             var r = new FindNodeResponse();
-            r.Peers.Add(Encode(resources, response.Peers));
+            r.Peers = Encode(resources, response.Peers).ToArray();
             return r;
         }
 
@@ -185,11 +171,11 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             {
                 r.HasValue = true;
                 r.Value = new ValueInfo();
-                r.Value.Data = ByteString.CopyFrom(value.Data);
+                r.Value.Data = value.Data;
                 r.Value.Version = value.Version;
-                r.Value.Ttl = value.Expiration != null ? new Google.Protobuf.WellKnownTypes.Duration() { Seconds = (long)(value.Expiration - DateTime.UtcNow).TotalSeconds } : null;
+                r.Value.Ttl = value.Expiration - DateTime.UtcNow;
             }
-            r.Peers.Add(Encode(resources, response.Peers));
+            r.Peers = Encode(resources, response.Peers).ToArray();
             return r;
         }
 
@@ -203,7 +189,7 @@ namespace Cogito.Kademlia.Protocols.Protobuf
         {
             var p = new Peer();
             p.Id = Encode(resources, peer.Id);
-            p.Endpoints.Add(Encode(resources, peer.Endpoints));
+            p.Endpoints = Encode(resources, peer.Endpoints).ToArray();
             return p;
         }
 
@@ -226,10 +212,10 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             switch (ip.Endpoint.Protocol)
             {
                 case KIpAddressFamily.IPv4:
-                    e.Address = new IpAddress() { V4 = Encode(resources, ip.Endpoint.V4) };
+                    e.Address = new Ipv4Address() { Value = Encode(resources, ip.Endpoint.V4) };
                     break;
                 case KIpAddressFamily.IPv6:
-                    e.Address = new IpAddress() { V6 = Encode(resources, ip.Endpoint.V6) };
+                    e.Address = new Ipv6Address() { Value = Encode(resources, ip.Endpoint.V6) };
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -246,17 +232,11 @@ namespace Cogito.Kademlia.Protocols.Protobuf
             return BinaryPrimitives.ReadUInt32BigEndian(s);
         }
 
-        ByteString Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KIp6Address ip)
+        byte[] Encode(IKIpProtocolResourceProvider<TKNodeId> resources, KIp6Address ip)
         {
-#if NET47
             var s = new byte[16];
             ip.Write(s);
-            return ByteString.CopyFrom(s);
-#else
-            var s = (Span<byte>)stackalloc byte[16];
-            ip.Write(s);
-            return ByteString.CopyFrom(s);
-#endif
+            return s;
         }
 
     }
