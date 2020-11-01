@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -17,7 +19,7 @@
         /// <param name="endpoints"></param>
         public KPingResponse(IKEndpoint<TKNodeId>[] endpoints)
         {
-            this.endpoints = endpoints;
+            this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
         }
 
         /// <summary>

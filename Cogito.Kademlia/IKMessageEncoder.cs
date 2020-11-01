@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 
-namespace Cogito.Kademlia.Protocols
+namespace Cogito.Kademlia
 {
 
     /// <summary>

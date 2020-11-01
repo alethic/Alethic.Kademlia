@@ -1,11 +1,13 @@
-﻿namespace Cogito.Kademlia.Protocols
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
     /// Defines the structure of a message.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKMessage<TKNodeId>
+    public interface IKMessage<TKNodeId> : IEquatable<IKMessage<TKNodeId>>
         where TKNodeId : unmanaged
     {
 

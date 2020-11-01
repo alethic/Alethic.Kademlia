@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
 using Cogito.Kademlia.Net;
-using Cogito.Linq;
 using Cogito.Threading;
 
 using Microsoft.Extensions.Hosting;
@@ -265,7 +264,7 @@ namespace Cogito.Kademlia.Protocols.Udp
             var o = MemoryPool<byte>.Shared.Rent(b.Length);
             var m = o.Memory.Slice(0, b.Length);
             b.CopyTo(m.Span);
-            Task.Run(async () => { try { await OnReceiveAsync(p, m.Span, CancellationToken.None); } catch { } finally { o.Dispose(); } });
+            Task.Run(async () => { try { await OnReceiveAsync(p, m, CancellationToken.None); } catch { } finally { o.Dispose(); } });
 
             // continue receiving if socket still available
             // this lock is blocking, but should be okay since this event handler can stall
@@ -361,40 +360,48 @@ namespace Cogito.Kademlia.Protocols.Udp
         /// <param name="packet"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveAsync(in KIpEndpoint endpoint, ReadOnlySpan<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveAsync(in KIpEndpoint endpoint, ReadOnlyMemory<byte> packet, CancellationToken cancellationToken)
         {
-            // check for continued connection
-            var s = mcastSocket;
-            if (s == null || s.IsBound == false)
-                return new ValueTask(Task.CompletedTask);
-
-            // decode incoming byte sequence
-            var l = decoder.Decode(protocol, new ReadOnlySequence<byte>(packet.ToArray()));
-            if (l.Network != network)
+            try
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
-                return new ValueTask(Task.CompletedTask);
-            }
+                // check for continued connection
+                var s = mcastSocket;
+                if (s == null || s.IsBound == false)
+                    return new ValueTask(Task.CompletedTask);
 
-            var t = new List<Task>();
-
-            // dispatch individual messages into infrastructure
-            foreach (var m in l)
-            {
-                // skip messages sent from ourselves
-                if (m.Header.Sender.Equals(engine.SelfId))
-                    continue;
-
-                t.Add(m switch
+                // decode incoming byte sequence
+                var l = decoder.Decode(protocol, new ReadOnlySequence<byte>(packet));
+                if (l.Network != network)
                 {
-                    KMessage<TKNodeId, KPingRequest<TKNodeId>> r => OnReceivePingRequestAsync(endpoint, r, cancellationToken).AsTask(),
-                    KMessage<TKNodeId, KPingResponse<TKNodeId>> r => OnReceivePingResponseAsync(endpoint, r, cancellationToken).AsTask(),
-                    _ => Task.CompletedTask,
-                });
-            }
+                    logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
+                    return new ValueTask(Task.CompletedTask);
+                }
 
-            // return when all complete
-            return new ValueTask(Task.WhenAll(t));
+                var t = new List<Task>();
+
+                // dispatch individual messages into infrastructure
+                foreach (var m in l)
+                {
+                    // skip messages sent from ourselves
+                    if (m.Header.Sender.Equals(engine.SelfId))
+                        continue;
+
+                    t.Add(m switch
+                    {
+                        KMessage<TKNodeId, KPingRequest<TKNodeId>> r => OnReceivePingRequestAsync(endpoint, r, cancellationToken).AsTask(),
+                        KMessage<TKNodeId, KPingResponse<TKNodeId>> r => OnReceivePingResponseAsync(endpoint, r, cancellationToken).AsTask(),
+                        _ => Task.CompletedTask,
+                    });
+                }
+
+                // return when all complete
+                return new ValueTask(Task.WhenAll(t));
+            }
+            catch (Exception e)
+            {
+                logger?.LogError(e, "Unexpected exception receiving multicast packet.");
+                return new ValueTask(Task.CompletedTask);
+            }
         }
 
         /// <summary>
@@ -460,7 +467,7 @@ namespace Cogito.Kademlia.Protocols.Udp
         KMessageSequence<TKNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKMessageBody<TKNodeId>
         {
-            return new KMessageSequence<TKNodeId>(network, new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body).Yield<IKMessage<TKNodeId>>());
+            return new KMessageSequence<TKNodeId>(network, new IKMessage<TKNodeId>[] { new KMessage<TKNodeId, TBody>(new KMessageHeader<TKNodeId>(engine.SelfId, magic), body) });
         }
 
         /// <summary>

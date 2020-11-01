@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Cogito.Kademlia
@@ -8,7 +9,7 @@ namespace Cogito.Kademlia
     /// Describes a PING request.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KPingRequest<TKNodeId> : IKMessageBody<TKNodeId>
+    public readonly struct KPingRequest<TKNodeId> : IKMessageBody<TKNodeId>, IEquatable<KPingRequest<TKNodeId>>
         where TKNodeId : unmanaged
     {
 
@@ -40,10 +41,29 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         public KPingRequest(IKEndpoint<TKNodeId>[] endpoints)
         {
-            this.endpoints = endpoints;
+            this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
         }
 
         public IKEndpoint<TKNodeId>[] Endpoints => endpoints;
+
+        public bool Equals(KPingRequest<TKNodeId> other)
+        {
+            return other.endpoints.SequenceEqual(endpoints);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is KPingRequest<TKNodeId> other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            var h = new HashCode();
+            h.Add(endpoints.Length);
+            foreach (var i in endpoints)
+                h.Add(i);
+            return h.ToHashCode();
+        }
 
     }
 

@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -18,7 +20,7 @@
         /// <param name="value"></param>
         public KFindValueResponse(KPeerEndpointInfo<TKNodeId>[] peers, in KValueInfo? value)
         {
-            this.peers = peers;
+            this.peers = peers ?? throw new ArgumentNullException(nameof(peers));
             this.value = value;
         }
 

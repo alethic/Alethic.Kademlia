@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj" />
+        <ProjectReference Include="..\Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj" />
         <ProjectReference Include="..\Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj" />
         <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
     </ItemGroup>

@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia.Protocols
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -39,6 +41,38 @@
         /// Gets the message body.
         /// </summary>
         IKMessageBody<TKNodeId> IKMessage<TKNodeId>.Body => body;
+
+        /// <summary>
+        /// Returns <c>true</c> if the object is equal to this object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(IKMessage<TKNodeId> other)
+        {
+            return other.Header.Equals(header) && other.Body.Equals(body);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the object is equal to this object.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return obj is IKMessage<TKNodeId> other && Equals(other);
+        }
+
+        /// <summary>
+        /// Gets a unique hashcode for this instance.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            var h = new HashCode();
+            h.Add(header);
+            h.Add(body);
+            return h.ToHashCode();
+        }
 
     }
 

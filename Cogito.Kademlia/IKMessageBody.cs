@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>

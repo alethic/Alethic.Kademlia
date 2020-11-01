@@ -101,7 +101,7 @@ namespace Cogito.Kademlia.Net
         /// </summary>
         /// <param name="address"></param>
         public KIp4Address(IPAddress address) :
-            this(address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes().ToArray() : throw new ArgumentException())
+            this(address.AddressFamily == AddressFamily.InterNetwork ? address.GetAddressBytes() : throw new ArgumentException())
         {
 
         }

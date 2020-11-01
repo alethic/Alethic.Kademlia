@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.1;netstandard2.0;netcoreapp3.0;net47</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
+    </ItemGroup>
+
+</Project>

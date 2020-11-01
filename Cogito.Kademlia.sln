@@ -24,7 +24,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.InMemory", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Protobuf", "Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj", "{F545AD9F-5652-413E-A54F-D81913566F8D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cogito.Kademlia.MessagePack", "Cogito.Kademlia.MessagePack\Cogito.Kademlia.MessagePack.csproj", "{4E5B228C-6462-40E0-96FE-2B814F5A2614}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.MessagePack", "Cogito.Kademlia.MessagePack\Cogito.Kademlia.MessagePack.csproj", "{4E5B228C-6462-40E0-96FE-2B814F5A2614}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cogito.Kademlia.Json", "Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj", "{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -64,6 +66,10 @@ Global
 		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

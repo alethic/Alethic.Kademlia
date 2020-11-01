@@ -5,7 +5,7 @@ using Autofac.Extensions.DependencyInjection;
 
 using Cogito.Autofac;
 using Cogito.Kademlia.InMemory;
-using Cogito.Kademlia.MessagePack;
+using Cogito.Kademlia.Json;
 using Cogito.Kademlia.Protocols.Udp;
 using Cogito.Serilog;
 
@@ -34,8 +34,8 @@ namespace Cogito.Kademlia.Console
             var data = new KNodeData<KNodeId256>();
             var parm = new[] { new TypedParameter(typeof(KNodeId256), self), new TypedParameter(typeof(KNodeData<KNodeId256>), data) };
 
-            builder.RegisterType<KMessagePackMessageEncoder<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<KMessagePackMessageDecoder<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KJsonMessageEncoder<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KJsonMessageDecoder<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KEndpointInvoker<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KFixedTableRouter<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KLookup<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();

@@ -11,7 +11,7 @@ namespace Cogito.Kademlia.MessagePack
 {
 
     /// <summary>
-    /// Implements a <see cref="IKMessageDecoder{TKNodeId}"/> using Google's Protocol Buffers.
+    /// Implements a <see cref="IKMessageDecoder{TKNodeId}"/> using MessagePack.
     /// </summary>
     /// <typeparam name="TKNodeId"></typeparam>
     public class KMessagePackMessageDecoder<TKNodeId> : IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
