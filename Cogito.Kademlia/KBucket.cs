@@ -13,31 +13,32 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Represents a set of items within a <see cref="KFixedTableRouter{TKNodeId}"/>.
+    /// Represents a set of items within a <see cref="KFixedTableRouter{TNodeId}"/>.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKNodeData"></typeparam>
-    class KBucket<TKNodeId, TKNodeData> : IEnumerable<KBucketItem<TKNodeId, TKNodeData>>
-        where TKNodeId : unmanaged
-        where TKNodeData : IKEndpointProvider<TKNodeId>, new()
+    /// <typeparam name="TNodeId"></typeparam>
+    class KBucket<TNodeId> : IEnumerable<KBucketItem<TNodeId>>
+        where TNodeId : unmanaged
     {
 
+        readonly IKEngine<TNodeId> engine;
+        readonly IKInvoker<TNodeId> invoker;
         readonly int k;
-        readonly IKEndpointInvoker<TKNodeId> invoker;
         readonly ILogger logger;
         readonly ReaderWriterLockSlim rw = new ReaderWriterLockSlim();
-        readonly LinkedList<KBucketItem<TKNodeId, TKNodeData>> l = new LinkedList<KBucketItem<TKNodeId, TKNodeData>>();
+        readonly LinkedList<KBucketItem<TNodeId>> l = new LinkedList<KBucketItem<TNodeId>>();
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="k"></param>
+        /// <param name="engine"></param>
         /// <param name="invoker"></param>
+        /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KBucket(int k, IKEndpointInvoker<TKNodeId> invoker, ILogger logger = null)
+        public KBucket(IKEngine<TNodeId> engine, IKInvoker<TNodeId> invoker, int k, ILogger logger = null)
         {
-            this.k = k;
+            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
+            this.k = k;
             this.logger = logger;
         }
 
@@ -48,11 +49,11 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask<TKNodeData> GetNodeDataAsync(in TKNodeId nodeId, CancellationToken cancellationToken)
+        internal ValueTask<KEndpointSet<TNodeId>> GetEndpointsAsync(in TNodeId nodeId, CancellationToken cancellationToken)
         {
             var n = GetNode(nodeId);
             if (n != null)
-                return new ValueTask<TKNodeData>(n.Value.Data);
+                return new ValueTask<KEndpointSet<TNodeId>>(n.Value.Endpoints);
             else
                 return default;
         }
@@ -60,11 +61,12 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Updates the given node with the newly available endpoints.
         /// </summary>
+        /// <param name="engine"></param>
         /// <param name="nodeId"></param>
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask UpdatePeerAsync(in TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        internal ValueTask UpdatePeerAsync(in TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
         {
             return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
         }
@@ -75,7 +77,7 @@ namespace Cogito.Kademlia
         /// <param name="nodeId"></param>
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
-        async ValueTask UpdatePeerAsync(TKNodeId nodeId, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken)
+        async ValueTask UpdatePeerAsync(TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
         {
             var lk = rw.BeginUpgradableReadLock();
 
@@ -97,8 +99,8 @@ namespace Cogito.Kademlia
                         // incorporate new additional endpoints into end of set
                         if (endpoints != null)
                             foreach (var j in endpoints)
-                                if (i.Value.Data.Endpoints.Select(j) == null)
-                                    i.Value.Data.Endpoints.Demote(j);
+                                if (i.Value.Endpoints.Select(j) == null)
+                                    i.Value.Endpoints.Demote(j);
                     }
                 }
                 else if (l.Count < k)
@@ -108,7 +110,7 @@ namespace Cogito.Kademlia
                         logger?.LogTrace("Peer {NodeId} does not exist, appending to tail.", nodeId);
 
                         // generate new peer entry
-                        var p = new TKNodeData();
+                        var p = new KBucketItem<TNodeId>(nodeId);
 
                         // incorporate new additional endpoints into end of set
                         if (endpoints != null)
@@ -117,7 +119,7 @@ namespace Cogito.Kademlia
                                     p.Endpoints.Demote(j);
 
                         // item does not exist, but bucket has room, insert at tail
-                        l.AddFirst(new KBucketItem<TKNodeId, TKNodeData>(nodeId, p));
+                        l.AddFirst(p);
                     }
                 }
                 else
@@ -128,8 +130,8 @@ namespace Cogito.Kademlia
                     var n = l.Last;
 
                     // start ping, check for async completion
-                    var r = (KResponse<TKNodeId, KPingResponse<TKNodeId>>)default;
-                    var t = invoker.PingAsync(n.Value.Data.Endpoints, cancellationToken);
+                    var r = (KResponse<TNodeId, KPingResponse<TNodeId>>)default;
+                    var t = invoker.PingAsync(engine.Endpoints, cancellationToken);
 
                     // completed synchronously (or immediately)
                     if (t.IsCompleted)
@@ -145,7 +147,7 @@ namespace Cogito.Kademlia
                     // was able to successfully ping the node
                     if (r.Status == KResponseStatus.Success)
                     {
-                        logger?.LogTrace("PING to {ExistingNodeId} succeeded. Keeping existing peer and discarding {NodeId}.", n.Value.Id, nodeId);
+                        logger?.LogTrace("PING to {ExistingNodeId} succeeded. Keeping existing peer and discarding {NodeId}.", n.Value.NodeId, nodeId);
 
                         // entry had response, move to tail, discard new entry
                         if (l.Count > 1)
@@ -173,7 +175,7 @@ namespace Cogito.Kademlia
                         {
                             // first entry had no response, remove, insert new at tail
                             l.Remove(n);
-                            var p = new TKNodeData();
+                            var p = new KBucketItem<TNodeId>(nodeId);
 
                             // incorporate new additional endpoints into end of set
                             if (endpoints != null)
@@ -181,7 +183,7 @@ namespace Cogito.Kademlia
                                     if (p.Endpoints.Select(j) == null)
                                         p.Endpoints.Demote(j);
 
-                            l.AddFirst(new KBucketItem<TKNodeId, TKNodeData>(nodeId, p));
+                            l.AddFirst(p);
                         }
                     }
                 }
@@ -197,11 +199,11 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="nodeId"></param>
         /// <returns></returns>
-        LinkedListNode<KBucketItem<TKNodeId, TKNodeData>> GetNode(in TKNodeId nodeId)
+        LinkedListNode<KBucketItem<TNodeId>> GetNode(in TNodeId nodeId)
         {
             using (rw.BeginReadLock())
                 for (var i = l.First; i != null; i = i.Next)
-                    if (nodeId.Equals(i.Value.Id))
+                    if (nodeId.Equals(i.Value.NodeId))
                         return i;
 
             return null;
@@ -223,7 +225,7 @@ namespace Cogito.Kademlia
         /// Gets an iterator that covers a snapshot of the bucket items.
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<KBucketItem<TKNodeId, TKNodeData>> GetEnumerator()
+        public IEnumerator<KBucketItem<TNodeId>> GetEnumerator()
         {
             using (rw.BeginReadLock())
                 return l.ToList().GetEnumerator();

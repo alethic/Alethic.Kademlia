@@ -7,9 +7,9 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a component that periodically publishes values owned by the node.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKPublisher<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public interface IKPublisher<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<bool> AddAsync(in TKNodeId key, in KValueInfo value, CancellationToken cancellationToken = default);
+        ValueTask<bool> AddAsync(in TNodeId key, in KValueInfo value, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Removes the value for the specified key from the publisher.
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<bool> RemoveAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<bool> RemoveAsync(in TNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the value for the specified key from the publisher.
@@ -35,7 +35,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KValueInfo?> GetAsync(in TNodeId key, CancellationToken cancellationToken = default);
 
     }
 

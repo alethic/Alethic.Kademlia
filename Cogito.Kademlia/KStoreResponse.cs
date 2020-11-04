@@ -4,8 +4,8 @@
     /// <summary>
     /// Describes a response to a STORE request.
     /// </summary>
-    public readonly struct KStoreResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    public readonly struct KStoreResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
         readonly KStoreResponseStatus status;

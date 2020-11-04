@@ -1,4 +1,6 @@
-﻿using MessagePack;
+﻿using System;
+
+using MessagePack;
 
 namespace Cogito.Kademlia.MessagePack.Structures
 {
@@ -8,7 +10,7 @@ namespace Cogito.Kademlia.MessagePack.Structures
     {
 
         [Key(0)]
-        public IpEndpoint[] Endpoints { get; set; }
+        public Uri[] Endpoints { get; set; }
 
     }
 

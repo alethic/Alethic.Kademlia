@@ -8,9 +8,9 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a PING request.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KPingRequest<TKNodeId> : IKMessageBody<TKNodeId>, IEquatable<KPingRequest<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KPingRequest<TNodeId> : IKRequestBody<TNodeId>, IEquatable<KPingRequest<TNodeId>>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -18,9 +18,9 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoints"></param>
         /// <returns></returns>
-        public KPingResponse<TKNodeId> Respond(IKEndpoint<TKNodeId>[] endpoints)
+        public KPingResponse<TNodeId> Respond(IKProtocolEndpoint<TNodeId>[] endpoints)
         {
-            return new KPingResponse<TKNodeId>(endpoints);
+            return new KPingResponse<TNodeId>(endpoints);
         }
 
         /// <summary>
@@ -28,32 +28,32 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoints"></param>
         /// <returns></returns>
-        public KPingResponse<TKNodeId> Respond(IEnumerable<IKEndpoint<TKNodeId>> endpoints)
+        public KPingResponse<TNodeId> Respond(IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints)
         {
-            return new KPingResponse<TKNodeId>(endpoints.ToArray());
+            return new KPingResponse<TNodeId>(endpoints.ToArray());
         }
 
-        readonly IKEndpoint<TKNodeId>[] endpoints;
+        readonly IKProtocolEndpoint<TNodeId>[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="endpoints"></param>
-        public KPingRequest(IKEndpoint<TKNodeId>[] endpoints)
+        public KPingRequest(IKProtocolEndpoint<TNodeId>[] endpoints)
         {
             this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
         }
 
-        public IKEndpoint<TKNodeId>[] Endpoints => endpoints;
+        public IKProtocolEndpoint<TNodeId>[] Endpoints => endpoints;
 
-        public bool Equals(KPingRequest<TKNodeId> other)
+        public bool Equals(KPingRequest<TNodeId> other)
         {
             return other.endpoints.SequenceEqual(endpoints);
         }
 
         public override bool Equals(object obj)
         {
-            return obj is KPingRequest<TKNodeId> other && Equals(other);
+            return obj is KPingRequest<TNodeId> other && Equals(other);
         }
 
         public override int GetHashCode()

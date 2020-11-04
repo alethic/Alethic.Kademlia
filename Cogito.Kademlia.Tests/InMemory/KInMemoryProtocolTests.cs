@@ -26,9 +26,9 @@ namespace Cogito.Kademlia.Tests.InMemory
             var data = new KNodeData<KNodeId256>();
             var parm = new[] { new TypedParameter(typeof(KNodeId256), selfId), new TypedParameter(typeof(KNodeData<KNodeId256>), data) };
 
-            builder.RegisterType<KEndpointInvoker<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KInvokerPolicy<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KFixedTableRouter<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<KLookup<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KNodeLookup<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KInMemoryStore<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KInMemoryPublisher<KNodeId256>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KEngine<KNodeId256, KNodeData<KNodeId256>>>().WithParameters(parm).AsImplementedInterfaces().SingleInstance();

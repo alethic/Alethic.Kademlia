@@ -13,11 +13,11 @@ namespace Cogito.Kademlia.InMemory
 {
 
     /// <summary>
-    /// Provides a <see cref="IKPublisher{TKNodeId}"/> implementation that keeps published items in memory.
+    /// Provides a <see cref="IKPublisher{TNodeId}"/> implementation that keeps published items in memory.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KInMemoryPublisher<TKNodeId> : IKPublisher<TKNodeId>, IHostedService
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KInMemoryPublisher<TNodeId> : IKPublisher<TNodeId>, IHostedService
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -41,13 +41,13 @@ namespace Cogito.Kademlia.InMemory
 
         static readonly TimeSpan DefaultTimeToLive = TimeSpan.FromMinutes(15);
 
-        readonly IKEndpointInvoker<TKNodeId> invoker;
-        readonly IKLookup<TKNodeId> lookup;
-        readonly IKStore<TKNodeId> store;
+        readonly IKInvoker<TNodeId> invoker;
+        readonly IKNodeLookup<TNodeId> lookup;
+        readonly IKStore<TNodeId> store;
         readonly TimeSpan frequency;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
-        readonly ConcurrentDictionary<TKNodeId, Entry> entries = new ConcurrentDictionary<TKNodeId, Entry>();
+        readonly ConcurrentDictionary<TNodeId, Entry> entries = new ConcurrentDictionary<TNodeId, Entry>();
 
         CancellationTokenSource runCts;
         Task run;
@@ -60,7 +60,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="store"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryPublisher(IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, IKStore<TKNodeId> store, TimeSpan? frequency = null, ILogger logger = null)
+        public KInMemoryPublisher(IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, IKStore<TNodeId> store, TimeSpan? frequency = null, ILogger logger = null)
         {
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
@@ -75,12 +75,12 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public ValueTask<bool> AddAsync(in TKNodeId key, in KValueInfo value, CancellationToken cancellationToken = default)
+        public ValueTask<bool> AddAsync(in TNodeId key, in KValueInfo value, CancellationToken cancellationToken = default)
         {
             return AddAsync(key, value, cancellationToken);
         }
 
-        async ValueTask<bool> AddAsync(TKNodeId key, KValueInfo value, CancellationToken cancellationToken)
+        async ValueTask<bool> AddAsync(TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
             using (await sync.LockAsync())
             {
@@ -105,12 +105,12 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<bool> RemoveAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<bool> RemoveAsync(in TNodeId key, CancellationToken cancellationToken = default)
         {
             return RemoveAsync(key, cancellationToken);
         }
 
-        async ValueTask<bool> RemoveAsync(TKNodeId key, CancellationToken cancellationToken)
+        async ValueTask<bool> RemoveAsync(TNodeId key, CancellationToken cancellationToken)
         {
             using (await sync.LockAsync())
                 return entries.TryRemove(key, out var _);
@@ -122,12 +122,12 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KValueInfo?> GetAsync(in TNodeId key, CancellationToken cancellationToken = default)
         {
             return GetAsync(key, cancellationToken);
         }
 
-        async ValueTask<KValueInfo?> GetAsync(TKNodeId key, CancellationToken cancellationToken)
+        async ValueTask<KValueInfo?> GetAsync(TNodeId key, CancellationToken cancellationToken)
         {
             using (await sync.LockAsync())
                 return entries.TryGetValue(key, out var v) ? v.Value : (KValueInfo?)null;
@@ -188,7 +188,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="version"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async Task PublishValueAsync(TKNodeId key, KValueInfo value, CancellationToken cancellationToken)
+        async Task PublishValueAsync(TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
             logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, value.Expiration);
 

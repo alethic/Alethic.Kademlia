@@ -12,7 +12,7 @@
 //        /// </summary>
 //        /// <param name="key"></param>
 //        /// <returns></returns>
-//        IEnumerable<KBucket<TKNodeId, TKPeerData>> GetBucketsByKey(TKNodeId key)
+//        IEnumerable<KBucket<TNodeId, TKPeerData>> GetBucketsByKey(TNodeId key)
 //        {
 //            // starting index
 //            var beg = GetBucketIndex(SelfId, key);
@@ -43,37 +43,37 @@
 //        /// </summary>
 //        /// <param name="key"></param>
 //        /// <param name="idx"></param>
-//        internal static void GetNextBucket(in TKNodeId selfId, in TKNodeId key, ref int idx)
+//        internal static void GetNextBucket(in TNodeId selfId, in TNodeId key, ref int idx)
 //        {
 //            // output self ID bytes
-//            var self = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var self = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            selfId.Write(self);
 
 //            // output key ID bytes
-//            var target = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var target = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            key.Write(target);
 
 //            // construct the prefix from the bucket ID
-//            var prefixBytes = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var prefixBytes = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            var prefixSize = GetBucketPrefix(selfId, idx, prefixBytes);
 
 //            // calculate distance between the target and the current bucket prefix
-//            var targetToPrefixDistance = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var targetToPrefixDistance = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            target.Xor(prefixBytes, targetToPrefixDistance);
 
 //            // increment the least significant prefix bit
-//            var targetToPrefixDistancePlusOne = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var targetToPrefixDistancePlusOne = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            targetToPrefixDistance.CopyTo(targetToPrefixDistancePlusOne);
 //            IncrementBit(targetToPrefixDistancePlusOne, prefixSize - 1);
 
 //            // translate back into natural distance
-//            var nextTargetBytes = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//            var nextTargetBytes = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //            target.CopyTo(nextTargetBytes);
 //            for (int i = 0; i < prefixSize; i++)
 //                nextTargetBytes.SetBit(i, target.GetBit(i) ^ targetToPrefixDistancePlusOne.GetBit(i));
 
 //            // reload as a node ID
-//            var nextTarget = KNodeId<TKNodeId>.Read(nextTargetBytes);
+//            var nextTarget = KNodeId<TNodeId>.Read(nextTargetBytes);
 //            if (nextTarget.Equals(selfId))
 //                idx = -1;
 //            else
@@ -117,17 +117,17 @@
 ///// <param name="target"></param>
 ///// <param name="index"></param>
 ///// <param name="span"></param>
-//internal static int GetBucketPrefix(in TKNodeId selfId, int index, Span<byte> prefix)
+//internal static int GetBucketPrefix(in TNodeId selfId, int index, Span<byte> prefix)
 //{
 //    // output self ID bytes
-//    var self = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//    var self = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //    selfId.Write(self);
 
 //    // the size of the prefix
-//    var prefixSize = KNodeId<TKNodeId>.SizeOf * 8 - index;
+//    var prefixSize = KNodeId<TNodeId>.SizeOf * 8 - index;
 
 //    // prepare a mask to AND against the self ID to determine the prefix
-//    var prefixMask = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+//    var prefixMask = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 //    for (int i = 0; i < prefixSize; i++)
 //        prefixMask.SetBit(i, true);
 

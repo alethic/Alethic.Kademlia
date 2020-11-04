@@ -4,35 +4,34 @@
     /// <summary>
     /// Represents an item within a bucket.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKNodeData"></typeparam>
-    public readonly struct KBucketItem<TKNodeId, TKNodeData>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KBucketItem<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        readonly TKNodeId id;
-        readonly TKNodeData data;
+        readonly TNodeId nodeId;
+        readonly KEndpointSet<TNodeId> endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KBucketItem(in TKNodeId id, in TKNodeData data)
+        public KBucketItem(in TNodeId id)
         {
-            this.id = id;
-            this.data = data;
+            this.nodeId = id;
+            this.endpoints = new KEndpointSet<TNodeId>();
         }
 
         /// <summary>
         /// Gets the node ID of the peer.
         /// </summary>
-        public TKNodeId Id => id;
+        public TNodeId NodeId => nodeId;
 
         /// <summary>
-        /// Gets the set of known endpoints of the peer.
+        /// Gets the endpoints associated with the node.
         /// </summary>
-        public TKNodeData Data => data;
+        public KEndpointSet<TNodeId> Endpoints => endpoints;
 
     }
 

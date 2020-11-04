@@ -15,11 +15,11 @@ namespace Cogito.Kademlia.InMemory
 {
 
     /// <summary>
-    /// Provides a <see cref="IKStore{TKNodeId}"/> implementation that uses an <see cref="IMemoryCache"/> instance as a backing store.
+    /// Provides a <see cref="IKStore{TNodeId}"/> implementation that uses an <see cref="IMemoryCache"/> instance as a backing store.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KInMemoryStore<TKNodeId> : IKStore<TKNodeId>, IHostedService
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KInMemoryStore<TNodeId> : IKStore<TNodeId>, IHostedService
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia.InMemory
         class Entry
         {
 
-            public TKNodeId Key;
+            public TNodeId Key;
             public KStoreValueMode Mode;
             public KValueInfo Value;
             public DateTime ExpireTime;
@@ -42,7 +42,7 @@ namespace Cogito.Kademlia.InMemory
             /// <param name="value"></param>
             /// <param name="expireTime"></param>
             /// <param name="replicateTime"></param>
-            public Entry(in TKNodeId key, KStoreValueMode mode, KValueInfo value, DateTime expireTime, DateTime? replicateTime)
+            public Entry(in TNodeId key, KStoreValueMode mode, KValueInfo value, DateTime expireTime, DateTime? replicateTime)
             {
                 Key = key;
                 Mode = mode;
@@ -54,14 +54,15 @@ namespace Cogito.Kademlia.InMemory
 
         static readonly TimeSpan DefaultFrequency = TimeSpan.FromHours(1);
 
-        readonly IKRouter<TKNodeId> router;
-        readonly IKEndpointInvoker<TKNodeId> invoker;
-        readonly IKLookup<TKNodeId> lookup;
+        readonly IKEngine<TNodeId> engine;
+        readonly IKRouter<TNodeId> router;
+        readonly IKInvoker<TNodeId> invoker;
+        readonly IKNodeLookup<TNodeId> lookup;
         readonly TimeSpan frequency;
         readonly ILogger logger;
         readonly C5.IntervalHeap<Entry> delQueue;
         readonly C5.IntervalHeap<Entry> repQueue;
-        readonly Dictionary<TKNodeId, (Entry Entry, C5.IPriorityQueueHandle<Entry> DelQueueHandle, C5.IPriorityQueueHandle<Entry> RepQueueHandle)> entries;
+        readonly Dictionary<TNodeId, (Entry Entry, C5.IPriorityQueueHandle<Entry> DelQueueHandle, C5.IPriorityQueueHandle<Entry> RepQueueHandle)> entries;
         readonly AsyncLock sync = new AsyncLock();
         readonly ReaderWriterLockSlim slim = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
@@ -71,13 +72,15 @@ namespace Cogito.Kademlia.InMemory
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="engine"></param>
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryStore(IKRouter<TKNodeId> router, IKEndpointInvoker<TKNodeId> invoker, IKLookup<TKNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
+        public KInMemoryStore(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
         {
+            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
@@ -86,7 +89,7 @@ namespace Cogito.Kademlia.InMemory
 
             this.delQueue = new C5.IntervalHeap<Entry>(32, new FuncComparer<Entry, DateTime>(e => e.ExpireTime, Comparer<DateTime>.Default));
             this.repQueue = new C5.IntervalHeap<Entry>(32, new FuncComparer<Entry, DateTime>(e => e.ReplicateTime.Value, Comparer<DateTime>.Default));
-            this.entries = new Dictionary<TKNodeId, (Entry, C5.IPriorityQueueHandle<Entry>, C5.IPriorityQueueHandle<Entry>)>(32);
+            this.entries = new Dictionary<TNodeId, (Entry, C5.IPriorityQueueHandle<Entry>, C5.IPriorityQueueHandle<Entry>)>(32);
         }
 
         /// <summary>
@@ -97,12 +100,12 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<bool> SetAsync(in TKNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
+        public ValueTask<bool> SetAsync(in TNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
         {
             return SetAsync(key, mode, value, cancellationToken);
         }
 
-        async ValueTask<bool> SetAsync(TKNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken)
+        async ValueTask<bool> SetAsync(TNodeId key, KStoreValueMode mode, KValueInfo? value, CancellationToken cancellationToken)
         {
             // do some work before entering lock
             var now = DateTime.UtcNow;
@@ -159,7 +162,7 @@ namespace Cogito.Kademlia.InMemory
                         // map entry
                         entries[key] = (entry, delQueueHandle, repQueueHandle);
 
-                        OnValueChanged(new KValueEventArgs<TKNodeId>(key, value));
+                        OnValueChanged(new KValueEventArgs<TNodeId>(key, value));
                     }
                 }
                 else if (entries.TryGetValue(key, out var record))
@@ -179,7 +182,7 @@ namespace Cogito.Kademlia.InMemory
                         // remove entry
                         entries.Remove(key);
 
-                        OnValueChanged(new KValueEventArgs<TKNodeId>(key, null));
+                        OnValueChanged(new KValueEventArgs<TNodeId>(key, null));
                     }
                 }
 
@@ -194,7 +197,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="cancellationToken"></param>
         /// <param name="expiration"></param>
         /// <returns></returns>
-        async ValueTask<DateTime> CalculateExpireTime(TKNodeId key, KStoreValueMode mode, DateTime expiration, CancellationToken cancellationToken)
+        async ValueTask<DateTime> CalculateExpireTime(TNodeId key, KStoreValueMode mode, DateTime expiration, CancellationToken cancellationToken)
         {
             var now = DateTime.UtcNow;
 
@@ -203,7 +206,7 @@ namespace Cogito.Kademlia.InMemory
                 return expiration;
 
             // calculation derived from https://www.syncfusion.com/ebooks/kademlia_protocol_succinctly/key-value-management
-            var d = new KNodeIdDistanceComparer<TKNodeId>(router.Self);
+            var d = new KNodeIdDistanceComparer<TNodeId>(engine.SelfId);
             var l = await router.SelectPeersAsync(key, 1024, cancellationToken);
             var c = l.Count(i => d.Compare(key, i.Id) > 0);
             var t = (int)(expiration - now).TotalSeconds;
@@ -217,7 +220,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KValueInfo?> GetAsync(in TNodeId key, CancellationToken cancellationToken = default)
         {
             using (slim.BeginReadLock())
             {
@@ -311,7 +314,7 @@ namespace Cogito.Kademlia.InMemory
                                 // remove entry
                                 entries.Remove(entry.Key);
 
-                                OnValueChanged(new KValueEventArgs<TKNodeId>(entry.Key, null));
+                                OnValueChanged(new KValueEventArgs<TNodeId>(entry.Key, null));
                             }
                         }
                     }
@@ -404,13 +407,13 @@ namespace Cogito.Kademlia.InMemory
         /// <summary>
         /// Raised when a value is changed.
         /// </summary>
-        public event EventHandler<KValueEventArgs<TKNodeId>> ValueChanged;
+        public event EventHandler<KValueEventArgs<TNodeId>> ValueChanged;
 
         /// <summary>
         /// Raises the ValueChanged event.
         /// </summary>
         /// <param name="args"></param>
-        void OnValueChanged(KValueEventArgs<TKNodeId> args)
+        void OnValueChanged(KValueEventArgs<TNodeId> args)
         {
             ValueChanged?.Invoke(this, args);
         }

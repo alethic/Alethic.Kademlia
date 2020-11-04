@@ -1,23 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Cogito.Autofac" Version="3.0.7" />
-    <PackageReference Include="Cogito.Autofac.DependencyInjection" Version="3.0.7" />
-    <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.20" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.9" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Cogito.Autofac" Version="3.0.7" />
+        <PackageReference Include="Cogito.Autofac.DependencyInjection" Version="3.0.7" />
+        <PackageReference Include="Cogito.Extensions.Configuration.Autofac" Version="2.1.14" />
+        <PackageReference Include="Cogito.Extensions.Logging.Autofac" Version="2.0.20" />
+        <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.20" />
+        <PackageReference Include="Cogito.Extensions.Options.Autofac" Version="2.0.19" />
+        <PackageReference Include="Cogito.Serilog.Autofac" Version="2.0.17" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.9" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj" />
-    <ProjectReference Include="..\Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj" />
-    <ProjectReference Include="..\Cogito.Kademlia.MessagePack\Cogito.Kademlia.MessagePack.csproj" />
-    <ProjectReference Include="..\Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj" />
-    <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj" />
+        <ProjectReference Include="..\Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj" />
+        <ProjectReference Include="..\Cogito.Kademlia.MessagePack\Cogito.Kademlia.MessagePack.csproj" />
+        <ProjectReference Include="..\Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj" />
+        <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
+    </ItemGroup>
 
 </Project>

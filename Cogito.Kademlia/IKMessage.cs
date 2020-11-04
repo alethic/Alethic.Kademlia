@@ -6,20 +6,20 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Defines the structure of a message.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKMessage<TKNodeId> : IEquatable<IKMessage<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public interface IKMessage<TNodeId> : IEquatable<IKMessage<TNodeId>>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
         /// Gets the header of the message.
         /// </summary>
-        KMessageHeader<TKNodeId> Header { get; }
+        KMessageHeader<TNodeId> Header { get; }
 
         /// <summary>
         /// Gets the body of the message.
         /// </summary>
-        IKMessageBody<TKNodeId> Body { get; }
+        IKRequestBody<TNodeId> Body { get; }
 
     }
 

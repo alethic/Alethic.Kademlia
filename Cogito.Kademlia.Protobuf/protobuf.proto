@@ -37,8 +37,7 @@ message IpAddress {
 }
 
 message IpEndpoint {
-    IpAddress address = 1;
-    uint32 port = 2;
+    string uri = 1;
 }
 
 message Peer {

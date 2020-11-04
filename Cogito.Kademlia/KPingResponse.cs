@@ -6,18 +6,18 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a response to a PING request.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KPingResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KPingResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        readonly IKEndpoint<TKNodeId>[] endpoints;
+        readonly IKProtocolEndpoint<TNodeId>[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="endpoints"></param>
-        public KPingResponse(IKEndpoint<TKNodeId>[] endpoints)
+        public KPingResponse(IKProtocolEndpoint<TNodeId>[] endpoints)
         {
             this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
         }
@@ -25,7 +25,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of endpoints to return to the ping requester.
         /// </summary>
-        public IKEndpoint<TKNodeId>[] Endpoints => endpoints;
+        public IKProtocolEndpoint<TNodeId>[] Endpoints => endpoints;
 
     }
 

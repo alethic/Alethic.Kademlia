@@ -9,20 +9,20 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a sequence of messages that have been decoded.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KMessageSequence<TKNodeId> : IEnumerable<IKMessage<TKNodeId>>, IEquatable<KMessageSequence<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KMessageSequence<TNodeId> : IEnumerable<IKMessage<TNodeId>>, IEquatable<KMessageSequence<TNodeId>>
+        where TNodeId : unmanaged
     {
 
         readonly ulong network;
-        readonly IKMessage<TKNodeId>[] messages;
+        readonly IKMessage<TNodeId>[] messages;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="network"></param>
         /// <param name="messages"></param>
-        public KMessageSequence(ulong network, IKMessage<TKNodeId>[] messages)
+        public KMessageSequence(ulong network, IKMessage<TNodeId>[] messages)
         {
             this.network = network;
             this.messages = messages ?? throw new ArgumentNullException(nameof(messages));
@@ -33,7 +33,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="network"></param>
         /// <param name="messages"></param>
-        public KMessageSequence(ulong network, IEnumerable<IKMessage<TKNodeId>> messages) :
+        public KMessageSequence(ulong network, IEnumerable<IKMessage<TNodeId>> messages) :
             this(network, messages?.ToArray())
         {
 
@@ -49,7 +49,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool Equals(KMessageSequence<TKNodeId> other)
+        public bool Equals(KMessageSequence<TNodeId> other)
         {
             return other.Network == network && other.messages.SequenceEqual(messages);
         }
@@ -61,7 +61,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            return obj is KMessageSequence<TKNodeId> other && Equals(other);
+            return obj is KMessageSequence<TNodeId> other && Equals(other);
         }
 
         /// <summary>
@@ -84,9 +84,9 @@ namespace Cogito.Kademlia
         /// Gets an enumerator of the messages.
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<IKMessage<TKNodeId>> GetEnumerator()
+        public IEnumerator<IKMessage<TNodeId>> GetEnumerator()
         {
-            return ((IEnumerable<IKMessage<TKNodeId>>)messages).GetEnumerator();
+            return ((IEnumerable<IKMessage<TNodeId>>)messages).GetEnumerator();
         }
 
         /// <summary>

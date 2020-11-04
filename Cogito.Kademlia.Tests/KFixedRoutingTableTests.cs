@@ -15,28 +15,28 @@ namespace Cogito.Kademlia.Tests
     public class KFixedRoutingTableTests
     {
 
-        class FakeEndpointInvoker<TKNodeId> : IKEndpointInvoker<TKNodeId>
-            where TKNodeId : unmanaged
+        class FakeEndpointInvoker<TNodeId> : IKInvokerPolicy<TNodeId>
+            where TNodeId : unmanaged
         {
 
-            public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpointSet<TKNodeId> endpoints, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>> PingAsync(IKProtocolEndpointSet<TNodeId> endpoints, CancellationToken cancellationToken = default)
             {
-                return new ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>>();
+                return new ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TNodeId, KStoreResponse<TNodeId>>> StoreAsync(IKProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
             {
-                return new ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>>();
+                return new ValueTask<KResponse<TNodeId, KStoreResponse<TNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TNodeId, KFindNodeResponse<TNodeId>>> FindNodeAsync(IKProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>>();
+                return new ValueTask<KResponse<TNodeId, KFindNodeResponse<TNodeId>>>();
             }
 
-            public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpointSet<TKNodeId> endpoints, in TKNodeId key, CancellationToken cancellationToken = default)
+            public ValueTask<KResponse<TNodeId, KFindValueResponse<TNodeId>>> FindValueAsync(IKProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
             {
-                return new ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>>();
+                return new ValueTask<KResponse<TNodeId, KFindValueResponse<TNodeId>>>();
             }
 
         }

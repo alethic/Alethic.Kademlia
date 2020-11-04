@@ -6,9 +6,9 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes information about an endpoint.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KEndpointInfo<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KEndpointInfo<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>

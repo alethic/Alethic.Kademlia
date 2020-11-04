@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
 using Cogito.Kademlia.Json;
-using Cogito.Kademlia.Net;
+using Cogito.Kademlia.Network;
 
 using FluentAssertions;
 
@@ -32,7 +32,7 @@ namespace Cogito.Kademlia.Tests.Json
 
             var ipv4 = protocol.CreateEndpoint(new KIpEndpoint(new KIp4Address(IPAddress.Parse("1.1.1.1")), 123));
             var ipv6 = protocol.CreateEndpoint(new KIpEndpoint(new KIp6Address(IPAddress.Parse("::1")), 123));
-            var message = new KMessage<KNodeId32, KPingRequest<KNodeId32>>(new KMessageHeader<KNodeId32>(sender, 1), new KPingRequest<KNodeId32>(new IKEndpoint<KNodeId32>[] { ipv4, ipv6 }));
+            var message = new KMessage<KNodeId32, KPingRequest<KNodeId32>>(new KMessageHeader<KNodeId32>(sender, 1), new KPingRequest<KNodeId32>(new IKProtocolEndpoint<KNodeId32>[] { ipv4, ipv6 }));
             var sequence = new KMessageSequence<KNodeId32>(1, new IKMessage<KNodeId32>[] { message });
 
             encoder.Encode(protocol, buffer, sequence);

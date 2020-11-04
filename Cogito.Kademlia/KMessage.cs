@@ -6,14 +6,14 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Defines a message.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
+    /// <typeparam name="TNodeId"></typeparam>
     /// <typeparam name="TBody"></typeparam>
-    public readonly struct KMessage<TKNodeId, TBody> : IKMessage<TKNodeId>
-        where TKNodeId : unmanaged
-        where TBody : struct, IKMessageBody<TKNodeId>
+    public readonly struct KMessage<TNodeId, TBody> : IKMessage<TNodeId>
+        where TNodeId : unmanaged
+        where TBody : struct, IKRequestBody<TNodeId>
     {
 
-        readonly KMessageHeader<TKNodeId> header;
+        readonly KMessageHeader<TNodeId> header;
         readonly TBody body;
 
         /// <summary>
@@ -21,7 +21,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="header"></param>
         /// <param name="body"></param>
-        public KMessage(in KMessageHeader<TKNodeId> header, in TBody body)
+        public KMessage(in KMessageHeader<TNodeId> header, in TBody body)
         {
             this.header = header;
             this.body = body;
@@ -30,7 +30,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the message header.
         /// </summary>
-        public KMessageHeader<TKNodeId> Header => header;
+        public KMessageHeader<TNodeId> Header => header;
 
         /// <summary>
         /// Gets the message body.
@@ -40,14 +40,14 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the message body.
         /// </summary>
-        IKMessageBody<TKNodeId> IKMessage<TKNodeId>.Body => body;
+        IKRequestBody<TNodeId> IKMessage<TNodeId>.Body => body;
 
         /// <summary>
         /// Returns <c>true</c> if the object is equal to this object.
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool Equals(IKMessage<TKNodeId> other)
+        public bool Equals(IKMessage<TNodeId> other)
         {
             return other.Header.Equals(header) && other.Body.Equals(body);
         }
@@ -59,7 +59,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            return obj is IKMessage<TKNodeId> other && Equals(other);
+            return obj is IKMessage<TNodeId> other && Equals(other);
         }
 
         /// <summary>

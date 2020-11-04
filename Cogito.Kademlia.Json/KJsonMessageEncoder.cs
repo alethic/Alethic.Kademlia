@@ -3,89 +3,88 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Text.Json;
 
-using Cogito.Kademlia.Net;
-using Cogito.Kademlia.Protocols;
-
 namespace Cogito.Kademlia.Json
 {
 
     /// <summary>
-    /// Implements a <see cref="IKMessageEncoder{TKNodeId}"/> using JSON.
+    /// Implements a <see cref="IKMessageEncoder{TNodeId}"/> using JSON.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KJsonMessageEncoder<TKNodeId> : IKMessageEncoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    class KJsonMessageEncoder<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        public void Encode(IKIpProtocolResourceProvider<TKNodeId> resources, IBufferWriter<byte> buffer, KMessageSequence<TKNodeId> sequence)
+        public string ContentType => "application/json";
+
+        public void Encode(IKMessageContext<TNodeId> context, IBufferWriter<byte> buffer, KMessageSequence<TNodeId> sequence)
         {
             using var writer = new Utf8JsonWriter(buffer);
             writer.WriteStartObject();
             writer.WriteNumber("network", sequence.Network);
             writer.WritePropertyName("messages");
-            Write(writer, resources, sequence);
+            Write(writer, context, sequence);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, IEnumerable<IKMessage<TKNodeId>> messages)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IEnumerable<IKMessage<TNodeId>> messages)
         {
             writer.WriteStartArray();
 
             foreach (var message in messages)
-                Write(writer, resources, message);
+                Write(writer, context, message);
 
             writer.WriteEndArray();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, IKMessage<TKNodeId> message)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKMessage<TNodeId> message)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("header");
-            Write(writer, resources, message.Header);
+            Write(writer, context, message.Header);
 
             writer.WritePropertyName("type");
 
             switch (message.Body)
             {
-                case KPingRequest<TKNodeId> request:
+                case KPingRequest<TNodeId> request:
                     writer.WriteStringValue("PING");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, request);
+                    Write(writer, context, request);
                     break;
-                case KPingResponse<TKNodeId> response:
+                case KPingResponse<TNodeId> response:
                     writer.WriteStringValue("PING_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, response);
+                    Write(writer, context, response);
                     break;
-                case KStoreRequest<TKNodeId> request:
+                case KStoreRequest<TNodeId> request:
                     writer.WriteStringValue("STORE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, request);
+                    Write(writer, context, request);
                     break;
-                case KStoreResponse<TKNodeId> response:
+                case KStoreResponse<TNodeId> response:
                     writer.WriteStringValue("STORE_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, response);
+                    Write(writer, context, response);
                     break;
-                case KFindNodeRequest<TKNodeId> request:
+                case KFindNodeRequest<TNodeId> request:
                     writer.WriteStringValue("FIND_NODE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, request);
+                    Write(writer, context, request);
                     break;
-                case KFindNodeResponse<TKNodeId> response:
+                case KFindNodeResponse<TNodeId> response:
                     writer.WriteStringValue("FIND_NODE_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, response);
+                    Write(writer, context, response);
                     break;
-                case KFindValueRequest<TKNodeId> request:
+                case KFindValueRequest<TNodeId> request:
                     writer.WriteStringValue("FIND_VALUE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, request);
+                    Write(writer, context, request);
                     break;
-                case KFindValueResponse<TKNodeId> response:
+                case KFindValueResponse<TNodeId> response:
                     writer.WriteStringValue("FIND_VALUE_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, resources, response);
+                    Write(writer, context, response);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -94,48 +93,48 @@ namespace Cogito.Kademlia.Json
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, TKNodeId nodeId)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, TNodeId nodeId)
         {
 #if NET47
-            var a = new byte[KNodeId<TKNodeId>.SizeOf];
+            var a = new byte[KNodeId<TNodeId>.SizeOf];
 #else
-            var a = (Span<byte>)stackalloc byte[KNodeId<TKNodeId>.SizeOf];
+            var a = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
 #endif
             nodeId.Write(a);
             writer.WriteBase64StringValue(a);
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KMessageHeader<TKNodeId> header)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("sender");
-            Write(writer, resources, header.Sender);
+            Write(writer, context, header.Sender);
             writer.WriteNumber("magic", header.Magic);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KPingRequest<TKNodeId> request)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPingRequest<TNodeId> request)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("endpoints");
-            Write(writer, resources, request.Endpoints);
+            Write(writer, context, request.Endpoints);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KPingResponse<TKNodeId> response)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPingResponse<TNodeId> response)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("endpoints");
-            Write(writer, resources, response.Endpoints);
+            Write(writer, context, response.Endpoints);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KStoreRequest<TKNodeId> request)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KStoreRequest<TNodeId> request)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName("key");
-            Write(writer, resources, request.Key);
+            Write(writer, context, request.Key);
 
             writer.WriteString("mode", request.Mode switch
             {
@@ -147,11 +146,11 @@ namespace Cogito.Kademlia.Json
             if (request.Value is KValueInfo value)
             {
                 writer.WritePropertyName("value");
-                Write(writer, resources, value);
+                Write(writer, context, value);
             }
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KStoreResponse<TKNodeId> response)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KStoreResponse<TNodeId> response)
         {
             writer.WriteStartObject();
             writer.WriteString("status", response.Status switch
@@ -163,46 +162,46 @@ namespace Cogito.Kademlia.Json
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KFindNodeRequest<TKNodeId> request)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KFindNodeRequest<TNodeId> request)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("key");
-            Write(writer, resources, request.Key);
+            Write(writer, context, request.Key);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KFindNodeResponse<TKNodeId> response)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KFindNodeResponse<TNodeId> response)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("peers");
-            Write(writer, resources, response.Peers);
+            Write(writer, context, response.Peers);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KFindValueRequest<TKNodeId> request)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KFindValueRequest<TNodeId> request)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("key");
-            Write(writer, resources, request.Key);
+            Write(writer, context, request.Key);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KFindValueResponse<TKNodeId> response)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KFindValueResponse<TNodeId> response)
         {
             writer.WriteStartObject();
 
             if (response.Value is KValueInfo value)
             {
                 writer.WritePropertyName("value");
-                Write(writer, resources, value);
+                Write(writer, context, value);
             }
 
             writer.WritePropertyName("peers");
-            Write(writer, resources, response.Peers);
+            Write(writer, context, response.Peers);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KValueInfo value)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KValueInfo value)
         {
             writer.WriteStartObject();
             writer.WriteBase64String("data", value.Data);
@@ -211,44 +210,39 @@ namespace Cogito.Kademlia.Json
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KPeerEndpointInfo<TKNodeId>[] peers)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId>[] peers)
         {
             writer.WriteStartArray();
 
             foreach (var peer in peers)
-                Write(writer, resources, peer);
+                Write(writer, context, peer);
 
             writer.WriteEndArray();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, KPeerEndpointInfo<TKNodeId> peer)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId> peer)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("id");
-            Write(writer, resources, peer.Id);
+            Write(writer, context, peer.Id);
             writer.WritePropertyName("endpoints");
-            Write(writer, resources, peer.Endpoints);
+            Write(writer, context, peer.Endpoints);
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, IEnumerable<IKEndpoint<TKNodeId>> endpoints)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints)
         {
             writer.WriteStartArray();
 
             foreach (var endpoint in endpoints)
-                Write(writer, resources, endpoint);
+                Write(writer, context, endpoint);
 
             writer.WriteEndArray();
         }
 
-        void Write(Utf8JsonWriter writer, IKIpProtocolResourceProvider<TKNodeId> resources, IKEndpoint<TKNodeId> endpoint)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKProtocolEndpoint<TNodeId> endpoint)
         {
-            // we only support IP protocol endpoints
-            var ip = endpoint as KIpProtocolEndpoint<TKNodeId>;
-            if (ip is null)
-                writer.WriteNullValue();
-
-            writer.WriteStringValue(endpoint.ToString());
+            writer.WriteStringValue(endpoint?.ToUri()?.ToString());
         }
 
     }

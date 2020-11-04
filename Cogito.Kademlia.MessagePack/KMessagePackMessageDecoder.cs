@@ -4,53 +4,52 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Cogito.Kademlia.MessagePack.Structures;
-using Cogito.Kademlia.Net;
-using Cogito.Kademlia.Protocols;
+using Cogito.Kademlia.Network;
 
 namespace Cogito.Kademlia.MessagePack
 {
 
     /// <summary>
-    /// Implements a <see cref="IKMessageDecoder{TKNodeId}"/> using MessagePack.
+    /// Implements a decoder using MessagePack.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KMessagePackMessageDecoder<TKNodeId> : IKMessageDecoder<TKNodeId, IKIpProtocolResourceProvider<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    class KMessagePackMessageDecoder<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        public KMessageSequence<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, ReadOnlySequence<byte> buffer)
+        public KMessageSequence<TNodeId> Decode(IKMessageContext<TNodeId> context, ReadOnlySequence<byte> buffer)
         {
             var p = global::MessagePack.MessagePackSerializer.Deserialize<Packet>(buffer);
-            var s = new KMessageSequence<TKNodeId>(p.Network, Decode(resources, p.Messages));
+            var s = new KMessageSequence<TNodeId>(p.Network, Decode(context, p.Messages));
             return s;
         }
 
-        IEnumerable<IKMessage<TKNodeId>> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, IEnumerable<Message> messages)
+        IEnumerable<IKMessage<TNodeId>> Decode(IKMessageContext<TNodeId> context, IEnumerable<Message> messages)
         {
             foreach (var message in messages)
-                yield return Decode(resources, message);
+                yield return Decode(context, message);
         }
 
-        IKMessage<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, Message message)
+        IKMessage<TNodeId> Decode(IKMessageContext<TNodeId> context, Message message)
         {
             switch (message.Body)
             {
                 case PingRequest pi:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, pi));
+                    return Create(context, Decode(context, message.Header), Decode(context, pi));
                 case PingResponse pr:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, pr));
+                    return Create(context, Decode(context, message.Header), Decode(context, pr));
                 case StoreRequest si:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, si));
+                    return Create(context, Decode(context, message.Header), Decode(context, si));
                 case StoreResponse sr:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, sr));
+                    return Create(context, Decode(context, message.Header), Decode(context, sr));
                 case FindNodeRequest fni:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, fni));
+                    return Create(context, Decode(context, message.Header), Decode(context, fni));
                 case FindNodeResponse fnr:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, fnr));
+                    return Create(context, Decode(context, message.Header), Decode(context, fnr));
                 case FindValueRequest fvi:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, fvi));
+                    return Create(context, Decode(context, message.Header), Decode(context, fvi));
                 case FindValueResponse fvr:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, fvr));
+                    return Create(context, Decode(context, message.Header), Decode(context, fvr));
                 default:
                     throw new InvalidOperationException();
             }
@@ -60,75 +59,75 @@ namespace Cogito.Kademlia.MessagePack
         /// Creates a message from the components.
         /// </summary>
         /// <typeparam name="TBody"></typeparam>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="header"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKMessage<TKNodeId> Create<TBody>(IKIpProtocolResourceProvider<TKNodeId> resources, KMessageHeader<TKNodeId> header, TBody body)
-            where TBody : struct, IKMessageBody<TKNodeId>
+        IKMessage<TNodeId> Create<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
+            where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessage<TKNodeId, TBody>(header, body);
+            return new KMessage<TNodeId, TBody>(header, body);
         }
 
         /// <summary>
-        /// Decodes a <typeparamref name="TKNodeId"/>.
+        /// Decodes a <typeparamref name="TNodeId"/>.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        TKNodeId DecodeNodeId(IKIpProtocolResourceProvider<TKNodeId> resources, byte[] bytes)
+        TNodeId DecodeNodeId(IKMessageContext<TNodeId> context, byte[] bytes)
         {
 #if NET47
-            return KNodeId<TKNodeId>.Read(bytes);
+            return KNodeId<TNodeId>.Read(bytes);
 #else
-            return KNodeId<TKNodeId>.Read(bytes.AsSpan());
+            return KNodeId<TNodeId>.Read(bytes.AsSpan());
 #endif
         }
 
         /// <summary>
         /// Decodes a message header.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="header"></param>
         /// <returns></returns>
-        KMessageHeader<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, Header header)
+        KMessageHeader<TNodeId> Decode(IKMessageContext<TNodeId> context, Header header)
         {
-            return new KMessageHeader<TKNodeId>(DecodeNodeId(resources, header.Sender), header.Magic);
+            return new KMessageHeader<TNodeId>(DecodeNodeId(context, header.Sender), header.Magic);
         }
 
         /// <summary>
         /// Decodes a PING request.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        KPingRequest<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, PingRequest request)
+        KPingRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, PingRequest request)
         {
-            return new KPingRequest<TKNodeId>(Decode(resources, request.Endpoints).ToArray());
+            return new KPingRequest<TNodeId>(Decode(context, request.Endpoints).ToArray());
         }
 
         /// <summary>
         /// Decodes a PING response.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        KPingResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, PingResponse response)
+        KPingResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, PingResponse response)
         {
-            return new KPingResponse<TKNodeId>(Decode(resources, response.Endpoints).ToArray());
+            return new KPingResponse<TNodeId>(Decode(context, response.Endpoints).ToArray());
         }
 
         /// <summary>
         /// Decodes a STORE request.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        KStoreRequest<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreRequest request)
+        KStoreRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, StoreRequest request)
         {
-            return new KStoreRequest<TKNodeId>(
-                DecodeNodeId(resources, request.Key),
-                Decode(resources, request.Mode),
+            return new KStoreRequest<TNodeId>(
+                DecodeNodeId(context, request.Key),
+                Decode(context, request.Mode),
                 request.HasValue ?
                     new KValueInfo(
                         request.Value.Data,
@@ -140,10 +139,10 @@ namespace Cogito.Kademlia.MessagePack
         /// <summary>
         /// Decodes a <see cref="StoreRequest.Types.StoreRequestMode" />.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="mode"></param>
         /// <returns></returns>
-        KStoreRequestMode Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreRequestMode mode)
+        KStoreRequestMode Decode(IKMessageContext<TNodeId> context, StoreRequestMode mode)
         {
             return mode switch
             {
@@ -156,21 +155,21 @@ namespace Cogito.Kademlia.MessagePack
         /// <summary>
         /// Decodes a STORE response.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        KStoreResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreResponse response)
+        KStoreResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, StoreResponse response)
         {
-            return new KStoreResponse<TKNodeId>(Decode(resources, response.Status));
+            return new KStoreResponse<TNodeId>(Decode(context, response.Status));
         }
 
         /// <summary>
         /// Decodes the STORE response status.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="status"></param>
         /// <returns></returns>
-        KStoreResponseStatus Decode(IKIpProtocolResourceProvider<TKNodeId> resources, StoreResponseStatus status)
+        KStoreResponseStatus Decode(IKMessageContext<TNodeId> context, StoreResponseStatus status)
         {
             return status switch
             {
@@ -183,46 +182,46 @@ namespace Cogito.Kademlia.MessagePack
         /// <summary>
         /// Decodes a FIND_NODE request.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        KFindNodeRequest<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindNodeRequest request)
+        KFindNodeRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, FindNodeRequest request)
         {
-            return new KFindNodeRequest<TKNodeId>(DecodeNodeId(resources, request.Key));
+            return new KFindNodeRequest<TNodeId>(DecodeNodeId(context, request.Key));
         }
 
         /// <summary>
         /// Decodes a FIND_NODE response.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        KFindNodeResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindNodeResponse response)
+        KFindNodeResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, FindNodeResponse response)
         {
-            return new KFindNodeResponse<TKNodeId>(Decode(resources, response.Peers).ToArray());
+            return new KFindNodeResponse<TNodeId>(Decode(context, response.Peers).ToArray());
         }
 
         /// <summary>
         /// Decodes a FIND_NODE request.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="request"></param>
         /// <returns></returns>
-        KFindValueRequest<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindValueRequest request)
+        KFindValueRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, FindValueRequest request)
         {
-            return new KFindValueRequest<TKNodeId>(DecodeNodeId(resources, request.Key));
+            return new KFindValueRequest<TNodeId>(DecodeNodeId(context, request.Key));
         }
 
         /// <summary>
         /// Decodes a FIND_NODE response.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        KFindValueResponse<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, FindValueResponse response)
+        KFindValueResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, FindValueResponse response)
         {
-            return new KFindValueResponse<TKNodeId>(
-                Decode(resources, response.Peers).ToArray(),
+            return new KFindValueResponse<TNodeId>(
+                Decode(context, response.Peers).ToArray(),
                 response.HasValue ?
                     new KValueInfo(
                         response.Value.Data,
@@ -234,55 +233,47 @@ namespace Cogito.Kademlia.MessagePack
         /// <summary>
         /// Decodes a list of peers.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="peers"></param>
         /// <returns></returns>
-        IEnumerable<KPeerEndpointInfo<TKNodeId>> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, Peer[] peers)
+        IEnumerable<KPeerEndpointInfo<TNodeId>> Decode(IKMessageContext<TNodeId> context, Peer[] peers)
         {
             foreach (var peer in peers)
-                yield return Decode(resources, peer);
+                yield return Decode(context, peer);
         }
 
         /// <summary>
         /// Decodes a single peer.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="peer"></param>
         /// <returns></returns>
-        KPeerEndpointInfo<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, Peer peer)
+        KPeerEndpointInfo<TNodeId> Decode(IKMessageContext<TNodeId> context, Peer peer)
         {
-            return new KPeerEndpointInfo<TKNodeId>(DecodeNodeId(resources, peer.Id), new KEndpointSet<TKNodeId>(Decode(resources, peer.Endpoints)));
+            return new KPeerEndpointInfo<TNodeId>(DecodeNodeId(context, peer.Id), new KEndpointSet<TNodeId>(Decode(context, peer.Endpoints)));
         }
 
         /// <summary>
         /// Decodes a list of endpoints.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="endpoints"></param>
         /// <returns></returns>
-        IEnumerable<IKEndpoint<TKNodeId>> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, IpEndpoint[] endpoints)
+        IEnumerable<IKProtocolEndpoint<TNodeId>> Decode(IKMessageContext<TNodeId> context, Uri[] endpoints)
         {
             foreach (var endpoint in endpoints)
-                yield return Decode(resources, endpoint);
+                yield return Decode(context, endpoint);
         }
 
         /// <summary>
         /// Decodes a single endpoint.
         /// </summary>
-        /// <param name="resources"></param>
+        /// <param name="context"></param>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        IKEndpoint<TKNodeId> Decode(IKIpProtocolResourceProvider<TKNodeId> resources, IpEndpoint endpoint)
+        IKProtocolEndpoint<TNodeId> Decode(IKMessageContext<TNodeId> context, Uri endpoint)
         {
-            switch (endpoint.Address)
-            {
-                case Ipv4Address ipv4:
-                    return resources.CreateEndpoint(new KIpEndpoint(DecodeIp4Address(ipv4.Value), endpoint.Port));
-                case Ipv6Address ipv6:
-                    return resources.CreateEndpoint(new KIpEndpoint(DecodeIp6Address(ipv6.Value), endpoint.Port));
-                default:
-                    throw new InvalidOperationException();
-            }
+            return context.ResolveEndpoint(endpoint);
         }
 
         /// <summary>

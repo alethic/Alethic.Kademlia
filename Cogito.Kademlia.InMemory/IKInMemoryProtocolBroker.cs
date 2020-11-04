@@ -7,9 +7,9 @@ namespace Cogito.Kademlia.InMemory
     /// <summary>
     /// Describes an object that can route messages between in-memory protocol instances.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKInMemoryProtocolBroker<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public interface IKInMemoryProtocolBroker<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="protocol"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask RegisterAsync(in TKNodeId node, IKInMemoryProtocol<TKNodeId> protocol, CancellationToken cancellationToken);
+        ValueTask RegisterAsync(in TNodeId node, IKInMemoryProtocol<TNodeId> protocol, CancellationToken cancellationToken);
 
         /// <summary>
         /// Removes the specified protocol from the broker.
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="protocol"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask UnregisterAsync(in TKNodeId node, IKInMemoryProtocol<TKNodeId> protocol, CancellationToken cancellationToken);
+        ValueTask UnregisterAsync(in TNodeId node, IKInMemoryProtocol<TNodeId> protocol, CancellationToken cancellationToken);
 
         /// <summary>
         /// Routes a PING request.
@@ -38,38 +38,9 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in TKNodeId sender, KInMemoryProtocolEndpoint<TKNodeId> target, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Routes a STORE request.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in TKNodeId sender, KInMemoryProtocolEndpoint<TKNodeId> target, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Routes a FIND_NODE request.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in TKNodeId sender, KInMemoryProtocolEndpoint<TKNodeId> target, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Routes a FIND_VALUE request.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in TKNodeId sender, KInMemoryProtocolEndpoint<TKNodeId> target, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
-
+        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(in TNodeId sender, KInMemoryProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
+            where TRequest : struct, IKRequestBody<TNodeId>
+            where TResponse : struct, IKResponseBody<TNodeId>;
 
     }
 

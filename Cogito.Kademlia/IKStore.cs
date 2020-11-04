@@ -8,9 +8,9 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a component that implements a value store for values published to the node.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKStore<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public interface IKStore<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -21,7 +21,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<bool> SetAsync(in TKNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default);
+        ValueTask<bool> SetAsync(in TNodeId key, KStoreValueMode mode, in KValueInfo? value, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the value from the value store.
@@ -29,12 +29,12 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KValueInfo?> GetAsync(in TKNodeId key, CancellationToken cancellationToken = default);
+        ValueTask<KValueInfo?> GetAsync(in TNodeId key, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Invoked when a value is changed.
         /// </summary>
-        event EventHandler<KValueEventArgs<TKNodeId>> ValueChanged;
+        event EventHandler<KValueEventArgs<TNodeId>> ValueChanged;
 
     }
 

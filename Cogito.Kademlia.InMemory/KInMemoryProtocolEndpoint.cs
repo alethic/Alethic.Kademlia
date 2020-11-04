@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,34 +10,42 @@ namespace Cogito.Kademlia.InMemory
     /// <summary>
     /// Provides an endpoint implementation for an in memory node.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KInMemoryProtocolEndpoint<TKNodeId> : IKEndpoint<TKNodeId>, IEquatable<KInMemoryProtocolEndpoint<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KInMemoryProtocolEndpoint<TNodeId> : IKProtocolEndpoint<TNodeId>, IEquatable<KInMemoryProtocolEndpoint<TNodeId>>
+        where TNodeId : unmanaged
     {
 
-        readonly IKProtocol<TKNodeId> protocol;
-        readonly TKNodeId node;
+        readonly IKProtocol<TNodeId> protocol;
+        readonly TNodeId node;
+        readonly string[] accepts;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="protocol"></param>
         /// <param name="node"></param>
-        public KInMemoryProtocolEndpoint(IKProtocol<TKNodeId> protocol, in TKNodeId node)
+        /// <param name="accepts"></param>
+        public KInMemoryProtocolEndpoint(IKProtocol<TNodeId> protocol, in TNodeId node, IEnumerable<string> accepts)
         {
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.node = node;
+            this.accepts = accepts?.ToArray();
         }
 
         /// <summary>
         /// Gets the associated protocol.
         /// </summary>
-        public IKProtocol<TKNodeId> Protocol => protocol;
+        public IKProtocol<TNodeId> Protocol => protocol;
 
         /// <summary>
         /// Gets the endpoint.
         /// </summary>
-        public TKNodeId Node => node;
+        public TNodeId Node => node;
+
+        /// <summary>
+        /// Gets the set of media types supported by the endpoint.
+        /// </summary>
+        public IEnumerable<string> Accepts => accepts;
 
         /// <summary>
         /// Initiates a PING request against the endpoint.
@@ -43,43 +53,11 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(in KPingRequest<TKNodeId> request, CancellationToken cancellationToken)
+        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(in TRequest request, CancellationToken cancellationToken)
+            where TRequest : struct, IKRequestBody<TNodeId>
+            where TResponse : struct, IKResponseBody<TNodeId>
         {
-            return protocol.PingAsync(this, request, cancellationToken);
-        }
-
-        /// <summary>
-        /// Initiates a STORE request against the endpoint.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken)
-        {
-            return protocol.StoreAsync(this, request, cancellationToken);
-        }
-
-        /// <summary>
-        /// Initiates a FIND_NODE request against the endpoint.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken)
-        {
-            return protocol.FindNodeAsync(this, request, cancellationToken);
-        }
-
-        /// <summary>
-        /// Initiates a FIND_VALUE request against the endpoint.
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken)
-        {
-            return protocol.FindValueAsync(this, request, cancellationToken);
+            return protocol.InvokeAsync<TRequest, TResponse>(this, request, cancellationToken);
         }
 
         /// <summary>
@@ -111,13 +89,14 @@ namespace Cogito.Kademlia.InMemory
         }
 
         /// <summary>
-        /// Returns <c>true</c> if this instance matches the specified instance.
+        /// Returns a URI for the endpoint.
         /// </summary>
-        /// <param name="obj"></param>
         /// <returns></returns>
-        public override bool Equals(object obj)
+        public unsafe Uri ToUri()
         {
-            return obj is KInMemoryProtocolEndpoint<TKNodeId> other && Equals(other);
+            var a = new byte[KNodeId<TNodeId>.SizeOf];
+            node.Write(a.AsSpan());
+            return new Uri($"memory://${BitConverter.ToString(a).Replace("-", "")}");
         }
 
         /// <summary>
@@ -125,7 +104,17 @@ namespace Cogito.Kademlia.InMemory
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public bool Equals(KInMemoryProtocolEndpoint<TKNodeId> other)
+        public override bool Equals(object obj)
+        {
+            return obj is KInMemoryProtocolEndpoint<TNodeId> other && Equals(other);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if this instance matches the specified instance.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public bool Equals(KInMemoryProtocolEndpoint<TNodeId> other)
         {
             return ReferenceEquals(protocol, other.protocol) && node.Equals(other.node);
         }

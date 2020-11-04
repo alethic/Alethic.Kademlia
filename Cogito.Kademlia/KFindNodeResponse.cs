@@ -4,17 +4,17 @@
     /// <summary>
     /// Describes a response to a FIND_NODE request.
     /// </summary>
-    public readonly struct KFindNodeResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    public readonly struct KFindNodeResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        readonly KPeerEndpointInfo<TKNodeId>[] peers;
+        readonly KPeerEndpointInfo<TNodeId>[] peers;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="peers"></param>
-        public KFindNodeResponse(KPeerEndpointInfo<TKNodeId>[] peers)
+        public KFindNodeResponse(KPeerEndpointInfo<TNodeId>[] peers)
         {
             this.peers = peers;
         }
@@ -22,7 +22,7 @@
         /// <summary>
         /// Gets the set of peers and their endpoints returned by the lookup.
         /// </summary>
-        public KPeerEndpointInfo<TKNodeId>[] Peers => peers;
+        public KPeerEndpointInfo<TNodeId>[] Peers => peers;
 
     }
 

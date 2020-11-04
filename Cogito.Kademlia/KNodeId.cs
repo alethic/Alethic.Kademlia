@@ -14,15 +14,15 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Provides methods for interacting with a KNodeId.
     /// </summary>
-    public static class KNodeId<TKNodeId>
-        where TKNodeId : unmanaged
+    public static class KNodeId<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        static readonly int szz = Unsafe.SizeOf<TKNodeId>();
+        static readonly int szz = Unsafe.SizeOf<TNodeId>();
         static readonly RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
 
         /// <summary>
-        /// Gets the size of the <typeparamref name="TKNodeId"/> type.
+        /// Gets the size of the <typeparamref name="TNodeId"/> type.
         /// </summary>
         /// <returns></returns>
         public static int SizeOf => szz;
@@ -31,7 +31,7 @@ namespace Cogito.Kademlia
         /// Creates a new random node ID.
         /// </summary>
         /// <returns></returns>
-        public static TKNodeId Create()
+        public static TNodeId Create()
         {
 #if NET47 || NETSTANDARD2_0
             var b = new byte[SizeOf];
@@ -39,33 +39,33 @@ namespace Cogito.Kademlia
             var b = (Span<byte>)stackalloc byte[SizeOf];
 #endif
             rng.GetBytes(b);
-            return MemoryMarshal.Read<TKNodeId>(b);
+            return MemoryMarshal.Read<TNodeId>(b);
         }
 
         /// <summary>
-        /// Reads the given <typeparamref name="TKNodeId"/> from the specified data.
+        /// Reads the given <typeparamref name="TNodeId"/> from the specified data.
         /// </summary>
         /// <param name="sequence"></param>
-        public static TKNodeId Read(ref ReadOnlySequence<byte> sequence)
+        public static TNodeId Read(ref ReadOnlySequence<byte> sequence)
         {
             return sequence.AdvanceOver(SizeOf, Read);
         }
 
         /// <summary>
-        /// Reads the given <typeparamref name="TKNodeId"/> from the specified data.
+        /// Reads the given <typeparamref name="TNodeId"/> from the specified data.
         /// </summary>
         /// <param name="span"></param>
-        public static TKNodeId Read(ReadOnlySpan<byte> span)
+        public static TNodeId Read(ReadOnlySpan<byte> span)
         {
-            return MemoryMarshal.Read<TKNodeId>(span);
+            return MemoryMarshal.Read<TNodeId>(span);
         }
 
         /// <summary>
-        /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.
+        /// Writes the given <typeparamref name="TNodeId"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="writer"></param>
-        public static void Write(TKNodeId self, IBufferWriter<byte> writer)
+        public static void Write(TNodeId self, IBufferWriter<byte> writer)
         {
             var s = SizeOf;
             Write(self, writer.GetSpan(s));
@@ -73,11 +73,11 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.
+        /// Writes the given <typeparamref name="TNodeId"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="target"></param>
-        public static void Write(TKNodeId self, Span<byte> target)
+        public static void Write(TNodeId self, Span<byte> target)
         {
             MemoryMarshal.Write(target, ref self);
         }
@@ -85,11 +85,11 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Calculates the distance between the two node IDs.
         /// </summary>
-        /// <typeparam name="TKNodeId"></typeparam>
+        /// <typeparam name="TNodeId"></typeparam>
         /// <param name="l"></param>
         /// <param name="r"></param>
         /// <param name="o"></param>
-        public static void CalculateDistance(in TKNodeId l, in TKNodeId r, Span<byte> o)
+        public static void CalculateDistance(in TNodeId l, in TNodeId r, Span<byte> o)
         {
             var s = SizeOf;
             if (o.Length < s)
@@ -113,12 +113,12 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Randomizes the last <paramref name="suffixCount"/> bits within a <see cref="TKNodeId"/>.
+        /// Randomizes the last <paramref name="suffixCount"/> bits within a <see cref="TNodeId"/>.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="suffixCount"></param>
         /// <returns></returns>
-        public static TKNodeId Randomize(in TKNodeId self, int suffixCount)
+        public static TNodeId Randomize(in TNodeId self, int suffixCount)
         {
             // set all except suffix
             var selfMask = new BitArray(SizeOf * 8);
@@ -158,45 +158,45 @@ namespace Cogito.Kademlia
         /// Creates a new random node ID.
         /// </summary>
         /// <returns></returns>
-        public static TKNodeId Create<TKNodeId>()
-            where TKNodeId : unmanaged
+        public static TNodeId Create<TNodeId>()
+            where TNodeId : unmanaged
         {
-            return KNodeId<TKNodeId>.Create();
+            return KNodeId<TNodeId>.Create();
         }
 
         /// <summary>
-        /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.
+        /// Writes the given <typeparamref name="TNodeId"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="writer"></param>
-        public static void Write<TKNodeId>(this TKNodeId self, IBufferWriter<byte> writer)
-            where TKNodeId : unmanaged
+        public static void Write<TNodeId>(this TNodeId self, IBufferWriter<byte> writer)
+            where TNodeId : unmanaged
         {
-            KNodeId<TKNodeId>.Write(self, writer);
+            KNodeId<TNodeId>.Write(self, writer);
         }
 
         /// <summary>
-        /// Writes the given <typeparamref name="TKNodeId"/> to the specified buffer writer.
+        /// Writes the given <typeparamref name="TNodeId"/> to the specified buffer writer.
         /// </summary>
         /// <param name="self"></param>
         /// <param name="target"></param>
-        public static void Write<TKNodeId>(this TKNodeId self, Span<byte> target)
-            where TKNodeId : unmanaged
+        public static void Write<TNodeId>(this TNodeId self, Span<byte> target)
+            where TNodeId : unmanaged
         {
-            KNodeId<TKNodeId>.Write(self, target);
+            KNodeId<TNodeId>.Write(self, target);
         }
 
         /// <summary>
         /// Calculates the distance between the two node IDs.
         /// </summary>
-        /// <typeparam name="TKNodeId"></typeparam>
+        /// <typeparam name="TNodeId"></typeparam>
         /// <param name="l"></param>
         /// <param name="r"></param>
         /// <param name="o"></param>
-        public static void CalculateDistance<TKNodeId>(in TKNodeId l, in TKNodeId r, Span<byte> o)
-            where TKNodeId : unmanaged
+        public static void CalculateDistance<TNodeId>(in TNodeId l, in TNodeId r, Span<byte> o)
+            where TNodeId : unmanaged
         {
-            KNodeId<TKNodeId>.CalculateDistance(l, r, o);
+            KNodeId<TNodeId>.CalculateDistance(l, r, o);
         }
 
     }

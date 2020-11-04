@@ -6,12 +6,12 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a datagram header.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KMessageHeader<TKNodeId> : IEquatable<KMessageHeader<TKNodeId>>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KMessageHeader<TNodeId> : IEquatable<KMessageHeader<TNodeId>>
+        where TNodeId : unmanaged
     {
 
-        readonly TKNodeId sender;
+        readonly TNodeId sender;
         readonly ulong magic;
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="magic"></param>
-        public KMessageHeader(in TKNodeId sender, ulong magic)
+        public KMessageHeader(in TNodeId sender, ulong magic)
         {
             this.sender = sender;
             this.magic = magic;
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the sender of the datagram.
         /// </summary>
-        public TKNodeId Sender => sender;
+        public TNodeId Sender => sender;
 
         /// <summary>
         /// Gets the value identifying this datagram in a request/response lifecycle.
@@ -40,7 +40,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="other"></param>
         /// <returns></returns>
-        public bool Equals(KMessageHeader<TKNodeId> other)
+        public bool Equals(KMessageHeader<TNodeId> other)
         {
             return other.Sender.Equals(sender) && other.Magic.Equals(magic);
         }
@@ -51,7 +51,7 @@ namespace Cogito.Kademlia
         /// <param name="obj"></param>
         public override bool Equals(object obj)
         {
-            return obj is KMessageHeader<TKNodeId> other && Equals(other);
+            return obj is KMessageHeader<TNodeId> other && Equals(other);
         }
 
         /// <summary>

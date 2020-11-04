@@ -4,9 +4,9 @@
     /// <summary>
     /// Describes a STORE request.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KStoreRequest<TKNodeId> : IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KStoreRequest<TNodeId> : IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -14,12 +14,12 @@
         /// </summary>
         /// <param name="status"></param>
         /// <returns></returns>
-        public KStoreResponse<TKNodeId> Respond(KStoreResponseStatus status)
+        public KStoreResponse<TNodeId> Respond(KStoreResponseStatus status)
         {
-            return new KStoreResponse<TKNodeId>(status);
+            return new KStoreResponse<TNodeId>(status);
         }
 
-        readonly TKNodeId key;
+        readonly TNodeId key;
         readonly KStoreRequestMode mode;
         readonly KValueInfo? value;
 
@@ -29,7 +29,7 @@
         /// <param name="key"></param>
         /// <param name="mode"></param>
         /// <param name="value"></param>
-        public KStoreRequest(in TKNodeId key, KStoreRequestMode mode, in KValueInfo? value)
+        public KStoreRequest(in TNodeId key, KStoreRequestMode mode, in KValueInfo? value)
         {
             this.key = key;
             this.mode = mode;
@@ -39,7 +39,7 @@
         /// <summary>
         /// Specifies the key to be stored.
         /// </summary>
-        public TKNodeId Key => key;
+        public TNodeId Key => key;
 
         /// <summary>
         /// Gets the mode of the store request.

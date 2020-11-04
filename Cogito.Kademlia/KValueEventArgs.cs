@@ -6,12 +6,12 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes an event that occurred to a value.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public class KValueEventArgs<TKNodeId> : EventArgs
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KValueEventArgs<TNodeId> : EventArgs
+        where TNodeId : unmanaged
     {
 
-        readonly TKNodeId key;
+        readonly TNodeId key;
         readonly KValueInfo? value;
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public KValueEventArgs(in TKNodeId key, in KValueInfo? value)
+        public KValueEventArgs(in TNodeId key, in KValueInfo? value)
         {
             this.key = key;
             this.value = value;
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the key that was changed.
         /// </summary>
-        public TKNodeId Key => key;
+        public TNodeId Key => key;
 
         /// <summary>
         /// Gets the new value information.

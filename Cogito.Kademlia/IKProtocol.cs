@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,14 +9,21 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Provides required operations for node communication within Kademlia.
     /// </summary>
-    public interface IKProtocol<TKNodeId>
-        where TKNodeId : unmanaged
+    public interface IKProtocol<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
         /// Gets the set of endpoints available for communication with this protocol.
         /// </summary>
-        IEnumerable<IKEndpoint<TKNodeId>> Endpoints { get; }
+        IEnumerable<IKProtocolEndpoint<TNodeId>> Endpoints { get; }
+
+        /// <summary>
+        /// Attempts to create an endpoint for the protocol given the specified URI. Can return <c>null</c> if the protocol does not support the endpoint.
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri);
 
         /// <summary>
         /// Initiates a PING operation to the remote node and returns its result.
@@ -24,34 +32,9 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KPingResponse<TKNodeId>>> PingAsync(IKEndpoint<TKNodeId> target, in KPingRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Initiates a STORE operation to the remote node and returns its result.
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KStoreResponse<TKNodeId>>> StoreAsync(IKEndpoint<TKNodeId> target, in KStoreRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Initiates a FIND_NODE operation to the remote node and returns its result.
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindNodeResponse<TKNodeId>>> FindNodeAsync(IKEndpoint<TKNodeId> target, in KFindNodeRequest<TKNodeId> request, CancellationToken cancellationToken);
-
-        /// <summary>
-        /// Initiates a FIND_VALUE operation to the remote node and returns its result.
-        /// </summary>
-        /// <param name="target"></param>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<KResponse<TKNodeId, KFindValueResponse<TKNodeId>>> FindValueAsync(IKEndpoint<TKNodeId> target, in KFindValueRequest<TKNodeId> request, CancellationToken cancellationToken);
+        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(IKProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken = default)
+            where TRequest : struct, IKRequestBody<TNodeId>
+            where TResponse : struct, IKResponseBody<TNodeId>;
 
     }
 

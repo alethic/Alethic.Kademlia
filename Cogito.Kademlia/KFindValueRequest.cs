@@ -7,9 +7,9 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a FIND_VALUE request.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public readonly struct KFindValueRequest<TKNodeId> : IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public readonly struct KFindValueRequest<TNodeId> : IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
         /// <summary>
@@ -18,9 +18,9 @@ namespace Cogito.Kademlia
         /// <param name="peers"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(KPeerEndpointInfo<TKNodeId>[] peers, in KValueInfo? value)
+        public KFindValueResponse<TNodeId> Respond(KPeerEndpointInfo<TNodeId>[] peers, in KValueInfo? value)
         {
-            return new KFindValueResponse<TKNodeId>(peers, value);
+            return new KFindValueResponse<TNodeId>(peers, value);
         }
 
         /// <summary>
@@ -29,18 +29,18 @@ namespace Cogito.Kademlia
         /// <param name="peers"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public KFindValueResponse<TKNodeId> Respond(IEnumerable<KPeerEndpointInfo<TKNodeId>> peers, in KValueInfo? value)
+        public KFindValueResponse<TNodeId> Respond(IEnumerable<KPeerEndpointInfo<TNodeId>> peers, in KValueInfo? value)
         {
-            return new KFindValueResponse<TKNodeId>(peers.ToArray(), value);
+            return new KFindValueResponse<TNodeId>(peers.ToArray(), value);
         }
 
-        readonly TKNodeId key;
+        readonly TNodeId key;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
-        public KFindValueRequest(in TKNodeId key)
+        public KFindValueRequest(in TNodeId key)
         {
             this.key = key;
         }
@@ -48,7 +48,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Specifies the key to be located.
         /// </summary>
-        public TKNodeId Key => key;
+        public TNodeId Key => key;
 
     }
 

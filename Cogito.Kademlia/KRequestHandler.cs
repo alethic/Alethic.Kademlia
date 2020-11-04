@@ -1,0 +1,166 @@
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
+
+namespace Cogito.Kademlia
+{
+
+    /// <summary>
+    /// Handles incoming requests.
+    /// </summary>
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KRequestHandler<TNodeId> : IKRequestHandler<TNodeId>
+        where TNodeId : unmanaged
+    {
+
+        readonly IKEngine<TNodeId> engine;
+        readonly IKRouter<TNodeId> router;
+        readonly IKStore<TNodeId> store;
+        readonly ILogger logger;
+
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="engine"></param>
+        /// <param name="router"></param>
+        /// <param name="store"></param>
+        /// <param name="logger"></param>
+        public KRequestHandler(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
+        {
+            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.router = router ?? throw new ArgumentNullException(nameof(router));
+            this.store = store ?? throw new ArgumentNullException(nameof(store));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming PING requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KPingResponse<TNodeId>> OnPingAsync(in TNodeId sender, in KPingRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            logger?.LogDebug("Processing {Operation} from {Sender}.", "PING", sender);
+            return OnPingAsync(sender, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming PING requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KPingResponse<TNodeId>> OnPingAsync(TNodeId sender, KPingRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(sender, request.Endpoints, cancellationToken);
+
+            return request.Respond(engine.Endpoints.ToArray());
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming STORE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(in TNodeId sender, in KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            logger?.LogDebug("Processing {Operation} from {Sender}.", "STORE", sender);
+            return OnStoreAsync(sender, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming STORE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(TNodeId sender, KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(sender, null, cancellationToken);
+            await store.SetAsync(request.Key, ToStoreMode(request.Mode), request.Value, cancellationToken);
+
+            return request.Respond(KStoreResponseStatus.Success);
+        }
+
+        /// <summary>
+        /// Converts the store request mode into the store setter mode.
+        /// </summary>
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        KStoreValueMode ToStoreMode(KStoreRequestMode mode)
+        {
+            return mode switch
+            {
+                KStoreRequestMode.Primary => KStoreValueMode.Primary,
+                KStoreRequestMode.Replica => KStoreValueMode.Replica,
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_NODE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(in TNodeId sender, in KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_NODE", sender);
+            return OnFindNodeAsync(sender, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_NODE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(TNodeId sender, KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(sender, null, cancellationToken);
+
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken));
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_VALUE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(in TNodeId sender, in KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_VALUE", sender);
+            return OnFindValueAsync(sender, request, cancellationToken);
+        }
+
+        /// <summary>
+        /// Invoked to handle incoming FIND_VALUE requests.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(TNodeId sender, KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
+        {
+            await router.UpdatePeerAsync(sender, null, cancellationToken);
+            var r = await store.GetAsync(request.Key);
+
+            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r);
+        }
+
+    }
+
+}

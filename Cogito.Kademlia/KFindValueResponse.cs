@@ -6,11 +6,11 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a response to a FIND_VALUE request.
     /// </summary>
-    public readonly struct KFindValueResponse<TKNodeId> : IKResponseData<TKNodeId>, IKMessageBody<TKNodeId>
-        where TKNodeId : unmanaged
+    public readonly struct KFindValueResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+        where TNodeId : unmanaged
     {
 
-        readonly KPeerEndpointInfo<TKNodeId>[] peers;
+        readonly KPeerEndpointInfo<TNodeId>[] peers;
         readonly KValueInfo? value;
 
         /// <summary>
@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="peers"></param>
         /// <param name="value"></param>
-        public KFindValueResponse(KPeerEndpointInfo<TKNodeId>[] peers, in KValueInfo? value)
+        public KFindValueResponse(KPeerEndpointInfo<TNodeId>[] peers, in KValueInfo? value)
         {
             this.peers = peers ?? throw new ArgumentNullException(nameof(peers));
             this.value = value;
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of peers and their endpoints returned by the lookup.
         /// </summary>
-        public KPeerEndpointInfo<TKNodeId>[] Peers => peers;
+        public KPeerEndpointInfo<TNodeId>[] Peers => peers;
 
         /// <summary>
         /// Gets the value that was located.

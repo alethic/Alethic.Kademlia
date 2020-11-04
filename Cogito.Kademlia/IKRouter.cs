@@ -9,16 +9,10 @@ namespace Cogito.Kademlia
     /// Describes a Kademlia routing table. A routing table is used to track the known nodes within the network and
     /// provide lookups.
     /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    /// <typeparam name="TKNodeData"></typeparam>
-    public interface IKRouter<TKNodeId, TKNodeData> : IKRouter<TKNodeId>
-        where TKNodeId : unmanaged
+    /// <typeparam name="TNodeId"></typeparam>
+    public interface IKRouter<TNodeId>
+        where TNodeId : unmanaged
     {
-
-        /// <summary>
-        /// Gets the peer data of the node itself.
-        /// </summary>
-        TKNodeData SelfData { get; }
 
         /// <summary>
         /// Gets the data associated with the specified peer.
@@ -26,23 +20,7 @@ namespace Cogito.Kademlia
         /// <param name="id"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<TKNodeData> GetNodeDataAsync(in TKNodeId id, CancellationToken cancellationToken = default);
-
-    }
-
-    /// <summary>
-    /// Describes a Kademlia routing table. A routing table is used to track the known nodes within the network and
-    /// provide lookups.
-    /// </summary>
-    /// <typeparam name="TKNodeId"></typeparam>
-    public interface IKRouter<TKNodeId>
-        where TKNodeId : unmanaged
-    {
-
-        /// <summary>
-        /// Gets the ID of the node itself.
-        /// </summary>
-        TKNodeId Self { get; }
+        ValueTask<KEndpointSet<TNodeId>> GetEndpointsAsync(in TNodeId id, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Gets the current K-value of the router.
@@ -61,7 +39,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<IEnumerable<KPeerEndpointInfo<TKNodeId>>> SelectPeersAsync(in TKNodeId key, int k, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<KPeerEndpointInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Updates the endpoints of the node within the router.
@@ -70,7 +48,7 @@ namespace Cogito.Kademlia
         /// <param name="endpoints">Additional known endpoints of the peer.</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask UpdatePeerAsync(in TKNodeId id, IEnumerable<IKEndpoint<TKNodeId>> endpoints, CancellationToken cancellationToken = default);
+        ValueTask UpdatePeerAsync(in TNodeId id, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken = default);
 
     }
 
