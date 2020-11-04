@@ -97,7 +97,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public Uri ToUri()
         {
-            var q = "?accepts=" + string.Join(",", accepts);
+            var q = "?format=" + string.Join(",", accepts);
             var h = endpoint.Protocol switch { KIpAddressFamily.IPv4 => endpoint.V4.ToString(), KIpAddressFamily.IPv6 => endpoint.V6.ToString() };
             Uri F(string protocol) => new UriBuilder() { Scheme = protocol, Host = h, Port = endpoint.Port, Query = q }.Uri;
 

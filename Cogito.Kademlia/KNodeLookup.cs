@@ -121,17 +121,17 @@ namespace Cogito.Kademlia
         /// <param name="engine"></param>
         /// <param name="router"></param>
         /// <param name="invoker"></param>
+        /// <param name="logger"></param>
         /// <param name="alpha">Number of outstanding FIND_ RPC requests to keep in flight.</param>
         /// <param name="cache">Number of nodes to cache resulting values at.</param>
-        /// <param name="logger"></param>
-        public KNodeLookup(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, int alpha = 3, int cache = 1, ILogger logger = null)
+        public KNodeLookup(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.alpha = alpha;
             this.cache = cache;
-            this.logger = logger;
         }
 
         /// <summary>

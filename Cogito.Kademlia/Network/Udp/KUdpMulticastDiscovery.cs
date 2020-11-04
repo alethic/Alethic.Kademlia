@@ -12,6 +12,7 @@ using Cogito.Threading;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cogito.Kademlia.Network.Udp
 {
@@ -24,22 +25,16 @@ namespace Cogito.Kademlia.Network.Udp
         where TNodeId : unmanaged
     {
 
-        static readonly KIpEndpoint DefaultEndpoint = new KIpEndpoint(KIp4Address.Parse("239.255.83.54"), 1283);
-        static readonly TimeSpan DefaultFrequency = TimeSpan.FromSeconds(600);
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
         static readonly Random rnd = new Random();
 
-        readonly ulong network;
+        readonly IOptions<KUdpOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
         readonly IKMessageFormat<TNodeId> format;
         readonly IKConnector<TNodeId> connector;
         readonly IKRequestHandler<TNodeId> handler;
-        readonly KIpEndpoint endpoint;
-        readonly TimeSpan frequency;
-        readonly TimeSpan timeout;
         readonly ILogger logger;
-        readonly AsyncLock sync = new AsyncLock();
 
+        readonly AsyncLock sync = new AsyncLock();
         readonly KRequestResponseQueue<TNodeId, ulong> queue;
 
         Socket mcastSocket;
@@ -54,38 +49,23 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="network"></param>
+        /// <param name="options"></param>
         /// <param name="engine"></param>
-        /// <param name="connector"></param>
         /// <param name="format"></param>
-        /// <param name="endpoint"></param>
-        /// <param name="frequency"></param>
-        /// <param name="timeout"></param>
+        /// <param name="connector"></param>
+        /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(ulong network, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, KIpEndpoint? endpoint = null, TimeSpan? frequency = null, TimeSpan? timeout = null, ILogger logger = null)
+        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
-            this.network = network;
+            this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.format = format ?? throw new ArgumentNullException(nameof(format));
             this.connector = connector ?? throw new ArgumentNullException(nameof(connector));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
-            this.endpoint = endpoint ?? DefaultEndpoint;
-            this.frequency = frequency ?? DefaultFrequency;
-            this.timeout = timeout ?? DefaultTimeout;
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            queue = new KRequestResponseQueue<TNodeId, ulong>(this.timeout);
+            queue = new KRequestResponseQueue<TNodeId, ulong>(options.Value.Multicast.Timeout ?? options.Value.Timeout);
         }
-
-        /// <summary>
-        /// Gets the engine associated with this protocol.
-        /// </summary>
-        public IKEngine<TNodeId> Engine => engine;
-
-        /// <summary>
-        /// Gets the set of endpoints available for communication with this protocol.
-        /// </summary>
-        public IEnumerable<IKProtocolEndpoint<TNodeId>> Endpoints => Enumerable.Empty<IKProtocolEndpoint<TNodeId>>();
 
         /// <summary>
         /// Gets the next magic value.
@@ -99,10 +79,10 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Gets the wildcard endpoint.
         /// </summary>
-        KIpEndpoint IpAny => endpoint.Protocol switch
+        KIpEndpoint IpAny => options.Value.Multicast.Endpoint.Address.AddressFamily switch
         {
-            KIpAddressFamily.IPv4 => KIpEndpoint.AnyV4,
-            KIpAddressFamily.IPv6 => KIpEndpoint.AnyV6,
+            AddressFamily.InterNetwork => KIpEndpoint.AnyV4,
+            AddressFamily.InterNetworkV6 => KIpEndpoint.AnyV6,
             _ => throw new InvalidOperationException(),
         };
 
@@ -121,14 +101,14 @@ namespace Cogito.Kademlia.Network.Udp
                 if (mcastSocket != null)
                     throw new KProtocolException(KProtocolError.Invalid, "Discovery is already started.");
 
-                switch (endpoint.Protocol)
+                switch (options.Value.Multicast.Endpoint.AddressFamily)
                 {
-                    case KIpAddressFamily.IPv4:
-                        logger?.LogInformation("Initializing IPv4 multicast UDP discovery on {Endpoint}.", endpoint);
+                    case AddressFamily.InterNetwork:
+                        logger?.LogInformation("Initializing IPv4 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
                         mcastSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                         mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                        mcastSocket.Bind(new IPEndPoint(IPAddress.Any, endpoint.Port));
-                        mcastSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(endpoint.V4.ToIPAddress(), IPAddress.Any));
+                        mcastSocket.Bind(new IPEndPoint(IPAddress.Any, options.Value.Multicast.Endpoint.Port));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(options.Value.Multicast.Endpoint.Address, IPAddress.Any));
                         mcastSocket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
                         mcastRecvArgs = new SocketAsyncEventArgs();
                         mcastRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
@@ -140,12 +120,12 @@ namespace Cogito.Kademlia.Network.Udp
                         localRecvArgs = new SocketAsyncEventArgs();
                         localRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
                         break;
-                    case KIpAddressFamily.IPv6:
-                        logger?.LogInformation("Initializing IPv6 multicast UDP discovery on {Endpoint}.", endpoint);
+                    case AddressFamily.InterNetworkV6:
+                        logger?.LogInformation("Initializing IPv6 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
                         mcastSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                        mcastSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, endpoint.Port));
-                        mcastSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new MulticastOption(endpoint.V6.ToIPAddress(), IPAddress.IPv6Any));
+                        mcastSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, options.Value.Multicast.Endpoint.Port));
+                        mcastSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new MulticastOption(options.Value.Multicast.Endpoint.Address, IPAddress.IPv6Any));
                         mcastSocket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastTimeToLive, 2);
                         mcastRecvArgs = new SocketAsyncEventArgs();
                         mcastRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.IPv6Any, 0);
@@ -319,7 +299,7 @@ namespace Cogito.Kademlia.Network.Udp
                     logger?.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
                 }
 
-                await Task.Delay(frequency, cancellationToken);
+                await Task.Delay(options.Value.Multicast.DiscoveryFrequency, cancellationToken);
             }
         }
 
@@ -329,8 +309,8 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
         {
-            // only allow connect to run for so long
-            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(DefaultTimeout).Token, cancellationToken).Token;
+            // cancel PING after timeout
+            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(options.Value.Multicast.Timeout ?? options.Value.Timeout).Token, cancellationToken).Token;
 
             try
             {
@@ -373,7 +353,7 @@ namespace Cogito.Kademlia.Network.Udp
 
                 // decode incoming byte sequence
                 var l = format.Decode(new KMessageContext<TNodeId>(engine), new ReadOnlySequence<byte>(packet));
-                if (l.Network != network)
+                if (l.Network != options.Value.Network)
                 {
                     logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
                     return new ValueTask(Task.CompletedTask);
@@ -443,8 +423,8 @@ namespace Cogito.Kademlia.Network.Udp
 
             try
             {
-                logger?.LogDebug("Sending packet to {Endpoint} with {Magic}.", endpoint, magic);
-                await SocketSendToAsync(buffer, endpoint.ToIPEndPoint(), cancellationToken);
+                logger?.LogDebug("Sending packet to {Endpoint} with {Magic}.", options.Value.Multicast.Endpoint, magic);
+                await SocketSendToAsync(buffer, options.Value.Multicast.Endpoint, cancellationToken);
             }
             catch (Exception)
             {
@@ -469,7 +449,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(network, new IKMessage<TNodeId>[] { new KMessage<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, magic), body) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new IKMessage<TNodeId>[] { new KMessage<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, magic), body) });
         }
 
         /// <summary>
@@ -504,7 +484,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, KMessage<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received multicast PING:{Magic} from {Sender} at {Endpoint}.", request.Header.Magic, request.Header.Sender, endpoint);
-            await SendPingReplyAsync(endpoint, request.Header.Magic, await handler.OnPingAsync(request.Header.Sender, request.Body, cancellationToken), cancellationToken);
+            await SendPingReplyAsync(endpoint, request.Header.Magic, await handler.OnPingAsync(request.Header.Sender, null, request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask SendPingReplyAsync(in KIpEndpoint endpoint, ulong magic, in KPingResponse<TNodeId> response, CancellationToken cancellationToken)

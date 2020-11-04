@@ -60,13 +60,13 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="store"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryPublisher(IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, IKStore<TNodeId> store, TimeSpan? frequency = null, ILogger logger = null)
+        public KInMemoryPublisher(IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, IKStore<TNodeId> store, ILogger logger, TimeSpan? frequency = null)
         {
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
             this.store = store ?? throw new ArgumentNullException(nameof(store));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.frequency = frequency ?? TimeSpan.FromHours(1);
-            this.logger = logger;
         }
 
         /// <summary>

@@ -2,6 +2,7 @@
 using System.Linq;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cogito.Kademlia
 {
@@ -14,7 +15,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly TNodeId selfId;
+        readonly IOptions<KEngineOptions<TNodeId>> options;
         readonly ILogger logger;
 
         readonly KEndpointSet<TNodeId> endpoints;
@@ -22,11 +23,11 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="selfId"></param>
+        /// <param name="options"></param>
         /// <param name="logger"></param>
-        public KEngine(TNodeId selfId, ILogger logger)
+        public KEngine(IOptions<KEngineOptions<TNodeId>> options, ILogger logger)
         {
-            this.selfId = selfId;
+            this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             endpoints = new KEndpointSet<TNodeId>();
@@ -35,7 +36,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the Node ID of the node itself.
         /// </summary>
-        public TNodeId SelfId => selfId;
+        public TNodeId SelfId => options.Value.NodeId;
 
         /// <summary>
         /// Gets the set of endpoints available on the engine.

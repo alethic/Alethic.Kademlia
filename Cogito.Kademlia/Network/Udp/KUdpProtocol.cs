@@ -15,6 +15,7 @@ using Cogito.Threading;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cogito.Kademlia.Network.Udp
 {
@@ -27,19 +28,17 @@ namespace Cogito.Kademlia.Network.Udp
         where TNodeId : unmanaged
     {
 
-        static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
         static readonly Random rnd = new Random();
 
-        readonly ulong network;
+        readonly IOptions<KUdpOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
         readonly IKMessageFormat<TNodeId> format;
         readonly IKRequestHandler<TNodeId> handler;
-        readonly KIpEndpoint listen;
         readonly ILogger logger;
 
         readonly AsyncLock sync = new AsyncLock();
         readonly Dictionary<KIpEndpoint, KIpProtocolEndpoint<TNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TNodeId>>();
-        readonly KRequestResponseQueue<TNodeId, ulong> queue = new KRequestResponseQueue<TNodeId, ulong>(DefaultTimeout);
+        readonly KRequestResponseQueue<TNodeId, ulong> queue;
 
         Socket sendSocket;
         Dictionary<IPAddress, Socket> recvSockets;
@@ -47,25 +46,21 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="network"></param>
+        /// <param name="options"></param>
         /// <param name="engine"></param>
         /// <param name="format"></param>
-        /// <param name="listen"></param>
+        /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(ulong network, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKRequestHandler<TNodeId> handler, KIpEndpoint? listen = null, ILogger logger = null)
+        public KUdpProtocol(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
-            this.network = network;
+            this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.format = format ?? throw new ArgumentNullException(nameof(format));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
-            this.listen = listen ?? KIpEndpoint.Any;
-            this.logger = logger;
-        }
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        /// <summary>
-        /// Uniquely idenfies the traffic for this network from others.
-        /// </summary>
-        public ulong Network => network;
+            queue = new KRequestResponseQueue<TNodeId, ulong>(options.Value.Timeout);
+        }
 
         /// <summary>
         /// Gets the set of endpoints through which this protocol is reachable.
@@ -90,7 +85,7 @@ namespace Cogito.Kademlia.Network.Udp
         public IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri)
         {
             var n = HttpUtility.ParseQueryString(uri.Query);
-            var a = n.Get("accepts").Split(',');
+            var a = n.Get("format").Split(',');
             return uri.Scheme == "udp" ? CreateEndpoint(KIpEndpoint.Parse(uri.ToString()), a) : null;
         }
 
@@ -125,31 +120,31 @@ namespace Cogito.Kademlia.Network.Udp
         void RefreshReceiveSockets()
         {
             // determine port, either we already have one allocated previously, or we need to generate a new one
-            var recvPort = (ushort?)recvSockets.Select(i => i.Value.LocalEndPoint).Cast<IPEndPoint>().FirstOrDefault()?.Port ?? listen.Port;
+            var recvPort = (ushort?)recvSockets.Select(i => i.Value.LocalEndPoint).Cast<IPEndPoint>().FirstOrDefault()?.Port ?? options.Value.Listen?.Port ?? 0;
             var ipListen = GetLocalIpAddresses();
 
             // the IPs we listen to are governed by the 'listen' endpoint
-            switch (listen.Protocol)
+            switch (options.Value.Listen?.AddressFamily)
             {
-                case KIpAddressFamily.IPv4:
+                case AddressFamily.InterNetwork:
                     {
                         // listen only on V4
                         ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetwork);
 
                         // listen only on specific address
-                        if (listen.V4 != KIp4Address.Any)
-                            ipListen = ipListen.Where(i => new KIp4Address(i) == listen.V4);
+                        if (options.Value.Listen?.Address != IPAddress.Any)
+                            ipListen = ipListen.Where(i => i == options.Value.Listen.Address);
                         break;
                     }
 
-                case KIpAddressFamily.IPv6:
+                case AddressFamily.InterNetworkV6:
                     {
                         // listen only on V6
                         ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetworkV6);
 
                         // listen only on specific address
-                        if (listen.V6 != KIp6Address.Any)
-                            ipListen = ipListen.Where(i => new KIp6Address(i) == listen.V6);
+                        if (options.Value.Listen?.Address != IPAddress.IPv6Any)
+                            ipListen = ipListen.Where(i => i == options.Value.Listen.Address);
                         break;
                     }
                 default:
@@ -246,22 +241,22 @@ namespace Cogito.Kademlia.Network.Udp
                     engine.Endpoints.Remove(i);
 
                 // listen protocol determines send socket binding
-                switch (listen.Protocol)
+                switch (options.Value.Listen?.AddressFamily ?? AddressFamily.Unspecified)
                 {
-                    case KIpAddressFamily.Unknown:
+                    case AddressFamily.Unspecified:
                         // establish UDP socket for both IPv4 and IPv6 (dual mode)
                         sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.DualMode = true;
                         sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
                         logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
                         break;
-                    case KIpAddressFamily.IPv4:
+                    case AddressFamily.InterNetwork:
                         // establish UDP socket for IPv4
                         sendSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
                         logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
                         break;
-                    case KIpAddressFamily.IPv6:
+                    case AddressFamily.InterNetworkV6:
                         // establish UDP socket for IPv6
                         sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
@@ -397,7 +392,7 @@ namespace Cogito.Kademlia.Network.Udp
         ValueTask OnReceiveAsync(Socket socket, in KIpEndpoint source, ReadOnlyMemory<byte> packet, CancellationToken cancellationToken)
         {
             var sequence = format.Decode(new KMessageContext<TNodeId>(engine), new ReadOnlySequence<byte>(packet));
-            if (sequence.Network != network)
+            if (sequence.Network != options.Value.Network)
             {
                 logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", sequence.Network);
                 return new ValueTask(Task.CompletedTask);
@@ -436,7 +431,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageMessage<TBody>(ulong magic, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(network, new[] { (IKMessage<TNodeId>)new KMessage<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, magic), body) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKMessage<TNodeId>)new KMessage<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, magic), body) });
         }
 
         /// <summary>
@@ -450,7 +445,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask OnReceivePingRequestAsync(Socket socket, KIpEndpoint source, KMessage<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "PING", request.Header.Magic, request.Header.Sender, source);
-            await OnPingReplyAsync(socket, source, request.Header.Magic, await handler.OnPingAsync(request.Header.Sender, request.Body, cancellationToken), cancellationToken);
+            await OnPingReplyAsync(socket, source, request.Header.Magic, await handler.OnPingAsync(request.Header.Sender, null, request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask OnPingReplyAsync(Socket socket, in KIpEndpoint source, ulong magic, in KPingResponse<TNodeId> response, CancellationToken cancellationToken)
@@ -472,7 +467,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask OnReceiveStoreRequestAsync(Socket socket, KIpEndpoint source, KMessage<TNodeId, KStoreRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "STORE", request.Header.Magic, request.Header.Sender, source);
-            await StoreReplyAsync(socket, source, request.Header.Magic, await handler.OnStoreAsync(request.Header.Sender, request.Body, cancellationToken), cancellationToken);
+            await StoreReplyAsync(socket, source, request.Header.Magic, await handler.OnStoreAsync(request.Header.Sender, null, request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask StoreReplyAsync(Socket socket, in KIpEndpoint source, ulong magic, in KStoreResponse<TNodeId> response, CancellationToken cancellationToken)
@@ -494,7 +489,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask OnReceiveFindNodeRequestAsync(Socket socket, KIpEndpoint source, KMessage<TNodeId, KFindNodeRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.Magic, request.Header.Sender, source);
-            await FindNodeReplyAsync(socket, source, request.Header.Magic, await handler.OnFindNodeAsync(request.Header.Sender, request.Body, cancellationToken), cancellationToken);
+            await FindNodeReplyAsync(socket, source, request.Header.Magic, await handler.OnFindNodeAsync(request.Header.Sender, null, request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask FindNodeReplyAsync(Socket socket, in KIpEndpoint source, ulong magic, in KFindNodeResponse<TNodeId> response, CancellationToken cancellationToken)
@@ -516,7 +511,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask OnReceiveFindValueRequestAsync(Socket socket, KIpEndpoint source, KMessage<TNodeId, KFindValueRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{Magic} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.Magic, request.Header.Sender, source);
-            await FindValueReplyAsync(socket, source, request.Header.Magic, await handler.OnFindValueAsync(request.Header.Sender, request.Body, cancellationToken), cancellationToken);
+            await FindValueReplyAsync(socket, source, request.Header.Magic, await handler.OnFindValueAsync(request.Header.Sender, null, request.Body, cancellationToken), cancellationToken);
         }
 
         ValueTask FindValueReplyAsync(Socket socket, in KIpEndpoint source, ulong magic, in KFindValueResponse<TNodeId> response, CancellationToken cancellationToken)
@@ -592,7 +587,7 @@ namespace Cogito.Kademlia.Network.Udp
             using (await sync.LockAsync(cancellationToken))
             {
                 // stop listening for address changes
-                NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+                NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
 
                 // remove any endpoints registered by ourselves
                 foreach (var i in endpoints.Values)

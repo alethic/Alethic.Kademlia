@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 
+using Microsoft.Extensions.Logging;
+
 namespace Cogito.Kademlia
 {
 
@@ -10,21 +12,23 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     public class KValueLookup<TNodeId> : IKValueLookup<TNodeId>
-        where TNodeId: unmanaged
+        where TNodeId : unmanaged
     {
 
         readonly IKNodeLookup<TNodeId> nodes;
         readonly IKStore<TNodeId> store;
+        readonly ILogger logger;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="nodes"></param>
         /// <param name="store"></param>
-        public KValueLookup(IKNodeLookup<TNodeId> nodes, IKStore<TNodeId> store)
+        public KValueLookup(IKNodeLookup<TNodeId> nodes, IKStore<TNodeId> store, ILogger logger)
         {
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
             this.store = store ?? throw new ArgumentNullException(nameof(store));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         /// <summary>

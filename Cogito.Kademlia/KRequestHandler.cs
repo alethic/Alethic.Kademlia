@@ -40,23 +40,25 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming PING requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KPingResponse<TNodeId>> OnPingAsync(in TNodeId sender, in KPingRequest<TNodeId> request, CancellationToken cancellationToken)
+        public ValueTask<KPingResponse<TNodeId>> OnPingAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Processing {Operation} from {Sender}.", "PING", sender);
-            return OnPingAsync(sender, request, cancellationToken);
+            return OnPingAsync(sender, source, request, cancellationToken);
         }
 
         /// <summary>
         /// Invoked to handle incoming PING requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KPingResponse<TNodeId>> OnPingAsync(TNodeId sender, KPingRequest<TNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KPingResponse<TNodeId>> OnPingAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, request.Endpoints, cancellationToken);
 
@@ -67,23 +69,25 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming STORE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(in TNodeId sender, in KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
+        public ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Processing {Operation} from {Sender}.", "STORE", sender);
-            return OnStoreAsync(sender, request, cancellationToken);
+            return OnStoreAsync(sender, source, request, cancellationToken);
         }
 
         /// <summary>
         /// Invoked to handle incoming STORE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(TNodeId sender, KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
             await store.SetAsync(request.Key, ToStoreMode(request.Mode), request.Value, cancellationToken);
@@ -110,23 +114,25 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming FIND_NODE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(in TNodeId sender, in KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
+        public ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_NODE", sender);
-            return OnFindNodeAsync(sender, request, cancellationToken);
+            return OnFindNodeAsync(sender, source, request, cancellationToken);
         }
 
         /// <summary>
         /// Invoked to handle incoming FIND_NODE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(TNodeId sender, KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
 
@@ -137,23 +143,25 @@ namespace Cogito.Kademlia
         /// Invoked to handle incoming FIND_VALUE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(in TNodeId sender, in KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
+        public ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_VALUE", sender);
-            return OnFindValueAsync(sender, request, cancellationToken);
+            return OnFindValueAsync(sender, source, request, cancellationToken);
         }
 
         /// <summary>
         /// Invoked to handle incoming FIND_VALUE requests.
         /// </summary>
         /// <param name="sender"></param>
+        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(TNodeId sender, KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
+        async ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
         {
             await router.UpdatePeerAsync(sender, null, cancellationToken);
             var r = await store.GetAsync(request.Key);

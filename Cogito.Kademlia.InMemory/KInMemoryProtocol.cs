@@ -162,13 +162,13 @@ namespace Cogito.Kademlia.InMemory
             switch (request)
             {
                 case KPingRequest<TNodeId> ping:
-                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnPingAsync(sender, ping, cancellationToken);
+                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnPingAsync(sender, source, ping, cancellationToken);
                 case KStoreRequest<TNodeId> store:
-                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnStoreAsync(sender, store, cancellationToken);
+                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnStoreAsync(sender, source, store, cancellationToken);
                 case KFindNodeRequest<TNodeId> findNode:
-                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnFindNodeAsync(sender, findNode, cancellationToken);
+                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnFindNodeAsync(sender, source, findNode, cancellationToken);
                 case KFindValueRequest<TNodeId> findValue:
-                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnFindValueAsync(sender, findValue, cancellationToken);
+                    return (TResponse)(IKResponseBody<TNodeId>)await handler.OnFindValueAsync(sender, source, findValue, cancellationToken);
                 default:
                     throw new KProtocolException(KProtocolError.Invalid, "Invalid message type.");
             }

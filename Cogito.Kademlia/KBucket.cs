@@ -66,7 +66,7 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask UpdatePeerAsync(in TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
+        public ValueTask UpdatePeerAsync(in TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
         {
             return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
         }

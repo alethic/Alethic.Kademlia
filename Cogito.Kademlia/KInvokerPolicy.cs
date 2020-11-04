@@ -71,7 +71,7 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Attempts to execute the specified method against an endpoint.
+        /// Attempts to execute the specified method against an endpoint.IO
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
