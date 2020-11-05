@@ -33,7 +33,7 @@ namespace Cogito.Kademlia.Network.Udp
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
-        readonly IKMessageFormat<TNodeId> format;
+        readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly ILogger logger;
 
         readonly AsyncLock sync = new AsyncLock();
@@ -48,16 +48,17 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="options"></param>
         /// <param name="engine"></param>
-        /// <param name="format"></param>
+        /// <param name="formats"></param>
+        /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpProtocol(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            this.format = format ?? throw new ArgumentNullException(nameof(format));
+            this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            server = new KUdpServer<TNodeId>(options, engine, format, handler, logger, magic);
+            server = new KUdpServer<TNodeId>(options, engine, formats, handler, new KUdpSerializer<TNodeId>(formats, magic), logger);
         }
 
         /// <summary>
@@ -70,9 +71,9 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        KIpProtocolEndpoint<TNodeId> CreateEndpoint(in KIpEndpoint endpoint, IEnumerable<string> accepts)
+        KIpProtocolEndpoint<TNodeId> CreateEndpoint(in KIpEndpoint endpoint, IEnumerable<string> formats)
         {
-            return new KIpProtocolEndpoint<TNodeId>(this, endpoint, KIpProtocolType.Udp, accepts);
+            return new KIpProtocolEndpoint<TNodeId>(this, endpoint, KIpProtocolType.Udp, formats);
         }
 
         /// <summary>
@@ -179,7 +180,7 @@ namespace Cogito.Kademlia.Network.Udp
 
                 // record relation between endpoint data and endpoint interface
                 var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
-                engine.Endpoints.Demote(endpoints[ep] = CreateEndpoint(ep, format.ContentType.Yield()));
+                engine.Endpoints.Demote(endpoints[ep] = CreateEndpoint(ep, formats.Select(i => i.ContentType)));
                 logger?.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
 
                 // following sockets will preserve port

@@ -38,12 +38,17 @@ namespace Cogito.Kademlia.Json
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKMessage<TNodeId> message)
         {
-            if (message is IKRequest<TNodeId> request)
-                Write(writer, context, request);
-            if (message is IKResponse<TNodeId> response)
-                Write(writer, context, response);
-
-            throw new InvalidOperationException();
+            switch (message)
+            {
+                case IKRequest<TNodeId> request:
+                    Write(writer, context, request);
+                    break;
+                case IKResponse<TNodeId> response:
+                    Write(writer, context, response);
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
         }
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKRequest<TNodeId> message)
@@ -156,7 +161,7 @@ namespace Cogito.Kademlia.Json
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KResponseStatus status)
         {
-            writer.WriteString("status", status switch
+            writer.WriteStringValue(status switch
             {
                 KResponseStatus.Success => "SUCCESS",
                 KResponseStatus.Failure => "FAILURE",

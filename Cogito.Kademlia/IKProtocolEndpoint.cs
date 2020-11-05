@@ -22,7 +22,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of media types supported by the endpoint.
         /// </summary>
-        IEnumerable<string> Accepts { get; }
+        IEnumerable<string> Formats { get; }
 
         /// <summary>
         /// Returns a <see cref="Uri"/> representation of the endpoint suitable for transmission.

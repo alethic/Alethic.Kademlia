@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
+using Cogito.Linq;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,10 +28,10 @@ namespace Cogito.Kademlia.Network.Udp
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
-        readonly IKMessageFormat<TNodeId> format;
+        readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKRequestHandler<TNodeId> handler;
+        readonly IKUdpSerializer<TNodeId> serializer;
         readonly ILogger logger;
-        readonly uint magic;
 
         readonly KRequestResponseQueue<TNodeId, ulong> queue;
 
@@ -43,15 +43,14 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="format"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        /// <param name="magic"></param>
-        public KUdpServer(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKRequestHandler<TNodeId> handler, ILogger logger, uint magic)
+        public KUdpServer(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, IKUdpSerializer<TNodeId> serializer, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            this.format = format ?? throw new ArgumentNullException(nameof(format));
+            this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
+            this.serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.magic = magic;
 
             queue = new KRequestResponseQueue<TNodeId, ulong>(options.Value.Timeout);
         }
@@ -73,7 +72,10 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         public void OnReceive(Socket receive, Socket respond, SocketAsyncEventArgs args)
         {
-            logger?.LogTrace("Received incoming packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
+            // extract source endpoint
+            var source = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
+            var length = args.BytesTransferred;
+            logger?.LogTrace("Received incoming packet of {Length} from {Endpoint}.", length, source);
 
             try
             {
@@ -93,54 +95,21 @@ namespace Cogito.Kademlia.Network.Udp
                 if (receive.IsBound == false)
                     return;
 
-                // extract source endpoint
-                var source = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-
-                // check that buffer is a valid packet
-                var input = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
-                if (BinaryPrimitives.ReadUInt32LittleEndian(input) != magic)
+                // deserialize message sequence
+                var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(engine, formats.Select(i => i.ContentType)));
+                if (packet.Format == null || packet.Sequence == null)
                     return;
 
-                // advance past magic number
-                input = input.Slice(sizeof(uint));
-
-                // format ends at first NUL
-                var formatEnd = input.IndexOf((byte)0x00);
-                if (formatEnd < 0)
-                    return;
-
-                // extract encoded format type
-#if NET47 || NETSTANDARD2_0
-                var format = Encoding.UTF8.GetString(input.Slice(0, formatEnd).ToArray());
-#else
-                var format = Encoding.UTF8.GetString(input.Slice(0, formatEnd));
-#endif
-                if (format == null)
-                    return;
-
-                // advance past format
-                input = input.Slice(formatEnd + 1);
-
-                // lease temporary memory and copy incoming buffer
-                var memown = MemoryPool<byte>.Shared.Rent(input.Length);
-                var buffer = memown.Memory.Slice(0, input.Length);
-                input.CopyTo(buffer.Span);
-
-                // schedule receive on task pool
                 Task.Run(async () =>
                 {
                     try
                     {
-                        await OnReceiveAsync(receive, respond, source, format, buffer, CancellationToken.None);
+                        logger?.LogTrace("Decoded packet as {Format} from {Endpoint}.", packet.Format, source);
+                        await OnReceiveAsync(receive, respond, source, packet, CancellationToken.None);
                     }
                     catch (Exception e)
                     {
                         logger?.LogError(e, "Unhandled exception dispatching incoming packet.");
-                    }
-                    finally
-                    {
-                        // return the buffer to the pool
-                        memown.Dispose();
                     }
                 });
             }
@@ -160,30 +129,29 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="packet"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveAsync(Socket receive, Socket respond, in KIpEndpoint source, string formata, ReadOnlyMemory<byte> packet, CancellationToken cancellationToken)
+        ValueTask OnReceiveAsync(Socket receive, Socket respond, in KIpEndpoint source, in KUdpPacket<TNodeId> packet, CancellationToken cancellationToken)
         {
-            var sequence = format.Decode(new KMessageContext<TNodeId>(engine), new ReadOnlySequence<byte>(packet));
-            if (sequence.Network != options.Value.Network)
+            if (packet.Sequence.Value.Network != options.Value.Network)
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", sequence.Network);
+                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
                 return new ValueTask(Task.CompletedTask);
             }
 
             var todo = new List<Task>();
 
             // dispatch individual messages into infrastructure
-            foreach (var message in sequence)
+            foreach (var message in packet.Sequence.Value)
             {
                 todo.Add(message switch
                 {
-                    KRequest<TNodeId, KPingRequest<TNodeId>> request => OnReceivePingRequestAsync(receive, respond, source, request, cancellationToken),
-                    KResponse<TNodeId, KPingResponse<TNodeId>> response => OnReceivePingResponseAsync(receive, respond, source, response, cancellationToken).AsTask(),
-                    KRequest<TNodeId, KStoreRequest<TNodeId>> request => OnReceiveStoreRequestAsync(receive, respond, source, request, cancellationToken),
-                    KResponse<TNodeId, KStoreResponse<TNodeId>> response => OnReceiveStoreResponseAsync(receive, respond, source, response, cancellationToken).AsTask(),
-                    KRequest<TNodeId, KFindNodeRequest<TNodeId>> request => OnReceiveFindNodeRequestAsync(receive, respond, source, request, cancellationToken),
-                    KResponse<TNodeId, KFindNodeResponse<TNodeId>> response => OnReceiveFindNodeResponseAsync(receive, respond, source, response, cancellationToken).AsTask(),
-                    KRequest<TNodeId, KFindValueRequest<TNodeId>> request => OnReceiveFindValueRequestAsync(receive, respond, source, request, cancellationToken),
-                    KResponse<TNodeId, KFindValueResponse<TNodeId>> response => OnReceiveFindValueResponseAsync(receive, respond, source, response, cancellationToken).AsTask(),
+                    KRequest<TNodeId, KPingRequest<TNodeId>> request => OnReceivePingRequestAsync(receive, respond, source, packet.Format, request, cancellationToken),
+                    KResponse<TNodeId, KPingResponse<TNodeId>> response => OnReceivePingResponseAsync(receive, respond, source, packet.Format, response, cancellationToken).AsTask(),
+                    KRequest<TNodeId, KStoreRequest<TNodeId>> request => OnReceiveStoreRequestAsync(receive, respond, source, packet.Format, request, cancellationToken),
+                    KResponse<TNodeId, KStoreResponse<TNodeId>> response => OnReceiveStoreResponseAsync(receive, respond, source, packet.Format, response, cancellationToken).AsTask(),
+                    KRequest<TNodeId, KFindNodeRequest<TNodeId>> request => OnReceiveFindNodeRequestAsync(receive, respond, source, packet.Format, request, cancellationToken),
+                    KResponse<TNodeId, KFindNodeResponse<TNodeId>> response => OnReceiveFindNodeResponseAsync(receive, respond, source, packet.Format, response, cancellationToken).AsTask(),
+                    KRequest<TNodeId, KFindValueRequest<TNodeId>> request => OnReceiveFindValueRequestAsync(receive, respond, source, packet.Format, request, cancellationToken),
+                    KResponse<TNodeId, KFindValueResponse<TNodeId>> response => OnReceiveFindValueResponseAsync(receive, respond, source, packet.Format, response, cancellationToken).AsTask(),
                     _ => Task.CompletedTask,
                 });
             }
@@ -215,7 +183,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, TBody body)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Failure, body) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Success, body) });
         }
 
         /// <summary>
@@ -236,23 +204,13 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="messages"></param>
         /// <returns></returns>
-        ReadOnlyMemory<byte> FormatMessages(KMessageSequence<TNodeId> messages)
+        ReadOnlyMemory<byte> FormatMessages(KMessageSequence<TNodeId> messages, IEnumerable<string> formats)
         {
+            if (formats is null)
+                throw new ArgumentNullException(nameof(formats));
+
             var b = new ArrayBufferWriter<byte>();
-
-            // write protocol magic
-            var m = b.GetSpan(sizeof(uint));
-            BinaryPrimitives.WriteUInt32LittleEndian(m, magic);
-            b.Advance(sizeof(uint));
-
-            // write format type
-            b.Write(Encoding.UTF8.GetBytes(format.ContentType));
-            b.Write(new byte[] { 0x00 });
-
-            // write message sequence
-            format.Encode(new KMessageContext<TNodeId>(engine), b, messages);
-
-            // return out finished memory
+            serializer.Write(b, new KMessageContext<TNodeId>(engine, formats), messages);
             return b.WrittenMemory;
         }
 
@@ -261,12 +219,18 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="socket"></param>
         /// <param name="target"></param>
+        /// <param name="formats"></param>
         /// <param name="messages"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask SendAsync(Socket socket, in KIpEndpoint target, KMessageSequence<TNodeId> messages, CancellationToken cancellationToken)
+        ValueTask SendAsync(Socket socket, in KIpEndpoint target, IEnumerable<string> formats, KMessageSequence<TNodeId> messages, CancellationToken cancellationToken)
         {
-            return SocketSendToAsync(socket, FormatMessages(messages).Span, target, cancellationToken);
+            if (socket is null)
+                throw new ArgumentNullException(nameof(socket));
+            if (formats is null)
+                throw new ArgumentNullException(nameof(formats));
+
+            return SocketSendToAsync(socket, FormatMessages(messages, formats).Span, target, cancellationToken);
         }
 
         /// <summary>
@@ -288,13 +252,14 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnReceivePingRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, in KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceivePingRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "PING", request.Header.ReplyId, request.Header.Sender, source);
-            return HandleAsync(receive, respond, source, request, handler.OnPingAsync, cancellationToken);
+            return HandleAsync(receive, respond, source, format, request, handler.OnPingAsync, cancellationToken);
         }
 
         /// <summary>
@@ -302,28 +267,32 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="receive"></param>
         /// <param name="respond"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="sender"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnReceiveStoreRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, in KRequest<TNodeId, KStoreRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceiveStoreRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KStoreRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "STORE", request.Header.ReplyId, request.Header.Sender, source);
-            return HandleAsync(receive, respond, source, request, handler.OnStoreAsync, cancellationToken);
+            return HandleAsync(receive, respond, source, format, request, handler.OnStoreAsync, cancellationToken);
         }
 
         /// <summary>
         /// Invoked when a FIND_NODE request is received.
         /// </summary>
         /// <param name="receive"></param>
+        /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnReceiveFindNodeRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, in KRequest<TNodeId, KFindNodeRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceiveFindNodeRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KFindNodeRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.ReplyId, request.Header.Sender, source);
-            return HandleAsync(receive, respond, source, request, handler.OnFindNodeAsync, cancellationToken);
+            return HandleAsync(receive, respond, source, format, request, handler.OnFindNodeAsync, cancellationToken);
         }
 
         /// <summary>
@@ -332,13 +301,14 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnReceiveFindValueRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, in KRequest<TNodeId, KFindValueRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceiveFindValueRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KFindValueRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.ReplyId, request.Header.Sender, source);
-            return HandleAsync(receive, respond, source, request, handler.OnFindValueAsync, cancellationToken);
+            return HandleAsync(receive, respond, source, format, request, handler.OnFindValueAsync, cancellationToken);
         }
 
         /// <summary>
@@ -361,12 +331,13 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="replyId"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <param name="handler"></param>
         /// <returns></returns>
-        async Task HandleAsync<TRequest, TResponse>(Socket receive, Socket respond, KIpEndpoint source, KRequest<TNodeId, TRequest> request, HandleAsyncDelegate<TRequest, TResponse> handler, CancellationToken cancellationToken)
+        async Task HandleAsync<TRequest, TResponse>(Socket receive, Socket respond, KIpEndpoint source, string format, KRequest<TNodeId, TRequest> request, HandleAsyncDelegate<TRequest, TResponse> handler, CancellationToken cancellationToken)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
@@ -375,12 +346,12 @@ namespace Cogito.Kademlia.Network.Udp
 
             try
             {
-                await ReplyAsync(respond, source, request.Header.ReplyId, await handler(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
+                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Unexpected exception handling request.");
-                await ReplyAsync<TResponse>(respond, source, request.Header.ReplyId, e, cancellationToken);
+                await ReplyAsync<TResponse>(respond, source, format, request.Header.ReplyId, e, cancellationToken);
             }
         }
 
@@ -390,14 +361,15 @@ namespace Cogito.Kademlia.Network.Udp
         /// <typeparam name="TResponse"></typeparam>
         /// <param name="socket"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="replyId"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, uint replyId, in TResponse response, CancellationToken cancellationToken)
+        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, string format, uint replyId, in TResponse response, CancellationToken cancellationToken)
             where TResponse : struct, IKResponseBody<TNodeId>
         {
-            return SendAsync(socket, source, PackageResponse(replyId, response), cancellationToken);
+            return SendAsync(socket, source, format.Yield(), PackageResponse(replyId, response), cancellationToken);
         }
 
         /// <summary>
@@ -406,14 +378,15 @@ namespace Cogito.Kademlia.Network.Udp
         /// <typeparam name="TResponse"></typeparam>
         /// <param name="socket"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="replyId"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, uint replyId, Exception exception, CancellationToken cancellationToken)
+        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, string format, uint replyId, Exception exception, CancellationToken cancellationToken)
             where TResponse : struct, IKResponseBody<TNodeId>
         {
-            return SendAsync(socket, source, PackageResponse<TResponse>(replyId, exception), cancellationToken);
+            return SendAsync(socket, source, format.Yield(), PackageResponse<TResponse>(replyId, exception), cancellationToken);
         }
 
         /// <summary>
@@ -422,10 +395,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceivePingResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
             queue.Respond(response.Header.ReplyId, response);
             return new ValueTask(Task.CompletedTask);
@@ -437,10 +411,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveStoreResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, in KResponse<TNodeId, KStoreResponse<TNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveStoreResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KStoreResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
             queue.Respond(response.Header.ReplyId, response);
             return new ValueTask(Task.CompletedTask);
@@ -452,10 +427,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindNodeResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, in KResponse<TNodeId, KFindNodeResponse<TNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindNodeResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KFindNodeResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
             queue.Respond(response.Header.ReplyId, response);
             return new ValueTask(Task.CompletedTask);
@@ -467,10 +443,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="receive"></param>
         /// <param name="respond"></param>
         /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveFindValueResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, in KResponse<TNodeId, KFindValueResponse<TNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceiveFindValueResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KFindValueResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
             queue.Respond(response.Header.ReplyId, response);
             return new ValueTask(Task.CompletedTask);
@@ -521,6 +498,13 @@ namespace Cogito.Kademlia.Network.Udp
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
+            if (socket is null)
+                throw new ArgumentNullException(nameof(socket));
+            if (target is null)
+                throw new ArgumentNullException(nameof(target));
+            if (target.Formats is null)
+                throw new ArgumentException($"Endpoint '{target}' has no acceptable formats.");
+
             return target is KIpProtocolEndpoint<TNodeId> t ? InvokeAsync<TRequest, TResponse>(socket, t, request, cancellationToken) : throw new KProtocolException(KProtocolError.Invalid, "Invalid endpoint type for protocol.");
         }
 
@@ -529,7 +513,7 @@ namespace Cogito.Kademlia.Network.Udp
             where TResponse : struct, IKResponseBody<TNodeId>
         {
             var replyId = NewReplyId();
-            return SendAndWaitAsync<TResponse>(socket, target.Endpoint, replyId, FormatMessages(PackageRequest(replyId, request)), cancellationToken);
+            return SendAndWaitAsync<TResponse>(socket, target.Endpoint, replyId, FormatMessages(PackageRequest(replyId, request), target.Formats), cancellationToken);
         }
 
     }

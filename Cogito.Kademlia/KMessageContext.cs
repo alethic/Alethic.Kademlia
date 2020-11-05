@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Cogito.Kademlia
 {
@@ -12,6 +13,7 @@ namespace Cogito.Kademlia
     {
 
         readonly IKEngine<TNodeId> engine;
+        readonly IEnumerable<string> formats;
 
         /// <summary>
         /// Initializes a new instance.
@@ -19,9 +21,11 @@ namespace Cogito.Kademlia
         /// <param name="engine"></param>
         /// <param name="sender"></param>
         /// <param name="target"></param>
-        public KMessageContext(IKEngine<TNodeId> engine)
+        /// <param name="formats"></param>
+        public KMessageContext(IKEngine<TNodeId> engine, IEnumerable<string> formats)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
         }
 
         /// <summary>
@@ -33,6 +37,11 @@ namespace Cogito.Kademlia
         {
             return engine.ResolveEndpoint(uri);
         }
+
+        /// <summary>
+        /// Gets the allowable formats.
+        /// </summary>
+        public IEnumerable<string> Formats => formats;
 
     }
 

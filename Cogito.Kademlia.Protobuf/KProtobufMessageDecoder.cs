@@ -21,7 +21,7 @@ namespace Cogito.Kademlia.Protobuf
 
         public KMessageSequence<TNodeId> Decode(IKMessageContext<TNodeId> resources, ReadOnlySequence<byte> buffer)
         {
-            var p = MessageSequence.Parser.ParseFrom(buffer.ToArray());
+            var p = MessageSequence.Parser.ParseFrom(buffer);
             var s = new KMessageSequence<TNodeId>(p.Network, Decode(resources, p.Messages));
             return s;
         }

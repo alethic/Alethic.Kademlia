@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cogito.Kademlia.Core;
+using Cogito.Linq;
 using Cogito.Threading;
 
 using Microsoft.Extensions.Hosting;
@@ -286,7 +287,7 @@ namespace Cogito.Kademlia.Network.Udp
             {
                 try
                 {
-                    await OnReceiveAsync(p, buffer, CancellationToken.None);
+                    await OnReceiveAsync(p, new ReadOnlySequence<byte>(buffer), CancellationToken.None);
                 }
                 catch (Exception e)
                 {
@@ -388,7 +389,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="buffer"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveAsync(in KIpEndpoint source, ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+        ValueTask OnReceiveAsync(in KIpEndpoint source, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
         {
             try
             {
@@ -398,7 +399,7 @@ namespace Cogito.Kademlia.Network.Udp
                     return new ValueTask(Task.CompletedTask);
 
                 // decode incoming byte sequence
-                var l = format.Decode(new KMessageContext<TNodeId>(engine), new ReadOnlySequence<byte>(buffer));
+                var l = format.Decode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer);
                 if (l.Network != options.Value.Network)
                 {
                     logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
@@ -546,7 +547,7 @@ namespace Cogito.Kademlia.Network.Udp
 
                 // write message sequence
                 var replyId = NewReplyId();
-                format.Encode(new KMessageContext<TNodeId>(engine), buffer, PackageMessage(replyId, request));
+                format.Encode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer, PackageMessage(replyId, request));
 
                 // send packet and return task that waits for response
                 return SendAndWaitAsync<KPingResponse<TNodeId>>(replyId, queue, buffer, cancellationToken);
@@ -589,7 +590,7 @@ namespace Cogito.Kademlia.Network.Udp
             buffer.Write(new byte[] { 0x00 });
 
             // write message sequence
-            format.Encode(new KMessageContext<TNodeId>(engine), buffer, PackageResponse(replyId, response));
+            format.Encode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer, PackageResponse(replyId, response));
 
             // send reply packet
             return SocketSendToAsync(buffer, endpoint, cancellationToken);

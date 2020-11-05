@@ -18,7 +18,7 @@ namespace Cogito.Kademlia.Network
         readonly IKProtocol<TNodeId> protocol;
         readonly KIpEndpoint endpoint;
         readonly KIpProtocolType type;
-        readonly IEnumerable<string> accepts;
+        readonly IEnumerable<string> formats;
 
         /// <summary>
         /// Initializes a new instance.
@@ -26,13 +26,13 @@ namespace Cogito.Kademlia.Network
         /// <param name="protocol"></param>
         /// <param name="endpoint"></param>
         /// <param name="type"></param>
-        /// <param name="accepts"></param>
-        public KIpProtocolEndpoint(IKProtocol<TNodeId> protocol, in KIpEndpoint endpoint, KIpProtocolType type, IEnumerable<string> accepts)
+        /// <param name="formats"></param>
+        public KIpProtocolEndpoint(IKProtocol<TNodeId> protocol, in KIpEndpoint endpoint, KIpProtocolType type, IEnumerable<string> formats)
         {
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.endpoint = endpoint;
             this.type = type;
-            this.accepts = accepts ?? throw new ArgumentNullException(nameof(accepts));
+            this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
         }
 
         /// <summary>
@@ -41,9 +41,9 @@ namespace Cogito.Kademlia.Network
         public IKProtocol<TNodeId> Protocol => protocol;
 
         /// <summary>
-        /// Gets the set of media types supported by the endpoint.
+        /// Gets the set of format types supported by the endpoint.
         /// </summary>
-        public IEnumerable<string> Accepts { get; set; }
+        public IEnumerable<string> Formats => formats;
 
         /// <summary>
         /// Gets the endpoint.
@@ -97,7 +97,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public Uri ToUri()
         {
-            var q = "?format=" + string.Join(",", accepts);
+            var q = "?format=" + string.Join(",", formats);
             var h = endpoint.Protocol switch { KIpAddressFamily.IPv4 => endpoint.V4.ToString(), KIpAddressFamily.IPv6 => endpoint.V6.ToString() };
             Uri F(string protocol) => new UriBuilder() { Scheme = protocol, Host = h, Port = endpoint.Port, Query = q }.Uri;
 
@@ -126,7 +126,7 @@ namespace Cogito.Kademlia.Network
         /// <returns></returns>
         public bool Equals(KIpProtocolEndpoint<TNodeId> other)
         {
-            return ReferenceEquals(protocol, other.protocol) && endpoint.Equals(other.endpoint) && accepts.SequenceEqual(other.accepts);
+            return ReferenceEquals(protocol, other.protocol) && endpoint.Equals(other.endpoint) && formats.SequenceEqual(other.formats);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Cogito.Kademlia.Network
             h.Add(endpoint);
 
             var i = 0;
-            foreach (var a in accepts)
+            foreach (var a in formats)
             {
                 h.Add(a);
                 i++;

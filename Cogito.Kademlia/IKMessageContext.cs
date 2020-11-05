@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Cogito.Kademlia
 {
@@ -17,6 +18,11 @@ namespace Cogito.Kademlia
         /// <param name="uri"></param>
         /// <returns></returns>
         IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri);
+
+        /// <summary>
+        /// Gets the allowable formats of the messages.
+        /// </summary>
+        IEnumerable<string> Formats { get; }
 
     }
 

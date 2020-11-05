@@ -7,6 +7,7 @@ namespace Cogito.Kademlia.MessagePack.Structures
     public class Request : Message
     {
 
+        [Key(5)]
         public RequestBody Body { get; set; }
 
     }

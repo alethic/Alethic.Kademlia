@@ -34,6 +34,8 @@ namespace Cogito.Kademlia.Console
         static void RegisterKademlia(ContainerBuilder builder, ulong network)
         {
             builder.RegisterType<KProtobufMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KJsonMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KMessagePackMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KRefresher<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KConnector<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KInvoker<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
