@@ -12,17 +12,17 @@ namespace Cogito.Kademlia
     {
 
         readonly TNodeId sender;
-        readonly ulong magic;
+        readonly uint replyId;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="sender"></param>
-        /// <param name="magic"></param>
-        public KMessageHeader(in TNodeId sender, ulong magic)
+        /// <param name="replyId"></param>
+        public KMessageHeader(in TNodeId sender, uint replyId)
         {
             this.sender = sender;
-            this.magic = magic;
+            this.replyId = replyId;
         }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the value identifying this datagram in a request/response lifecycle.
         /// </summary>
-        public ulong Magic => magic;
+        public uint ReplyId => replyId;
 
         /// <summary>
         /// Returns <c>true</c> if the other object is equal to this object.
@@ -42,7 +42,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool Equals(KMessageHeader<TNodeId> other)
         {
-            return other.Sender.Equals(sender) && other.Magic.Equals(magic);
+            return other.sender.Equals(sender) && other.replyId.Equals(replyId);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace Cogito.Kademlia
         {
             var h = new HashCode();
             h.Add(sender);
-            h.Add(magic);
+            h.Add(replyId);
             return h.ToHashCode();
         }
 

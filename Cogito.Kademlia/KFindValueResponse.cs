@@ -6,7 +6,7 @@ namespace Cogito.Kademlia
     /// <summary>
     /// Describes a response to a FIND_VALUE request.
     /// </summary>
-    public readonly struct KFindValueResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+    public readonly struct KFindValueResponse<TNodeId> : IKResponseBody<TNodeId>
         where TNodeId : unmanaged
     {
 

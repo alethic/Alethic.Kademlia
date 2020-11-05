@@ -4,19 +4,19 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class StoreRequest : Request
+    public class StoreRequest : RequestBody
     {
 
-        [Key(0)]
+        [Key(8)]
         public byte[] Key { get; set; }
 
-        [Key(1)]
+        [Key(9)]
         public StoreRequestMode Mode { get; set; }
 
-        [Key(2)]
+        [Key(10)]
         public bool HasValue { get; set; }
 
-        [Key(3)]
+        [Key(11)]
         public ValueInfo Value { get; set; }
 
     }

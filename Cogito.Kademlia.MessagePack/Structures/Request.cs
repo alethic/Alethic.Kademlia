@@ -1,10 +1,13 @@
-﻿namespace Cogito.Kademlia.MessagePack.Structures
+﻿using MessagePack;
+
+namespace Cogito.Kademlia.MessagePack.Structures
 {
 
-    public abstract class Request : Body
+    [MessagePackObject]
+    public class Request : Message
     {
 
-
+        public RequestBody Body { get; set; }
 
     }
 

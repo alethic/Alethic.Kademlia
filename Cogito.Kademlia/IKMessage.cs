@@ -4,7 +4,24 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Defines the structure of a message.
+    /// Represents any message with a body.
+    /// </summary>
+    /// <typeparam name="TNodeId"></typeparam>
+    /// <typeparam name="TBody"></typeparam>
+    public interface IKMessage<TNodeId, TBody> : IKMessage<TNodeId>
+        where TNodeId : unmanaged
+        where TBody : struct, IKMessageBody<TNodeId>
+    {
+
+        /// <summary>
+        /// Gets the body of the message.
+        /// </summary>
+        TBody? Body { get; }
+
+    }
+
+    /// <summary>
+    /// Represents any message.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     public interface IKMessage<TNodeId> : IEquatable<IKMessage<TNodeId>>
@@ -15,11 +32,6 @@ namespace Cogito.Kademlia
         /// Gets the header of the message.
         /// </summary>
         KMessageHeader<TNodeId> Header { get; }
-
-        /// <summary>
-        /// Gets the body of the message.
-        /// </summary>
-        IKRequestBody<TNodeId> Body { get; }
 
     }
 

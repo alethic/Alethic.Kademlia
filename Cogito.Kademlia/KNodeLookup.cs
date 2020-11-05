@@ -346,8 +346,8 @@ namespace Cogito.Kademlia
         async ValueTask<FindResult> FindNodeAsync(KPeerEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
         {
             var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
-            if (r.Status == KResponseStatus.Success)
-                return new FindResult(r.Body.Peers, null);
+            if (r.Status == KResponseStatus.Success && r.Body != null)
+                return new FindResult(r.Body.Value.Peers, null);
 
             return new FindResult(null, null);
         }
@@ -363,8 +363,8 @@ namespace Cogito.Kademlia
         async ValueTask<FindResult> FindValueAsync(KPeerEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
         {
             var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
-            if (r.Status == KResponseStatus.Success)
-                return new FindResult(r.Body.Peers, r.Body.Value);
+            if (r.Status == KResponseStatus.Success && r.Body != null)
+                return new FindResult(r.Body.Value.Peers, r.Body.Value.Value);
 
             return new FindResult(null, null);
         }

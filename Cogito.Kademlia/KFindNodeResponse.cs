@@ -4,7 +4,7 @@
     /// <summary>
     /// Describes a response to a FIND_NODE request.
     /// </summary>
-    public readonly struct KFindNodeResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+    public readonly struct KFindNodeResponse<TNodeId> : IKResponseBody<TNodeId>
         where TNodeId : unmanaged
     {
 

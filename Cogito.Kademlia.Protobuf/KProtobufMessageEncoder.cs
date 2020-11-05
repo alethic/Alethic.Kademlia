@@ -18,18 +18,10 @@ namespace Cogito.Kademlia.Protobuf
 
         public void Encode(IKMessageContext<TNodeId> context, IBufferWriter<byte> buffer, KMessageSequence<TNodeId> sequence)
         {
-            var m = new MemoryStream(1024);
-
-            // generate packet
-            var p = new Packet();
+            var p = new MessageSequence();
             p.Network = sequence.Network;
             p.Messages.AddRange(Encode(context, sequence));
-            p.WriteTo(m);
-
-            // reset and dump stream into buffer writer
-            m.Position = 0;
-            m.ToArray().CopyTo(buffer.GetMemory((int)m.Length));
-            buffer.Advance((int)m.Length);
+            p.WriteTo(buffer);
         }
 
         IEnumerable<Message> Encode(IKMessageContext<TNodeId> context, IEnumerable<IKMessage<TNodeId>> messages)
@@ -40,34 +32,60 @@ namespace Cogito.Kademlia.Protobuf
 
         Message Encode(IKMessageContext<TNodeId> context, IKMessage<TNodeId> message)
         {
-            var m = new Message();
-            m.Header = Encode(context, message.Header);
+            if (message is IKRequest<TNodeId> request)
+                return Encode(context, request);
+            if (message is IKResponse<TNodeId> response)
+                return Encode(context, response);
 
-            switch (message.Body)
+            throw new InvalidOperationException();
+        }
+
+        Message Encode(IKMessageContext<TNodeId> context, IKRequest<TNodeId> request)
+        {
+            var m = new Message();
+            m.Request = new Request();
+            m.Request.Header = Encode(context, request.Header);
+
+            switch (request)
             {
-                case KPingRequest<TNodeId> request:
-                    m.PingRequest = Encode(context, request);
+                case KRequest<TNodeId, KPingRequest<TNodeId>> ping:
+                    m.Request.PingRequest = Encode(context, ping.Body.Value);
                     break;
-                case KPingResponse<TNodeId> request:
-                    m.PingResponse = Encode(context, request);
+                case KRequest<TNodeId, KStoreRequest<TNodeId>> store:
+                    m.Request.StoreRequest = Encode(context, store.Body.Value);
                     break;
-                case KStoreRequest<TNodeId> request:
-                    m.StoreRequest = Encode(context, request);
+                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> findNode:
+                    m.Request.FindNodeRequest = Encode(context, findNode.Body.Value);
                     break;
-                case KStoreResponse<TNodeId> request:
-                    m.StoreResponse = Encode(context, request);
+                case KRequest<TNodeId, KFindValueRequest<TNodeId>> findValue:
+                    m.Request.FindValueRequest = Encode(context, findValue.Body.Value);
                     break;
-                case KFindNodeRequest<TNodeId> request:
-                    m.FindNodeRequest = Encode(context, request);
+                default:
+                    throw new InvalidOperationException();
+            }
+
+            return m;
+        }
+
+        Message Encode(IKMessageContext<TNodeId> context, IKResponse<TNodeId> message)
+        {
+            var m = new Message();
+            m.Response = new Response();
+            m.Response.Header = Encode(context, message.Header);
+
+            switch (message)
+            {
+                case KResponse<TNodeId, KPingResponse<TNodeId>> ping:
+                    m.Response.PingResponse = Encode(context, ping.Body.Value);
                     break;
-                case KFindNodeResponse<TNodeId> request:
-                    m.FindNodeResponse = Encode(context, request);
+                case KResponse<TNodeId, KStoreResponse<TNodeId>> store:
+                    m.Response.StoreResponse = Encode(context, store.Body.Value);
                     break;
-                case KFindValueRequest<TNodeId> request:
-                    m.FindValueRequest = Encode(context, request);
+                case KResponse<TNodeId, KFindNodeResponse<TNodeId>> findNode:
+                    m.Response.FindNodeResponse = Encode(context, findNode.Body.Value);
                     break;
-                case KFindValueResponse<TNodeId> request:
-                    m.FindValueResponse = Encode(context, request);
+                case KResponse<TNodeId, KFindValueResponse<TNodeId>> findValue:
+                    m.Response.FindValueResponse = Encode(context, findValue.Body.Value);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -93,7 +111,7 @@ namespace Cogito.Kademlia.Protobuf
         {
             var h = new Header();
             h.Sender = Encode(context, header.Sender);
-            h.Magic = header.Magic;
+            h.ReplyId = header.ReplyId;
             return h;
         }
 

@@ -10,7 +10,7 @@ namespace Cogito.Kademlia.MessagePack
 {
 
     /// <summary>
-    /// Implements a decoder using MessagePack.
+    /// Decodes message sequences using Message Pack.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     class KMessagePackMessageDecoder<TNodeId>
@@ -19,7 +19,7 @@ namespace Cogito.Kademlia.MessagePack
 
         public KMessageSequence<TNodeId> Decode(IKMessageContext<TNodeId> context, ReadOnlySequence<byte> buffer)
         {
-            var p = global::MessagePack.MessagePackSerializer.Deserialize<Packet>(buffer);
+            var p = global::MessagePack.MessagePackSerializer.Deserialize<MessageSequence>(buffer);
             var s = new KMessageSequence<TNodeId>(p.Network, Decode(context, p.Messages));
             return s;
         }
@@ -32,41 +32,74 @@ namespace Cogito.Kademlia.MessagePack
 
         IKMessage<TNodeId> Decode(IKMessageContext<TNodeId> context, Message message)
         {
-            switch (message.Body)
+            if (message is Request request)
+                return Decode(context, request);
+            if (message is Response response)
+                return Decode(context, response);
+
+            throw new InvalidOperationException();
+        }
+
+        IKRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, Request message)
+        {
+            return message.Body switch
             {
-                case PingRequest pi:
-                    return Create(context, Decode(context, message.Header), Decode(context, pi));
-                case PingResponse pr:
-                    return Create(context, Decode(context, message.Header), Decode(context, pr));
-                case StoreRequest si:
-                    return Create(context, Decode(context, message.Header), Decode(context, si));
-                case StoreResponse sr:
-                    return Create(context, Decode(context, message.Header), Decode(context, sr));
-                case FindNodeRequest fni:
-                    return Create(context, Decode(context, message.Header), Decode(context, fni));
-                case FindNodeResponse fnr:
-                    return Create(context, Decode(context, message.Header), Decode(context, fnr));
-                case FindValueRequest fvi:
-                    return Create(context, Decode(context, message.Header), Decode(context, fvi));
-                case FindValueResponse fvr:
-                    return Create(context, Decode(context, message.Header), Decode(context, fvr));
-                default:
-                    throw new InvalidOperationException();
-            }
+                PingRequest ping => new KRequest<TNodeId, KPingRequest<TNodeId>>(Decode(context, message.Header), Decode(context, ping)),
+                StoreRequest store => new KRequest<TNodeId, KStoreRequest<TNodeId>>(Decode(context, message.Header), Decode(context, store)),
+                FindNodeRequest findNode => new KRequest<TNodeId, KFindNodeRequest<TNodeId>>(Decode(context, message.Header), Decode(context, findNode)),
+                FindValueRequest findValue => new KRequest<TNodeId, KFindValueRequest<TNodeId>>(Decode(context, message.Header), Decode(context, findValue)),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        IKResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, Response message)
+        {
+            return message.Body switch
+            {
+                PingResponse ping => new KResponse<TNodeId, KPingResponse<TNodeId>>(Decode(context, message.Header), Decode(context, message.Status), Decode(context, ping)),
+                StoreResponse store => new KResponse<TNodeId, KStoreResponse<TNodeId>>(Decode(context, message.Header), Decode(context, message.Status), Decode(context, store)),
+                FindNodeResponse findNode => new KResponse<TNodeId, KFindNodeResponse<TNodeId>>(Decode(context, message.Header), Decode(context, message.Status), Decode(context, findNode)),
+                FindValueResponse findValue => new KResponse<TNodeId, KFindValueResponse<TNodeId>>(Decode(context, message.Header), Decode(context, message.Status), Decode(context, findValue)),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        KResponseStatus Decode(IKMessageContext<TNodeId> context, ResponseStatus message)
+        {
+            return message switch
+            {
+                ResponseStatus.Success => KResponseStatus.Success,
+                ResponseStatus.Failure => KResponseStatus.Failure,
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         /// <summary>
         /// Creates a message from the components.
         /// </summary>
-        /// <typeparam name="TBody"></typeparam>
+        /// <typeparam name="TRequest"></typeparam>
         /// <param name="context"></param>
         /// <param name="header"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKMessage<TNodeId> Create<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
-            where TBody : struct, IKRequestBody<TNodeId>
+        IKRequest<TNodeId> CreateRequest<TRequest>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TRequest body)
+            where TRequest : struct, IKRequestBody<TNodeId>
         {
-            return new KMessage<TNodeId, TBody>(header, body);
+            return new KRequest<TNodeId, TRequest>(header, body);
+        }
+
+        /// <summary>
+        /// Creates a message from the components.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="header"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        IKResponse<TNodeId> CreateResponse<TResponse>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, KResponseStatus status, TResponse body)
+            where TResponse : struct, IKResponseBody<TNodeId>
+        {
+            return new KResponse<TNodeId, TResponse>(header, status, body);
         }
 
         /// <summary>
@@ -92,7 +125,7 @@ namespace Cogito.Kademlia.MessagePack
         /// <returns></returns>
         KMessageHeader<TNodeId> Decode(IKMessageContext<TNodeId> context, Header header)
         {
-            return new KMessageHeader<TNodeId>(DecodeNodeId(context, header.Sender), header.Magic);
+            return new KMessageHeader<TNodeId>(DecodeNodeId(context, header.Sender), header.ReplyId);
         }
 
         /// <summary>

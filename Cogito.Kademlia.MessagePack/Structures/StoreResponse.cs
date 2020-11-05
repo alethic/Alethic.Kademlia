@@ -4,10 +4,10 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class StoreResponse : Request
+    public class StoreResponse : ResponseBody
     {
 
-        [Key(0)]
+        [Key(8)]
         public StoreResponseStatus Status { get; set; }
 
     }

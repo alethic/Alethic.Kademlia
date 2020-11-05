@@ -7,7 +7,7 @@ namespace Cogito.Kademlia
     /// Describes a response to a PING request.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public readonly struct KPingResponse<TNodeId> : IKResponseBody<TNodeId>, IKRequestBody<TNodeId>
+    public readonly struct KPingResponse<TNodeId> : IKResponseBody<TNodeId>
         where TNodeId : unmanaged
     {
 

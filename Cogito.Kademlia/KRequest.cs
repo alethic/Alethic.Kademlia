@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     /// <typeparam name="TBody"></typeparam>
-    public readonly struct KMessage<TNodeId, TBody> : IKMessage<TNodeId>
+    public readonly struct KRequest<TNodeId, TBody> : IKRequest<TNodeId, TBody>
         where TNodeId : unmanaged
         where TBody : struct, IKRequestBody<TNodeId>
     {
@@ -21,7 +21,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="header"></param>
         /// <param name="body"></param>
-        public KMessage(in KMessageHeader<TNodeId> header, in TBody body)
+        public KRequest(in KMessageHeader<TNodeId> header, in TBody body)
         {
             this.header = header;
             this.body = body;
@@ -35,12 +35,17 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the message body.
         /// </summary>
-        public TBody Body => body;
+        public TBody? Body => body;
 
         /// <summary>
-        /// Gets the message body.
+        /// Returns <c>true</c> if the object is equal to this object.
         /// </summary>
-        IKRequestBody<TNodeId> IKMessage<TNodeId>.Body => body;
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(KRequest<TNodeId, TBody> other)
+        {
+            return other.Header.Equals(header) && other.Body.Equals(body);
+        }
 
         /// <summary>
         /// Returns <c>true</c> if the object is equal to this object.
@@ -49,7 +54,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool Equals(IKMessage<TNodeId> other)
         {
-            return other.Header.Equals(header) && other.Body.Equals(body);
+            return other is KRequest<TNodeId, TBody> o && Equals(o);
         }
 
         /// <summary>
@@ -57,9 +62,9 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="obj"></param>
         /// <returns></returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object other)
         {
-            return obj is IKMessage<TNodeId> other && Equals(other);
+            return other is KRequest<TNodeId, TBody> o && Equals(o);
         }
 
         /// <summary>

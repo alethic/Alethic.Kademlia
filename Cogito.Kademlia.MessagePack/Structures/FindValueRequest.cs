@@ -4,10 +4,10 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class FindValueRequest : Request
+    public class FindValueRequest : RequestBody
     {
 
-        [Key(0)]
+        [Key(8)]
         public byte[] Key { get; set; }
 
     }

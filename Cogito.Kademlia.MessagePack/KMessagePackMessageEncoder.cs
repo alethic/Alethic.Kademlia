@@ -11,7 +11,7 @@ namespace Cogito.Kademlia.MessagePack
 {
 
     /// <summary>
-    /// Implements a <see cref="IKMessageEncoder{TNodeId}"/> using MessagePack.
+    /// Encodes message sequences using Message Pack.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     class KMessagePackMessageEncoder<TNodeId>
@@ -20,7 +20,7 @@ namespace Cogito.Kademlia.MessagePack
 
         public void Encode(IKMessageContext<TNodeId> context, IBufferWriter<byte> buffer, KMessageSequence<TNodeId> sequence)
         {
-            var p = new Packet();
+            var p = new MessageSequence();
             p.Network = sequence.Network;
             p.Messages = Encode(context, sequence).ToArray();
             global::MessagePack.MessagePackSerializer.Serialize(buffer, p);
@@ -34,34 +34,57 @@ namespace Cogito.Kademlia.MessagePack
 
         Message Encode(IKMessageContext<TNodeId> context, IKMessage<TNodeId> message)
         {
-            var m = new Message();
+            return message switch
+            {
+                IKRequest<TNodeId> request => Encode(context, request),
+                IKResponse<TNodeId> response => Encode(context, response),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        Request Encode(IKMessageContext<TNodeId> context, IKRequest<TNodeId> message)
+        {
+            var m = new Request();
             m.Header = Encode(context, message.Header);
 
-            switch (message.Body)
+            switch (message)
             {
-                case KPingRequest<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKRequest<TNodeId, KPingRequest<TNodeId>> request:
+                    m.Body = Encode(context, request.Body.Value);
                     break;
-                case KPingResponse<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKRequest<TNodeId, KStoreRequest<TNodeId>> request:
+                    m.Body = Encode(context, request.Body.Value);
                     break;
-                case KStoreRequest<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKRequest<TNodeId, KFindNodeRequest<TNodeId>> request:
+                    m.Body = Encode(context, request.Body.Value);
                     break;
-                case KStoreResponse<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKRequest<TNodeId, KFindValueRequest<TNodeId>> request:
+                    m.Body = Encode(context, request.Body.Value);
                     break;
-                case KFindNodeRequest<TNodeId> request:
-                    m.Body = Encode(context, request);
+                    throw new InvalidOperationException();
+            }
+
+            return m;
+        }
+
+        Response Encode(IKMessageContext<TNodeId> context, IKResponse<TNodeId> message)
+        {
+            var m = new Response();
+            m.Header = Encode(context, message.Header);
+
+            switch (message)
+            {
+                case IKResponse<TNodeId, KPingResponse<TNodeId>> response:
+                    m.Body = Encode(context, response.Body.Value);
                     break;
-                case KFindNodeResponse<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKResponse<TNodeId, KStoreResponse<TNodeId>> response:
+                    m.Body = Encode(context, response.Body.Value);
                     break;
-                case KFindValueRequest<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKResponse<TNodeId, KFindNodeResponse<TNodeId>> response:
+                    m.Body = Encode(context, response.Body.Value);
                     break;
-                case KFindValueResponse<TNodeId> request:
-                    m.Body = Encode(context, request);
+                case IKResponse<TNodeId, KFindValueResponse<TNodeId>> response:
+                    m.Body = Encode(context, response.Body.Value);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -81,25 +104,25 @@ namespace Cogito.Kademlia.MessagePack
         {
             var h = new Header();
             h.Sender = Encode(context, header.Sender);
-            h.Magic = header.Magic;
+            h.ReplyId = header.ReplyId;
             return h;
         }
 
-        PingRequest Encode(IKMessageContext<TNodeId> context, KPingRequest<TNodeId> request)
+        PingRequest Encode(IKMessageContext<TNodeId> context, in KPingRequest<TNodeId> request)
         {
             var r = new PingRequest();
             r.Endpoints = Encode(context, request.Endpoints).ToArray();
             return r;
         }
 
-        PingResponse Encode(IKMessageContext<TNodeId> context, KPingResponse<TNodeId> response)
+        PingResponse Encode(IKMessageContext<TNodeId> context, in KPingResponse<TNodeId> response)
         {
             var r = new PingResponse();
             r.Endpoints = Encode(context, response.Endpoints).ToArray();
             return r;
         }
 
-        StoreRequest Encode(IKMessageContext<TNodeId> context, KStoreRequest<TNodeId> request)
+        StoreRequest Encode(IKMessageContext<TNodeId> context, in KStoreRequest<TNodeId> request)
         {
             var r = new StoreRequest();
             r.Key = Encode(context, request.Key);
@@ -125,7 +148,7 @@ namespace Cogito.Kademlia.MessagePack
             };
         }
 
-        StoreResponse Encode(IKMessageContext<TNodeId> context, KStoreResponse<TNodeId> response)
+        StoreResponse Encode(IKMessageContext<TNodeId> context, in KStoreResponse<TNodeId> response)
         {
             var r = new StoreResponse();
             r.Status = Encode(context, response.Status);
@@ -142,28 +165,28 @@ namespace Cogito.Kademlia.MessagePack
             };
         }
 
-        FindNodeRequest Encode(IKMessageContext<TNodeId> context, KFindNodeRequest<TNodeId> request)
+        FindNodeRequest Encode(IKMessageContext<TNodeId> context, in KFindNodeRequest<TNodeId> request)
         {
             var r = new FindNodeRequest();
             r.Key = Encode(context, request.Key);
             return r;
         }
 
-        FindNodeResponse Encode(IKMessageContext<TNodeId> context, KFindNodeResponse<TNodeId> response)
+        FindNodeResponse Encode(IKMessageContext<TNodeId> context, in KFindNodeResponse<TNodeId> response)
         {
             var r = new FindNodeResponse();
             r.Peers = Encode(context, response.Peers).ToArray();
             return r;
         }
 
-        FindValueRequest Encode(IKMessageContext<TNodeId> context, KFindValueRequest<TNodeId> request)
+        FindValueRequest Encode(IKMessageContext<TNodeId> context, in KFindValueRequest<TNodeId> request)
         {
             var r = new FindValueRequest();
             r.Key = Encode(context, request.Key);
             return r;
         }
 
-        FindValueResponse Encode(IKMessageContext<TNodeId> context, KFindValueResponse<TNodeId> response)
+        FindValueResponse Encode(IKMessageContext<TNodeId> context, in KFindValueResponse<TNodeId> response)
         {
             var r = new FindValueResponse();
             if (response.Value is KValueInfo value)
@@ -184,7 +207,7 @@ namespace Cogito.Kademlia.MessagePack
                 yield return Encode(context, peer);
         }
 
-        Peer Encode(IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId> peer)
+        Peer Encode(IKMessageContext<TNodeId> context, in KPeerEndpointInfo<TNodeId> peer)
         {
             var p = new Peer();
             p.Id = Encode(context, peer.Id);
@@ -204,14 +227,14 @@ namespace Cogito.Kademlia.MessagePack
             return endpoint.ToUri();
         }
 
-        uint Encode(IKMessageContext<TNodeId> context, KIp4Address ip)
+        uint Encode(IKMessageContext<TNodeId> context, in KIp4Address ip)
         {
             var s = (Span<byte>)stackalloc byte[4];
             ip.Write(s);
             return BinaryPrimitives.ReadUInt32BigEndian(s);
         }
 
-        byte[] Encode(IKMessageContext<TNodeId> context, KIp6Address ip)
+        byte[] Encode(IKMessageContext<TNodeId> context, in KIp6Address ip)
         {
             var s = new byte[16];
             ip.Write(s);

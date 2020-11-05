@@ -4,14 +4,14 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class Header
+    public struct Header
     {
 
         [Key(0)]
         public byte[] Sender { get; set; }
 
         [Key(1)]
-        public ulong Magic { get; set; }
+        public uint ReplyId { get; set; }
 
     }
 

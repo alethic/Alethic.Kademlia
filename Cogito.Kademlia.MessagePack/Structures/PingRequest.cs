@@ -6,10 +6,10 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class PingRequest : Request
+    public class PingRequest : RequestBody
     {
 
-        [Key(0)]
+        [Key(8)]
         public Uri[] Endpoints { get; set; }
 
     }

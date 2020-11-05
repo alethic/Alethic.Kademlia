@@ -38,53 +38,103 @@ namespace Cogito.Kademlia.Json
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKMessage<TNodeId> message)
         {
+            if (message is IKRequest<TNodeId> request)
+                Write(writer, context, request);
+            if (message is IKResponse<TNodeId> response)
+                Write(writer, context, response);
+
+            throw new InvalidOperationException();
+        }
+
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKRequest<TNodeId> message)
+        {
             writer.WriteStartObject();
             writer.WritePropertyName("header");
             Write(writer, context, message.Header);
 
             writer.WritePropertyName("type");
 
-            switch (message.Body)
+            switch (message)
             {
-                case KPingRequest<TNodeId> request:
+                case KRequest<TNodeId, KPingRequest<TNodeId>> request:
                     writer.WriteStringValue("PING");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request);
+                    Write(writer, context, request.Body.Value);
                     break;
-                case KPingResponse<TNodeId> response:
-                    writer.WriteStringValue("PING_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response);
-                    break;
-                case KStoreRequest<TNodeId> request:
+                case KRequest<TNodeId, KStoreRequest<TNodeId>> request:
                     writer.WriteStringValue("STORE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request);
+                    Write(writer, context, request.Body.Value);
                     break;
-                case KStoreResponse<TNodeId> response:
-                    writer.WriteStringValue("STORE_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response);
-                    break;
-                case KFindNodeRequest<TNodeId> request:
+                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> request:
                     writer.WriteStringValue("FIND_NODE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request);
+                    Write(writer, context, request.Body.Value);
                     break;
-                case KFindNodeResponse<TNodeId> response:
-                    writer.WriteStringValue("FIND_NODE_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response);
-                    break;
-                case KFindValueRequest<TNodeId> request:
+                case KRequest<TNodeId, KFindValueRequest<TNodeId>> request:
                     writer.WriteStringValue("FIND_VALUE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request);
+                    Write(writer, context, request.Body.Value);
                     break;
-                case KFindValueResponse<TNodeId> response:
+                default:
+                    throw new InvalidOperationException();
+            }
+
+            writer.WriteEndObject();
+        }
+
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, IKResponse<TNodeId> message)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("header");
+            Write(writer, context, message.Header);
+
+            writer.WritePropertyName("status");
+            Write(writer, context, message.Status);
+
+            writer.WritePropertyName("type");
+
+            switch (message)
+            {
+                case KRequest<TNodeId, KPingRequest<TNodeId>> request:
+                    writer.WriteStringValue("PING");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, request.Body.Value);
+                    break;
+                case KResponse<TNodeId, KPingResponse<TNodeId>> response:
+                    writer.WriteStringValue("PING_RESPONSE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, response.Body.Value);
+                    break;
+                case KRequest<TNodeId, KStoreRequest<TNodeId>> request:
+                    writer.WriteStringValue("STORE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, request.Body.Value);
+                    break;
+                case KResponse<TNodeId, KStoreResponse<TNodeId>> response:
+                    writer.WriteStringValue("STORE_RESPONSE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, response.Body.Value);
+                    break;
+                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> request:
+                    writer.WriteStringValue("FIND_NODE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, request.Body.Value);
+                    break;
+                case KResponse<TNodeId, KFindNodeResponse<TNodeId>> response:
+                    writer.WriteStringValue("FIND_NODE_RESPONSE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, response.Body.Value);
+                    break;
+                case KRequest<TNodeId, KFindValueRequest<TNodeId>> request:
+                    writer.WriteStringValue("FIND_VALUE");
+                    writer.WritePropertyName("body");
+                    Write(writer, context, request.Body.Value);
+                    break;
+                case KResponse<TNodeId, KFindValueResponse<TNodeId>> response:
                     writer.WriteStringValue("FIND_VALUE_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, response);
+                    Write(writer, context, response.Body.Value);
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -104,12 +154,22 @@ namespace Cogito.Kademlia.Json
             writer.WriteBase64StringValue(a);
         }
 
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KResponseStatus status)
+        {
+            writer.WriteString("status", status switch
+            {
+                KResponseStatus.Success => "SUCCESS",
+                KResponseStatus.Failure => "FAILURE",
+                _ => throw new InvalidOperationException(),
+            });
+        }
+
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("sender");
             Write(writer, context, header.Sender);
-            writer.WriteNumber("magic", header.Magic);
+            writer.WriteNumber("replyId", header.ReplyId);
             writer.WriteEndObject();
         }
 

@@ -21,7 +21,7 @@ namespace Cogito.Kademlia.Protobuf
 
         public KMessageSequence<TNodeId> Decode(IKMessageContext<TNodeId> resources, ReadOnlySequence<byte> buffer)
         {
-            var p = Packet.Parser.ParseFrom(buffer.ToArray());
+            var p = MessageSequence.Parser.ParseFrom(buffer.ToArray());
             var s = new KMessageSequence<TNodeId>(p.Network, Decode(resources, p.Messages));
             return s;
         }
@@ -32,43 +32,80 @@ namespace Cogito.Kademlia.Protobuf
                 yield return Decode(resources, message);
         }
 
-        IKMessage<TNodeId> Decode(IKMessageContext<TNodeId> resources, Message message)
+        IKMessage<TNodeId> Decode(IKMessageContext<TNodeId> context, Message message)
         {
-            switch (message.BodyCase)
+            return message.MessageCase switch
             {
-                case Message.BodyOneofCase.PingRequest:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.PingRequest));
-                case Message.BodyOneofCase.PingResponse:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.PingResponse));
-                case Message.BodyOneofCase.StoreRequest:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.StoreRequest));
-                case Message.BodyOneofCase.StoreResponse:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.StoreResponse));
-                case Message.BodyOneofCase.FindNodeRequest:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.FindNodeRequest));
-                case Message.BodyOneofCase.FindNodeResponse:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.FindNodeResponse));
-                case Message.BodyOneofCase.FindValueRequest:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.FindValueRequest));
-                case Message.BodyOneofCase.FindValueResponse:
-                    return Create(resources, Decode(resources, message.Header), Decode(resources, message.FindValueResponse));
-                default:
-                    throw new InvalidOperationException();
-            }
+                Message.MessageOneofCase.Request => Decode(context, message.Request),
+                Message.MessageOneofCase.Response => Decode(context, message.Response),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        IKRequest<TNodeId> Decode(IKMessageContext<TNodeId> resources, Request request)
+        {
+            return request.BodyCase switch
+            {
+                Request.BodyOneofCase.PingRequest => CreateRequest(resources, Decode(resources, request.Header), Decode(resources, request.PingRequest)),
+                Request.BodyOneofCase.StoreRequest => CreateRequest(resources, Decode(resources, request.Header), Decode(resources, request.StoreRequest)),
+                Request.BodyOneofCase.FindNodeRequest => CreateRequest(resources, Decode(resources, request.Header), Decode(resources, request.FindNodeRequest)),
+                Request.BodyOneofCase.FindValueRequest => CreateRequest(resources, Decode(resources, request.Header), Decode(resources, request.FindValueRequest)),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        IKResponse<TNodeId> Decode(IKMessageContext<TNodeId> resources, Response response)
+        {
+            return response.BodyCase switch
+            {
+                Response.BodyOneofCase.PingResponse => CreateResponse(resources, Decode(resources, response.Header), Decode(resources, response.PingResponse)),
+                Response.BodyOneofCase.StoreResponse => CreateResponse(resources, Decode(resources, response.Header), Decode(resources, response.StoreResponse)),
+                Response.BodyOneofCase.FindNodeResponse => CreateResponse(resources, Decode(resources, response.Header), Decode(resources, response.FindNodeResponse)),
+                Response.BodyOneofCase.FindValueResponse => CreateResponse(resources, Decode(resources, response.Header), Decode(resources, response.FindValueResponse)),
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         /// <summary>
         /// Creates a message from the components.
         /// </summary>
         /// <typeparam name="TBody"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="header"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        IKRequest<TNodeId> CreateRequest<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
+            where TBody : struct, IKRequestBody<TNodeId>
+        {
+            return new KRequest<TNodeId, TBody>(header, body);
+        }
+
+        /// <summary>
+        /// Creates a message from the components.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
         /// <param name="resources"></param>
         /// <param name="header"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKMessage<TNodeId> Create<TBody>(IKMessageContext<TNodeId> resources, KMessageHeader<TNodeId> header, TBody body)
-            where TBody : struct, IKRequestBody<TNodeId>
+        IKResponse<TNodeId> CreateResponse<TResponse>(IKMessageContext<TNodeId> resources, KMessageHeader<TNodeId> header, TResponse body)
+            where TResponse : struct, IKResponseBody<TNodeId>
         {
-            return new KMessage<TNodeId, TBody>(header, body);
+            return new KResponse<TNodeId, TResponse>(header, KResponseStatus.Success, body);
+        }
+
+        /// <summary>
+        /// Creates a message from the components.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="resources"></param>
+        /// <param name="header"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        IKResponse<TNodeId> CreateResponse<TResponse>(IKMessageContext<TNodeId> resources, KMessageHeader<TNodeId> header, Exception error)
+            where TResponse : struct, IKResponseBody<TNodeId>
+        {
+            return new KResponse<TNodeId, TResponse>(header, KResponseStatus.Failure, null);
         }
 
         /// <summary>
@@ -94,7 +131,7 @@ namespace Cogito.Kademlia.Protobuf
         /// <returns></returns>
         KMessageHeader<TNodeId> Decode(IKMessageContext<TNodeId> resources, Header header)
         {
-            return new KMessageHeader<TNodeId>(DecodeNodeId(resources, header.Sender), header.Magic);
+            return new KMessageHeader<TNodeId>(DecodeNodeId(resources, header.Sender), header.ReplyId);
         }
 
         /// <summary>

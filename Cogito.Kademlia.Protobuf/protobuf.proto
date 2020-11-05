@@ -5,28 +5,47 @@ import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "Cogito.Kademlia.Protobuf";
 
-message Packet {
+message MessageSequence {
     uint64 network = 1;
-    repeated Message messages = 2;
-}
-
-message Message {
-    Header header = 1;
-    oneof body {
-        PingRequest ping_request = 3;
-        PingResponse ping_response = 4;
-        StoreRequest store_request = 5;
-        StoreResponse store_response = 6;
-        FindNodeRequest find_node_request = 7;
-        FindNodeResponse find_node_response = 8;
-        FindValueRequest find_value_request = 9;
-        FindValueResponse find_value_response = 10;
-    }
+    repeated Message messages = 4;
 }
 
 message Header {
-    bytes sender = 2;
-    uint64 magic = 3;
+    bytes sender = 1;
+    uint32 replyId = 2;
+}
+
+message Message {
+     oneof message {
+        Request request = 4;
+        Response response = 5;
+    }
+}
+
+message Request {
+    Header header = 1;
+    oneof body {
+        PingRequest ping_request = 8;
+        StoreRequest store_request = 9;
+        FindNodeRequest find_node_request = 10;
+        FindValueRequest find_value_request = 11;
+    }
+}
+
+message Response {
+    enum ResponseStatus {
+        Success = 0;
+        Failure = 1;
+    }
+
+    Header header = 1;
+    ResponseStatus status = 2;
+    oneof body {
+        PingResponse ping_response = 8;
+        StoreResponse store_response = 9;
+        FindNodeResponse find_node_response = 10;
+        FindValueResponse find_value_response = 11;
+    }
 }
 
 message IpAddress {

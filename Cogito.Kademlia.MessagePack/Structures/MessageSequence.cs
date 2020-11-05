@@ -4,7 +4,7 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class Packet
+    public class MessageSequence
     {
 
         [Key(0)]

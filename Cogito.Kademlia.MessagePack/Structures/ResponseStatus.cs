@@ -1,11 +1,11 @@
 ﻿namespace Cogito.Kademlia.MessagePack.Structures
 {
 
-    public enum StoreResponseStatus
+    public enum ResponseStatus
     {
 
         Success = 0,
-        Invalid = 1,
+        Failure = 1,
 
     }
 

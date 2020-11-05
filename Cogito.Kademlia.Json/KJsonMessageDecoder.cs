@@ -33,27 +33,28 @@ namespace Cogito.Kademlia.Json
 
         IKMessage<TNodeId> DecodeMessage(IKMessageContext<TNodeId> context, JsonElement message)
         {
-            switch (message.GetProperty("type").GetString())
+            return (message.GetProperty("type").GetString()) switch
             {
-                case "PING":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodePingRequest(context, message.GetProperty("body")));
-                case "PING_RESPONSE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodePingResponse(context, message.GetProperty("body")));
-                case "STORE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeStoreRequest(context, message.GetProperty("body")));
-                case "STORE_RESPONSE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeStoreResponse(context, message.GetProperty("body")));
-                case "FIND_NODE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindNodeRequest(context, message.GetProperty("body")));
-                case "FIND_NODE_RESPONSE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindNodeResponse(context, message.GetProperty("body")));
-                case "FIND_VALUE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindValueRequest(context, message.GetProperty("body")));
-                case "FIND_VALUE_RESPONSE":
-                    return Create(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindValueResponse(context, message.GetProperty("body")));
-                default:
-                    throw new InvalidOperationException();
-            }
+                "PING" => CreateRequest(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodePingRequest(context, message.GetProperty("body"))),
+                "PING_RESPONSE" => CreateResponse(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeResponseStatus(context, message.GetProperty("status")), DecodePingResponse(context, message.GetProperty("body"))),
+                "STORE" => CreateRequest(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeStoreRequest(context, message.GetProperty("body"))),
+                "STORE_RESPONSE" => CreateResponse(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeResponseStatus(context, message.GetProperty("status")), DecodeStoreResponse(context, message.GetProperty("body"))),
+                "FIND_NODE" => CreateRequest(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindNodeRequest(context, message.GetProperty("body"))),
+                "FIND_NODE_RESPONSE" => CreateResponse(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeResponseStatus(context, message.GetProperty("status")), DecodeFindNodeResponse(context, message.GetProperty("body"))),
+                "FIND_VALUE" => CreateRequest(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeFindValueRequest(context, message.GetProperty("body"))),
+                "FIND_VALUE_RESPONSE" => CreateResponse(context, DecodeMessageHeader(context, message.GetProperty("header")), DecodeResponseStatus(context, message.GetProperty("status")), DecodeFindValueResponse(context, message.GetProperty("body"))),
+                _ => throw new InvalidOperationException(),
+            };
+        }
+
+        KResponseStatus DecodeResponseStatus(IKMessageContext<TNodeId> context, JsonElement element)
+        {
+            return element.GetString() switch
+            {
+                "SUCCESS" => KResponseStatus.Success,
+                "FAILURE" => KResponseStatus.Failure,
+                _ => throw new InvalidOperationException(),
+            };
         }
 
         /// <summary>
@@ -64,10 +65,25 @@ namespace Cogito.Kademlia.Json
         /// <param name="header"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKMessage<TNodeId> Create<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
+        IKRequest<TNodeId> CreateRequest<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessage<TNodeId, TBody>(header, body);
+            return new KRequest<TNodeId, TBody>(header, body);
+        }
+
+        /// <summary>
+        /// Creates a message from the components.
+        /// </summary>
+        /// <typeparam name="TBody"></typeparam>
+        /// <param name="context"></param>
+        /// <param name="header"></param>
+        /// <param name="status"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        IKResponse<TNodeId> CreateResponse<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, KResponseStatus status, TBody body)
+            where TBody : struct, IKResponseBody<TNodeId>
+        {
+            return new KResponse<TNodeId, TBody>(header, status, body);
         }
 
         /// <summary>
@@ -104,7 +120,7 @@ namespace Cogito.Kademlia.Json
         /// <returns></returns>
         KMessageHeader<TNodeId> DecodeMessageHeader(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KMessageHeader<TNodeId>(DecodeNodeId(context, element.GetProperty("sender")), element.GetProperty("magic").GetUInt64());
+            return new KMessageHeader<TNodeId>(DecodeNodeId(context, element.GetProperty("sender")), element.GetProperty("replyId").GetUInt32());
         }
 
         /// <summary>

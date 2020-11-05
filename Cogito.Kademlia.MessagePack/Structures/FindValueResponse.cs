@@ -4,16 +4,16 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class FindValueResponse : Response
+    public class FindValueResponse : ResponseBody
     {
 
-        [Key(0)]
+        [Key(8)]
         public Peer[] Peers { get; set; }
 
-        [Key(1)]
+        [Key(9)]
         public bool HasValue { get; set; }
 
-        [Key(2)]
+        [Key(10)]
         public ValueInfo Value { get; set; }
 
     }

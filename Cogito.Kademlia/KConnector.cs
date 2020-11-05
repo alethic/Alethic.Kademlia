@@ -56,7 +56,7 @@ namespace Cogito.Kademlia
             if (r.Status == KResponseStatus.Failure)
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
-            await router.UpdatePeerAsync(r.Sender, targets, cancellationToken);
+            await router.UpdatePeerAsync(r.Header.Sender, targets, cancellationToken);
             await lookup.LookupNodeAsync(engine.SelfId, cancellationToken);
         }
 

@@ -1,17 +1,19 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
     /// Base class of node protocol responses.
     /// </summary>
-    public readonly struct KResponse<TNodeId, TKResponseBody>
+    public readonly struct KResponse<TNodeId, TBody> : IKResponse<TNodeId, TBody>
         where TNodeId : unmanaged
-        where TKResponseBody : struct, IKResponseBody<TNodeId>
+        where TBody : struct, IKResponseBody<TNodeId>
     {
 
+        readonly KMessageHeader<TNodeId> header;
         readonly KResponseStatus status;
-        readonly TNodeId sender;
-        readonly TKResponseBody body;
+        readonly TBody? body;
 
         /// <summary>
         /// Initializes a new instance.
@@ -19,17 +21,17 @@
         /// <param name="sender"></param>
         /// <param name="status"></param>
         /// <param name="body"></param>
-        public KResponse(in TNodeId sender, KResponseStatus status, in TKResponseBody body)
+        public KResponse(in KMessageHeader<TNodeId> header, KResponseStatus status, in TBody? body)
         {
-            this.sender = sender;
+            this.header = header;
             this.status = status;
             this.body = body;
         }
 
         /// <summary>
-        /// Gets the sender of this response.
+        /// Gets the message header.
         /// </summary>
-        public TNodeId Sender => sender;
+        public KMessageHeader<TNodeId> Header => header;
 
         /// <summary>
         /// Gets the status of the request.
@@ -39,7 +41,50 @@
         /// <summary>
         /// Gets the response body.
         /// </summary>
-        public TKResponseBody Body => body;
+        public TBody? Body => body;
+
+        /// <summary>
+        /// Returns <c>true</c> if the object is equal to this object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(KResponse<TNodeId, TBody> other)
+        {
+            return other.Header.Equals(header) && other.Body.Equals(body);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the object is equal to this object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(IKMessage<TNodeId> other)
+        {
+            return other is KResponse<TNodeId, TBody> o && Equals(o);
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the object is equal to this object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public override bool Equals(object other)
+        {
+            return other is KResponse<TNodeId, TBody> o && Equals(o);
+        }
+
+        /// <summary>
+        /// Gets a unique hashcode for this instance.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            var h = new HashCode();
+            h.Add(header);
+            h.Add(status);
+            h.Add(body);
+            return h.ToHashCode();
+        }
 
     }
 
