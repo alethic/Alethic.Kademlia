@@ -153,6 +153,19 @@ namespace Cogito.Kademlia
         /// </summary>
         public int Count => buckets.Sum(i => i.Count);
 
+#if NETSTANDARD2_1
+
+        /// <summary>
+        /// Iterates all of the known peers.
+        /// </summary>
+        /// <returns></returns>
+        public IAsyncEnumerator<KPeerInfo<TNodeId>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            return buckets.SelectMany(i => i).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints)).ToAsyncEnumerable().GetAsyncEnumerator();
+        }
+
+#endif
+
         /// <summary>
         /// Iterates all of the known peers.
         /// </summary>

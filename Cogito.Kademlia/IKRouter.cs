@@ -10,7 +10,11 @@ namespace Cogito.Kademlia
     /// provide lookups.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public interface IKRouter<TNodeId> : IEnumerable<KPeerInfo<TNodeId>>
+    public interface IKRouter<TNodeId> :
+#if NETSTANDARD2_1
+        IAsyncEnumerable<KPeerInfo<TNodeId>>,
+#endif
+        IEnumerable<KPeerInfo<TNodeId>>
         where TNodeId : unmanaged
     {
 
