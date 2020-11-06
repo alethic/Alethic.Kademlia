@@ -14,8 +14,6 @@ namespace Cogito.Kademlia.Json
         where TNodeId : unmanaged
     {
 
-        public string ContentType => "application/json";
-
         public void Encode(IKMessageContext<TNodeId> context, IBufferWriter<byte> buffer, KMessageSequence<TNodeId> sequence)
         {
             using var writer = new Utf8JsonWriter(buffer);
