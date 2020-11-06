@@ -24,6 +24,19 @@ namespace Cogito.Kademlia
         /// </summary>
         int Count { get; }
 
+#if NETSTANDARD2_1
+
+        /// <summary>
+        /// Gets the data associated with the closest <paramref name="k"/> peers to <paramref name="key"/>.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
+
+#else
+
         /// <summary>
         /// Gets the data associated with the closest <paramref name="k"/> peers to <paramref name="key"/>.
         /// </summary>
@@ -32,6 +45,8 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
+
+#endif
 
         /// <summary>
         /// Updates the endpoints of the node within the router.

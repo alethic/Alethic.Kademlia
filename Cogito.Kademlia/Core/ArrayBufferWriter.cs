@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace Cogito.Kademlia.Core
 {
 
-#if NETSTANDARD2_0 || NET47
+#if NETSTANDARD2_0
 
     /// <summary>
     /// Private implementation of <see cref="ArrayBufferWriter"/> for down level frameworks.

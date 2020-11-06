@@ -50,7 +50,7 @@ namespace Cogito.Kademlia.Network.Udp
                 return new KUdpPacket<TNodeId>(null, null);
 
             // extract encoded format type
-#if NET47 || NETSTANDARD2_0
+#if NETSTANDARD2_0
             var contentType = Encoding.UTF8.GetString(buffer.Span.Slice(0, formatEnd).ToArray());
 #else
             var contentType = Encoding.UTF8.GetString(buffer.Span.Slice(0, formatEnd));

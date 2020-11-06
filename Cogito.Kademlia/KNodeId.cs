@@ -33,7 +33,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public static TNodeId Create()
         {
-#if NET47 || NETSTANDARD2_0
+#if NETSTANDARD2_0
             var b = new byte[SizeOf];
 #else
             var b = (Span<byte>)stackalloc byte[SizeOf];
@@ -95,7 +95,7 @@ namespace Cogito.Kademlia
             if (o.Length < s)
                 throw new ArgumentException("Output byte range must be greater than or equal to the size of the node IDs.");
 
-#if NETCOREAPP3_0 || NETSTANDARD2_1
+#if NETSTANDARD2_1
             // get binary representation of structure
             var a = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(l), 1));
             var b = MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref Unsafe.AsRef(r), 1));

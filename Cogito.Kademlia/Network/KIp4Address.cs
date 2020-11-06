@@ -35,7 +35,7 @@ namespace Cogito.Kademlia.Network
 
         public static KIp4Address Parse(ReadOnlySpan<char> text)
         {
-#if NETSTANDARD2_0 || NET47
+#if NETSTANDARD2_0
             return new KIp4Address(IPAddress.Parse(text.ToString()));
 #else
             return new KIp4Address(IPAddress.Parse(text));

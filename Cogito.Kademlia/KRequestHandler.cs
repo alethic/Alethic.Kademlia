@@ -136,7 +136,12 @@ namespace Cogito.Kademlia
         {
             await router.UpdateAsync(sender, null, cancellationToken);
 
-            return request.Respond(await router.SelectAsync(request.Key, router.K, cancellationToken));
+#if NETSTANDARD2_1
+            var l = await router.SelectAsync(request.Key, router.K, cancellationToken).ToArrayAsync();
+#else
+            var l = await router.SelectAsync(request.Key, router.K, cancellationToken);
+#endif
+            return request.Respond(l);
         }
 
         /// <summary>
@@ -166,7 +171,12 @@ namespace Cogito.Kademlia
             await router.UpdateAsync(sender, null, cancellationToken);
             var r = await store.GetAsync(request.Key);
 
-            return request.Respond(await router.SelectAsync(request.Key, router.K, cancellationToken), r);
+#if NETSTANDARD2_1
+            var l = await router.SelectAsync(request.Key, router.K, cancellationToken).ToArrayAsync(cancellationToken);
+#else
+            var l = await router.SelectAsync(request.Key, router.K, cancellationToken);
+#endif
+            return request.Respond(l, r);
         }
 
     }

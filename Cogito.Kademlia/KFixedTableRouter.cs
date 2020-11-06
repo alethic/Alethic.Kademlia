@@ -66,6 +66,35 @@ namespace Cogito.Kademlia
             return buckets[i];
         }
 
+#if NETSTANDARD2_1
+
+        /// <summary>
+        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
+        {
+            return SelectAsync(key, k, cancellationToken);
+        }
+
+        /// <summary>
+        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        async IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(TNodeId key, int k = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            foreach (var i in await SelectAsyncIter(key, k, cancellationToken))
+                yield return i;
+        }
+
+#else
+
         /// <summary>
         /// Gets the <paramref name="k"/> closest peers to the specified node ID.
         /// </summary>
@@ -74,6 +103,20 @@ namespace Cogito.Kademlia
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
+        {
+            return SelectAsyncIter(key, k, cancellationToken);
+        }
+
+#endif
+
+        /// <summary>
+        /// Gets the <paramref name="k"/> closest peers to the specified node ID.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="k"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsyncIter(in TNodeId key, int k, CancellationToken cancellationToken = default)
         {
             if (k == 0)
                 return GetBucket(key).SelectAsync(key, cancellationToken);
