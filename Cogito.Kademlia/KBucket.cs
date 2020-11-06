@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cogito.Linq;
 using Cogito.Threading;
 
 using Microsoft.Extensions.Logging;
@@ -48,11 +49,11 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        internal ValueTask<KEndpointSet<TNodeId>> GetEndpointsAsync(in TNodeId nodeId, CancellationToken cancellationToken)
+        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId nodeId, CancellationToken cancellationToken)
         {
             var n = GetNode(nodeId);
             if (n != null)
-                return new ValueTask<KEndpointSet<TNodeId>>(n.Value.Endpoints);
+                return new ValueTask<IEnumerable<KPeerInfo<TNodeId>>>(new KPeerInfo<TNodeId>(n.Value.NodeId, n.Value.Endpoints).Yield());
             else
                 return default;
         }
@@ -65,9 +66,9 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask UpdatePeerAsync(in TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
+        public ValueTask UpdateAsync(in TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
         {
-            return UpdatePeerAsync(nodeId, endpoints, cancellationToken);
+            return UpdateAsync(nodeId, endpoints, cancellationToken);
         }
 
         /// <summary>
@@ -76,7 +77,7 @@ namespace Cogito.Kademlia
         /// <param name="nodeId"></param>
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
-        async ValueTask UpdatePeerAsync(TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
+        async ValueTask UpdateAsync(TNodeId nodeId, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken)
         {
             var lk = rw.BeginUpgradableReadLock();
 

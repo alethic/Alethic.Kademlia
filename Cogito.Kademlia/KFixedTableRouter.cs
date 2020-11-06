@@ -69,12 +69,12 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the data for the peer within the table.
         /// </summary>
-        /// <param name="node"></param>
+        /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KEndpointSet<TNodeId>> GetEndpointsAsync(in TNodeId node, CancellationToken cancellationToken)
+        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, CancellationToken cancellationToken)
         {
-            return GetBucket(node).GetEndpointsAsync(node, cancellationToken);
+            return GetBucket(key).SelectAsync(key, cancellationToken);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default)
         {
             logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
 
@@ -104,7 +104,7 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask UpdatePeerAsync(in TNodeId peer, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken = default)
+        public ValueTask UpdateAsync(in TNodeId peer, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken = default)
         {
             if (peer.Equals(engine.SelfId))
             {
@@ -112,7 +112,7 @@ namespace Cogito.Kademlia
                 return new ValueTask(Task.CompletedTask);
             }
 
-            return GetBucket(peer).UpdatePeerAsync(peer, endpoints, cancellationToken);
+            return GetBucket(peer).UpdateAsync(peer, endpoints, cancellationToken);
         }
 
         /// <summary>

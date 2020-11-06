@@ -60,7 +60,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KPingResponse<TNodeId>> OnPingAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, request.Endpoints, cancellationToken);
+            await router.UpdateAsync(sender, request.Endpoints, cancellationToken);
 
             return request.Respond(engine.Endpoints.ToArray());
         }
@@ -89,7 +89,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, null, cancellationToken);
+            await router.UpdateAsync(sender, null, cancellationToken);
             await store.SetAsync(request.Key, ToStoreMode(request.Mode), request.Value, cancellationToken);
 
             return request.Respond(KStoreResponseStatus.Success);
@@ -134,9 +134,9 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, null, cancellationToken);
+            await router.UpdateAsync(sender, null, cancellationToken);
 
-            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken));
+            return request.Respond(await router.SelectAsync(request.Key, router.K, cancellationToken));
         }
 
         /// <summary>
@@ -163,10 +163,10 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdatePeerAsync(sender, null, cancellationToken);
+            await router.UpdateAsync(sender, null, cancellationToken);
             var r = await store.GetAsync(request.Key);
 
-            return request.Respond(await router.SelectPeersAsync(request.Key, router.K, cancellationToken), r);
+            return request.Respond(await router.SelectAsync(request.Key, router.K, cancellationToken), r);
         }
 
     }
