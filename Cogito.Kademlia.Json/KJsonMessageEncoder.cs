@@ -10,7 +10,7 @@ namespace Cogito.Kademlia.Json
     /// Implements a <see cref="IKMessageEncoder{TNodeId}"/> using JSON.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    class KJsonMessageEncoder<TNodeId>
+    public class KJsonMessageEncoder<TNodeId>
         where TNodeId : unmanaged
     {
 
