@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 using Cogito.Collections;
@@ -14,7 +13,7 @@ namespace Cogito.Kademlia
     /// Tracks a set of endpoints, managing their position within the set based on their timeout or success events.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KEndpointSet<TNodeId> : IDisposable, IEnumerable<IKProtocolEndpoint<TNodeId>>
+    public class KEndpointSet<TNodeId> : IDisposable, ICollection<IKProtocolEndpoint<TNodeId>>
         where TNodeId : unmanaged
     {
 
@@ -39,6 +38,34 @@ namespace Cogito.Kademlia
             // add source endpoints to set
             foreach (var i in source)
                 Insert(i);
+        }
+
+        /// <summary>
+        /// Gets whether or not the collection is read only.
+        /// </summary>
+        public bool IsReadOnly => false;
+
+        /// <summary>
+        /// Gets the number of items in the set.
+        /// </summary>
+        public int Count
+        {
+            get
+            {
+                using (sync.BeginReadLock())
+                    return ((ICollection<IKProtocolEndpoint<TNodeId>>)set).Count;
+            }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the set contains this endpoint.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public bool Contains(IKProtocolEndpoint<TNodeId> item)
+        {
+            using (sync.BeginReadLock())
+                return set.Contains(item);
         }
 
         /// <summary>
@@ -73,10 +100,15 @@ namespace Cogito.Kademlia
             return false;
         }
 
+        public void Clear()
+        {
+            set.Clear();
+        }
+
         public IEnumerator<IKProtocolEndpoint<TNodeId>> GetEnumerator()
         {
             using (sync.BeginReadLock())
-                return set.ToList().GetEnumerator();
+                return new List<IKProtocolEndpoint<TNodeId>>(set).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -93,6 +125,17 @@ namespace Cogito.Kademlia
                 set.Clear();
 
             GC.SuppressFinalize(this);
+        }
+
+        void ICollection<IKProtocolEndpoint<TNodeId>>.Add(IKProtocolEndpoint<TNodeId> item)
+        {
+            Insert(item);
+        }
+
+        void ICollection<IKProtocolEndpoint<TNodeId>>.CopyTo(IKProtocolEndpoint<TNodeId>[] array, int arrayIndex)
+        {
+            using (sync.BeginReadLock())
+                set.CopyTo(array, arrayIndex);
         }
 
         /// <summary>
