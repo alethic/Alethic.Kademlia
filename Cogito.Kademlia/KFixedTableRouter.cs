@@ -67,26 +67,16 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Gets the data for the peer within the table.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, CancellationToken cancellationToken)
-        {
-            return GetBucket(key).SelectAsync(key, cancellationToken);
-        }
-
-        /// <summary>
         /// Gets the <paramref name="k"/> closest peers to the specified node ID.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
         {
-            logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
+            if (k == 0)
+                return GetBucket(key).SelectAsync(key, cancellationToken);
 
             // take first bucket; then append others; pretty inefficient
             var c = new KNodeIdDistanceComparer<TNodeId>(key);

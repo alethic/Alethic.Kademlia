@@ -25,14 +25,6 @@ namespace Cogito.Kademlia
         int Count { get; }
 
         /// <summary>
-        /// Gets the data associated with the specified peer.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, CancellationToken cancellationToken = default);
-
-        /// <summary>
         /// Gets the data associated with the closest <paramref name="k"/> peers to <paramref name="key"/>.
         /// </summary>
         /// <param name="key"></param>
