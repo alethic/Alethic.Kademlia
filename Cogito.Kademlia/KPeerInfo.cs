@@ -5,7 +5,7 @@
     /// Describes a peer and its associated endpoints.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public struct KPeerEndpointInfo<TNodeId>
+    public struct KPeerInfo<TNodeId>
         where TNodeId : unmanaged
     {
 
@@ -17,7 +17,7 @@
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KPeerEndpointInfo(in TNodeId id, KEndpointSet<TNodeId> endpoints)
+        public KPeerInfo(in TNodeId id, KEndpointSet<TNodeId> endpoints)
         {
             this.id = id;
             this.endpoints = endpoints;

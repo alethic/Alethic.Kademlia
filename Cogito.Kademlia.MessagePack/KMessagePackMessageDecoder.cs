@@ -269,7 +269,7 @@ namespace Cogito.Kademlia.MessagePack
         /// <param name="context"></param>
         /// <param name="peers"></param>
         /// <returns></returns>
-        IEnumerable<KPeerEndpointInfo<TNodeId>> Decode(IKMessageContext<TNodeId> context, Peer[] peers)
+        IEnumerable<KPeerInfo<TNodeId>> Decode(IKMessageContext<TNodeId> context, Peer[] peers)
         {
             foreach (var peer in peers)
                 yield return Decode(context, peer);
@@ -281,9 +281,9 @@ namespace Cogito.Kademlia.MessagePack
         /// <param name="context"></param>
         /// <param name="peer"></param>
         /// <returns></returns>
-        KPeerEndpointInfo<TNodeId> Decode(IKMessageContext<TNodeId> context, Peer peer)
+        KPeerInfo<TNodeId> Decode(IKMessageContext<TNodeId> context, Peer peer)
         {
-            return new KPeerEndpointInfo<TNodeId>(DecodeNodeId(context, peer.Id), new KEndpointSet<TNodeId>(Decode(context, peer.Endpoints)));
+            return new KPeerInfo<TNodeId>(DecodeNodeId(context, peer.Id), new KEndpointSet<TNodeId>(Decode(context, peer.Endpoints)));
         }
 
         /// <summary>

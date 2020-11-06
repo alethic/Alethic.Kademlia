@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -228,7 +227,11 @@ namespace Cogito.Kademlia
         public IEnumerator<KBucketItem<TNodeId>> GetEnumerator()
         {
             using (rw.BeginReadLock())
-                return l.ToList().GetEnumerator();
+            {
+                var a = new KBucketItem<TNodeId>[l.Count];
+                l.CopyTo(a, 0);
+                return ((IEnumerable<KBucketItem<TNodeId>>)a).GetEnumerator();
+            }
         }
 
         /// <summary>

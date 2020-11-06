@@ -275,7 +275,7 @@ namespace Cogito.Kademlia.Protobuf
         /// <param name="resources"></param>
         /// <param name="peers"></param>
         /// <returns></returns>
-        IEnumerable<KPeerEndpointInfo<TNodeId>> Decode(IKMessageContext<TNodeId> resources, RepeatedField<Peer> peers)
+        IEnumerable<KPeerInfo<TNodeId>> Decode(IKMessageContext<TNodeId> resources, RepeatedField<Peer> peers)
         {
             foreach (var peer in peers)
                 yield return Decode(resources, peer);
@@ -287,9 +287,9 @@ namespace Cogito.Kademlia.Protobuf
         /// <param name="resources"></param>
         /// <param name="peer"></param>
         /// <returns></returns>
-        KPeerEndpointInfo<TNodeId> Decode(IKMessageContext<TNodeId> resources, Peer peer)
+        KPeerInfo<TNodeId> Decode(IKMessageContext<TNodeId> resources, Peer peer)
         {
-            return new KPeerEndpointInfo<TNodeId>(DecodeNodeId(resources, peer.Id), new KEndpointSet<TNodeId>(Decode(resources, peer.Endpoints)));
+            return new KPeerInfo<TNodeId>(DecodeNodeId(resources, peer.Id), new KEndpointSet<TNodeId>(Decode(resources, peer.Endpoints)));
         }
 
         /// <summary>

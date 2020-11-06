@@ -208,13 +208,13 @@ namespace Cogito.Kademlia.Protobuf
             return r;
         }
 
-        IEnumerable<Peer> Encode(IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId>[] peers)
+        IEnumerable<Peer> Encode(IKMessageContext<TNodeId> context, KPeerInfo<TNodeId>[] peers)
         {
             foreach (var peer in peers)
                 yield return Encode(context, peer);
         }
 
-        Peer Encode(IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId> peer)
+        Peer Encode(IKMessageContext<TNodeId> context, KPeerInfo<TNodeId> peer)
         {
             var p = new Peer();
             p.Id = Encode(context, peer.Id);

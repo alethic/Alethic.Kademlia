@@ -13,14 +13,14 @@ namespace Cogito.Kademlia
     {
 
         readonly TNodeId key;
-        readonly IEnumerable<KPeerEndpointInfo<TNodeId>> nodes;
+        readonly IEnumerable<KPeerInfo<TNodeId>> nodes;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="key"></param>
         /// <param name="nodes"></param>
-        public KNodeLookupNodeResult(in TNodeId key, IEnumerable<KPeerEndpointInfo<TNodeId>> nodes)
+        public KNodeLookupNodeResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes)
         {
             this.key = key;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
@@ -34,7 +34,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of nodes and node endpoints discovered on the way to the key, sorted by distance.
         /// </summary>
-        public IEnumerable<KPeerEndpointInfo<TNodeId>> Nodes => nodes;
+        public IEnumerable<KPeerInfo<TNodeId>> Nodes => nodes;
 
     }
 

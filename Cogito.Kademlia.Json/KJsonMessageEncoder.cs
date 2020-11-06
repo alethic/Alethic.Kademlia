@@ -273,7 +273,7 @@ namespace Cogito.Kademlia.Json
             writer.WriteEndObject();
         }
 
-        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId>[] peers)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerInfo<TNodeId>[] peers)
         {
             writer.WriteStartArray();
 
@@ -283,7 +283,7 @@ namespace Cogito.Kademlia.Json
             writer.WriteEndArray();
         }
 
-        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerEndpointInfo<TNodeId> peer)
+        void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KPeerInfo<TNodeId> peer)
         {
             writer.WriteStartObject();
             writer.WritePropertyName("id");

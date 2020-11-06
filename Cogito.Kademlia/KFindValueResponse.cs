@@ -10,7 +10,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly KPeerEndpointInfo<TNodeId>[] peers;
+        readonly KPeerInfo<TNodeId>[] peers;
         readonly KValueInfo? value;
 
         /// <summary>
@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="peers"></param>
         /// <param name="value"></param>
-        public KFindValueResponse(KPeerEndpointInfo<TNodeId>[] peers, in KValueInfo? value)
+        public KFindValueResponse(KPeerInfo<TNodeId>[] peers, in KValueInfo? value)
         {
             this.peers = peers ?? throw new ArgumentNullException(nameof(peers));
             this.value = value;
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of peers and their endpoints returned by the lookup.
         /// </summary>
-        public KPeerEndpointInfo<TNodeId>[] Peers => peers;
+        public KPeerInfo<TNodeId>[] Peers => peers;
 
         /// <summary>
         /// Gets the value that was located.

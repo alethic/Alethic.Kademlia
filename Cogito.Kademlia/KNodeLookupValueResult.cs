@@ -13,8 +13,8 @@ namespace Cogito.Kademlia
     {
 
         readonly TNodeId key;
-        readonly IEnumerable<KPeerEndpointInfo<TNodeId>> nodes;
-        readonly KPeerEndpointInfo<TNodeId>? source;
+        readonly IEnumerable<KPeerInfo<TNodeId>> nodes;
+        readonly KPeerInfo<TNodeId>? source;
         readonly KValueInfo? value;
 
         /// <summary>
@@ -24,7 +24,7 @@ namespace Cogito.Kademlia
         /// <param name="nodes"></param>
         /// <param name="source"></param>
         /// <param name="value"></param>
-        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerEndpointInfo<TNodeId>> nodes, in KPeerEndpointInfo<TNodeId>? source, in KValueInfo? value)
+        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? source, in KValueInfo? value)
         {
             this.key = key;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
@@ -38,7 +38,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="nodes"></param>
         /// <param name="final"></param>
-        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerEndpointInfo<TNodeId>> nodes, in KPeerEndpointInfo<TNodeId>? final) :
+        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? final) :
             this(key, nodes, final, null)
         {
 
@@ -52,12 +52,12 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the set of nodes and node endpoints discovered on the way to the key, sorted by distance.
         /// </summary>
-        public IEnumerable<KPeerEndpointInfo<TNodeId>> Nodes => nodes;
+        public IEnumerable<KPeerInfo<TNodeId>> Nodes => nodes;
 
         /// <summary>
         /// Gets the node information that returned the value.
         /// </summary>
-        public KPeerEndpointInfo<TNodeId>? Source => source;
+        public KPeerInfo<TNodeId>? Source => source;
 
         /// <summary>
         /// Gets the resulting value if any.

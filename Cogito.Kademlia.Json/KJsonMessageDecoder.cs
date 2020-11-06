@@ -264,7 +264,7 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        IEnumerable<KPeerEndpointInfo<TNodeId>> DecodePeers(IKMessageContext<TNodeId> context, JsonElement element)
+        IEnumerable<KPeerInfo<TNodeId>> DecodePeers(IKMessageContext<TNodeId> context, JsonElement element)
         {
             foreach (var peer in element.EnumerateArray())
                 yield return DecodePeer(context, peer);
@@ -276,9 +276,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KPeerEndpointInfo<TNodeId> DecodePeer(IKMessageContext<TNodeId> context, JsonElement element)
+        KPeerInfo<TNodeId> DecodePeer(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPeerEndpointInfo<TNodeId>(DecodeNodeId(context, element.GetProperty("id")), new KEndpointSet<TNodeId>(DecodeEndpoints(context, element.GetProperty("endpoints"))));
+            return new KPeerInfo<TNodeId>(DecodeNodeId(context, element.GetProperty("id")), new KEndpointSet<TNodeId>(DecodeEndpoints(context, element.GetProperty("endpoints"))));
         }
 
         /// <summary>

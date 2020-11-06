@@ -8,13 +8,13 @@
         where TNodeId : unmanaged
     {
 
-        readonly KPeerEndpointInfo<TNodeId>[] peers;
+        readonly KPeerInfo<TNodeId>[] peers;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="peers"></param>
-        public KFindNodeResponse(KPeerEndpointInfo<TNodeId>[] peers)
+        public KFindNodeResponse(KPeerInfo<TNodeId>[] peers)
         {
             this.peers = peers;
         }
@@ -22,7 +22,7 @@
         /// <summary>
         /// Gets the set of peers and their endpoints returned by the lookup.
         /// </summary>
-        public KPeerEndpointInfo<TNodeId>[] Peers => peers;
+        public KPeerInfo<TNodeId>[] Peers => peers;
 
     }
 

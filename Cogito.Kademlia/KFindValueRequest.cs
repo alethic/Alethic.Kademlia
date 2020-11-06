@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         /// <param name="peers"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public KFindValueResponse<TNodeId> Respond(KPeerEndpointInfo<TNodeId>[] peers, in KValueInfo? value)
+        public KFindValueResponse<TNodeId> Respond(KPeerInfo<TNodeId>[] peers, in KValueInfo? value)
         {
             return new KFindValueResponse<TNodeId>(peers, value);
         }
@@ -29,7 +29,7 @@ namespace Cogito.Kademlia
         /// <param name="peers"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public KFindValueResponse<TNodeId> Respond(IEnumerable<KPeerEndpointInfo<TNodeId>> peers, in KValueInfo? value)
+        public KFindValueResponse<TNodeId> Respond(IEnumerable<KPeerInfo<TNodeId>> peers, in KValueInfo? value)
         {
             return new KFindValueResponse<TNodeId>(peers.ToArray(), value);
         }

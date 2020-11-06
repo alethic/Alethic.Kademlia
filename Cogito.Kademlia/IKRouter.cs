@@ -10,7 +10,7 @@ namespace Cogito.Kademlia
     /// provide lookups.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public interface IKRouter<TNodeId>
+    public interface IKRouter<TNodeId> : IEnumerable<KPeerInfo<TNodeId>>
         where TNodeId : unmanaged
     {
 
@@ -39,7 +39,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<IEnumerable<KPeerEndpointInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Updates the endpoints of the node within the router.

@@ -25,7 +25,7 @@ namespace Cogito.Kademlia
         readonly struct FindResult
         {
 
-            readonly IEnumerable<KPeerEndpointInfo<TNodeId>> peers;
+            readonly IEnumerable<KPeerInfo<TNodeId>> peers;
             readonly KValueInfo? value;
 
             /// <summary>
@@ -33,7 +33,7 @@ namespace Cogito.Kademlia
             /// </summary>
             /// <param name="peers"></param>
             /// <param name="value"></param>
-            public FindResult(IEnumerable<KPeerEndpointInfo<TNodeId>> peers, KValueInfo? value)
+            public FindResult(IEnumerable<KPeerInfo<TNodeId>> peers, KValueInfo? value)
             {
                 this.peers = peers;
                 this.value = value;
@@ -42,7 +42,7 @@ namespace Cogito.Kademlia
             /// <summary>
             /// Gets the set of peers returned from the find method.
             /// </summary>
-            public IEnumerable<KPeerEndpointInfo<TNodeId>> Peers => peers;
+            public IEnumerable<KPeerInfo<TNodeId>> Peers => peers;
 
             /// <summary>
             /// Optionally gets the value returned from the find method.
@@ -58,8 +58,8 @@ namespace Cogito.Kademlia
         {
 
             readonly TNodeId key;
-            readonly IEnumerable<KPeerEndpointInfo<TNodeId>> peers;
-            readonly KPeerEndpointInfo<TNodeId>? source;
+            readonly IEnumerable<KPeerInfo<TNodeId>> peers;
+            readonly KPeerInfo<TNodeId>? source;
             readonly KValueInfo? value;
 
             /// <summary>
@@ -69,7 +69,7 @@ namespace Cogito.Kademlia
             /// <param name="peers"></param>
             /// <param name="source"></param>
             /// <param name="value"></param>
-            public LookupResult(in TNodeId key, IEnumerable<KPeerEndpointInfo<TNodeId>> peers, in KPeerEndpointInfo<TNodeId>? source, in KValueInfo? value)
+            public LookupResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> peers, in KPeerInfo<TNodeId>? source, in KValueInfo? value)
             {
                 this.key = key;
                 this.peers = peers;
@@ -85,12 +85,12 @@ namespace Cogito.Kademlia
             /// <summary>
             /// Gets the set of peers returned from the find method.
             /// </summary>
-            public IEnumerable<KPeerEndpointInfo<TNodeId>> Peers => peers;
+            public IEnumerable<KPeerInfo<TNodeId>> Peers => peers;
 
             /// <summary>
             /// Gets the final node that returned the result.
             /// </summary>
-            public KPeerEndpointInfo<TNodeId>? Source => source;
+            public KPeerInfo<TNodeId>? Source => source;
 
             /// <summary>
             /// Optionally gets the value returned from the find method.
@@ -106,7 +106,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        delegate ValueTask<FindResult> FindFunc(KPeerEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken);
+        delegate ValueTask<FindResult> FindFunc(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken);
 
         readonly IKEngine<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
@@ -181,7 +181,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task CacheAsync(IEnumerable<KPeerEndpointInfo<TNodeId>> peers, TNodeId key, KValueInfo value, CancellationToken cancellationToken)
+        Task CacheAsync(IEnumerable<KPeerInfo<TNodeId>> peers, TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
             return Task.WhenAll(peers.Select(i => invoker.StoreAsync(i.Endpoints, key, KStoreRequestMode.Replica, value, cancellationToken).AsTask()));
         }
@@ -208,12 +208,12 @@ namespace Cogito.Kademlia
             var init = await router.SelectPeersAsync(key, alpha, cancellationToken);
 
             // tracks the peers remaining to query sorted by distance
-            var todo = new C5.IntervalHeap<KPeerEndpointInfo<TNodeId>>(router.K, new FuncComparer<KPeerEndpointInfo<TNodeId>, TNodeId>(i => i.Id, comp));
+            var todo = new C5.IntervalHeap<KPeerInfo<TNodeId>>(router.K, new FuncComparer<KPeerInfo<TNodeId>, TNodeId>(i => i.Id, comp));
             todo.AddAll(init);
 
             // track done nodes so we don't recurse; and maintain a list of near nodes that have been traversed
             var done = new HashSet<TNodeId>(todo.Select(i => i.Id));
-            var path = new C5.IntervalHeap<KPeerEndpointInfo<TNodeId>>(router.K, new FuncComparer<KPeerEndpointInfo<TNodeId>, TNodeId>(i => i.Id, comp));
+            var path = new C5.IntervalHeap<KPeerInfo<TNodeId>>(router.K, new FuncComparer<KPeerInfo<TNodeId>, TNodeId>(i => i.Id, comp));
 
             try
             {
@@ -256,7 +256,7 @@ namespace Cogito.Kademlia
                         }
 
                         // extract the peer this request was destined to
-                        var peer = (KPeerEndpointInfo<TNodeId>)find.AsyncState;
+                        var peer = (KPeerInfo<TNodeId>)find.AsyncState;
 
                         // method returned the value; we can stop looking and return the value and our path
                         if (find.Result.Value != null)
@@ -343,7 +343,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<FindResult> FindNodeAsync(KPeerEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
+        async ValueTask<FindResult> FindNodeAsync(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
         {
             var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success && r.Body != null)
@@ -360,7 +360,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<FindResult> FindValueAsync(KPeerEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
+        async ValueTask<FindResult> FindValueAsync(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
         {
             var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success && r.Body != null)

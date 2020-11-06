@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
     /// Implements a fixed Kademlia routing table.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KFixedTableRouter<TNodeId> : KFixedTableRouter, IKRouter<TNodeId>, IEnumerable<KeyValuePair<TNodeId, KEndpointSet<TNodeId>>>
+    public class KFixedTableRouter<TNodeId> : KFixedTableRouter, IKRouter<TNodeId>
         where TNodeId : unmanaged
     {
 
@@ -84,7 +84,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerEndpointInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectPeersAsync(in TNodeId key, int k, CancellationToken cancellationToken = default)
         {
             logger?.LogTrace("Obtaining top {k} peers for {Key}.", k, key);
 
@@ -92,8 +92,8 @@ namespace Cogito.Kademlia
             var c = new KNodeIdDistanceComparer<TNodeId>(key);
             var f = key.Equals(engine.SelfId) ? null : buckets[GetBucketIndex(engine.SelfId, key)];
             var s = f == null ? Enumerable.Empty<KBucket<TNodeId>>() : new[] { f };
-            var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.NodeId, c).Take(k).Select(i => new KPeerEndpointInfo<TNodeId>(i.NodeId, i.Endpoints));
-            return new ValueTask<IEnumerable<KPeerEndpointInfo<TNodeId>>>(l);
+            var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.NodeId, c).Take(k).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints));
+            return new ValueTask<IEnumerable<KPeerInfo<TNodeId>>>(l);
         }
 
         /// <summary>
@@ -124,9 +124,9 @@ namespace Cogito.Kademlia
         /// Iterates all of the known peers.
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<KeyValuePair<TNodeId, KEndpointSet<TNodeId>>> GetEnumerator()
+        public IEnumerator<KPeerInfo<TNodeId>> GetEnumerator()
         {
-            return buckets.SelectMany(i => i).Select(i => new KeyValuePair<TNodeId, KEndpointSet<TNodeId>>(i.NodeId, i.Endpoints)).GetEnumerator();
+            return buckets.SelectMany(i => i).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints)).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
