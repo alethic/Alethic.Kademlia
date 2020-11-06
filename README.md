@@ -8,7 +8,7 @@ The `Cogito.Kademlia` library provides abstractions for most of the components a
 
 The primary feature is the usage of generic `KNodeId` specifications for the Kademlia node ID structure. This allows the consumer to customize to one of the included NodeId implementations (32 bits through 256 bits), or substitute their own. This is an unmanaged structure whos in-memory layout should match the logical Kademlia node ID requirements of interpretation as a large integer value. Big endian.
 
-The `IKEngine` component is the central "tying together" component. It's goal is to manage the activities related to incoming network requests, and determine their responses. It also provides a user-visible API surface for high-level Kademlia operations.
+The `IKHost` component is the central "tying together" component. It's goal is to manage the activities related to incoming network requests, and determine their responses. It also provides a user-visible API surface for high-level Kademlia operations.
 
 The `IKProtocol` component implements a network format. One sample network format exists in the `Cogito.Kademlia.Protocols.Protobuf` library, which implements a simple UDP protocol using Google Protocol Buffer format packets.
 

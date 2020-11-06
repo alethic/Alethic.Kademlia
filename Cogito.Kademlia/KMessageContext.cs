@@ -12,7 +12,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IEnumerable<string> formats;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace Cogito.Kademlia
         /// <param name="sender"></param>
         /// <param name="target"></param>
         /// <param name="formats"></param>
-        public KMessageContext(IKEngine<TNodeId> engine, IEnumerable<string> formats)
+        public KMessageContext(IKHost<TNodeId> engine, IEnumerable<string> formats)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));

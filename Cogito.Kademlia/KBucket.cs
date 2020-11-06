@@ -20,7 +20,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKInvoker<TNodeId> invoker;
         readonly int k;
         readonly ILogger logger;
@@ -34,7 +34,7 @@ namespace Cogito.Kademlia
         /// <param name="invoker"></param>
         /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KBucket(IKEngine<TNodeId> engine, IKInvoker<TNodeId> invoker, int k, ILogger logger = null)
+        public KBucket(IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, int k, ILogger logger = null)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));

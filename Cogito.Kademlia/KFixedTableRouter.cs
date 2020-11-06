@@ -23,7 +23,7 @@ namespace Cogito.Kademlia
     {
 
         readonly IOptions<KFixedTableRouterOptions<TNodeId>> options;
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKInvoker<TNodeId> invoker;
         readonly ILogger logger;
 
@@ -36,7 +36,7 @@ namespace Cogito.Kademlia
         /// <param name="engine"></param>
         /// <param name="invoker"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(IOptions<KFixedTableRouterOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
+        public KFixedTableRouter(IOptions<KFixedTableRouterOptions<TNodeId>> options, IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));

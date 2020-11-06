@@ -31,7 +31,7 @@ namespace Cogito.Kademlia.Network.Udp
         static readonly Random random = new Random();
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKConnector<TNodeId> connector;
         readonly IKRequestHandler<TNodeId> handler;
@@ -58,7 +58,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="connector"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));

@@ -14,7 +14,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKInvokerPolicy<TNodeId> policy;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="engine"></param>
         /// <param name="policy"></param>
-        public KInvoker(IKEngine<TNodeId> engine, IKInvokerPolicy<TNodeId> policy)
+        public KInvoker(IKHost<TNodeId> engine, IKInvokerPolicy<TNodeId> policy)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.policy = policy ?? throw new ArgumentNullException(nameof(policy));

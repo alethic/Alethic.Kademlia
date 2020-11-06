@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly IKNodeLookup<TNodeId> lookup;
@@ -32,7 +32,7 @@ namespace Cogito.Kademlia
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
         /// <param name="logger"></param>
-        public KConnector(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, ILogger logger)
+        public KConnector(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, ILogger logger)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));

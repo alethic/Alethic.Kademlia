@@ -2,10 +2,10 @@
 {
 
     /// <summary>
-    /// Options available to the <see cref="KEngine{TNodeId}"/>.
+    /// Options available to the <see cref="KHost{TNodeId}"/>.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KEngineOptions<TNodeId>
+    public class KHostOptions<TNodeId>
         where TNodeId : unmanaged
     {
 

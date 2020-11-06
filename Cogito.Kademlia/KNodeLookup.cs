@@ -12,7 +12,7 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Provides the node lookup operation logic against a <see cref="IKEngine{TNodeId}"/>.
+    /// Provides the node lookup operation logic against a <see cref="IKHost{TNodeId}"/>.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
     public class KNodeLookup<TNodeId> : IKNodeLookup<TNodeId>
@@ -108,7 +108,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         delegate ValueTask<FindResult> FindFunc(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken);
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly int alpha;
@@ -124,7 +124,7 @@ namespace Cogito.Kademlia
         /// <param name="logger"></param>
         /// <param name="alpha">Number of outstanding FIND_ RPC requests to keep in flight.</param>
         /// <param name="cache">Number of nodes to cache resulting values at.</param>
-        public KNodeLookup(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
+        public KNodeLookup(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));

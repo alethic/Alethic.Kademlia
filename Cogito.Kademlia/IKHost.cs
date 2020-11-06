@@ -7,7 +7,7 @@ namespace Cogito.Kademlia
     /// Represents a Kademlia network engine.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public interface IKEngine<TNodeId>
+    public interface IKHost<TNodeId>
         where TNodeId : unmanaged
     {
 

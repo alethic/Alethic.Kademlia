@@ -8,14 +8,14 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Provides an implementation of a Kademlia network engine. The <see cref="KEngine{TNodeId, TKNodeData}"/>
+    /// Provides an implementation of a Kademlia network engine. The <see cref="KHost{TNodeId}"/>
     /// class implements the core runtime logic of a Kademlia node.
     /// </summary>
-    public class KEngine<TNodeId> : IKEngine<TNodeId>
+    public class KHost<TNodeId> : IKHost<TNodeId>
         where TNodeId : unmanaged
     {
 
-        readonly IOptions<KEngineOptions<TNodeId>> options;
+        readonly IOptions<KHostOptions<TNodeId>> options;
         readonly ILogger logger;
 
         readonly KEndpointSet<TNodeId> endpoints;
@@ -25,7 +25,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="options"></param>
         /// <param name="logger"></param>
-        public KEngine(IOptions<KEngineOptions<TNodeId>> options, ILogger logger)
+        public KHost(IOptions<KHostOptions<TNodeId>> options, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));

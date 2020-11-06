@@ -54,7 +54,7 @@ namespace Cogito.Kademlia.InMemory
 
         static readonly TimeSpan DefaultFrequency = TimeSpan.FromHours(1);
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly IKNodeLookup<TNodeId> lookup;
@@ -78,7 +78,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="lookup"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryStore(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
+        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));

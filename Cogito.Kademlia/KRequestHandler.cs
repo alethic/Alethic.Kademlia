@@ -16,7 +16,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKEngine<TNodeId> engine;
+        readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
         readonly IKStore<TNodeId> store;
         readonly ILogger logger;
@@ -28,7 +28,7 @@ namespace Cogito.Kademlia
         /// <param name="router"></param>
         /// <param name="store"></param>
         /// <param name="logger"></param>
-        public KRequestHandler(IKEngine<TNodeId> engine, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
+        public KRequestHandler(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
