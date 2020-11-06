@@ -75,7 +75,7 @@ namespace Cogito.Kademlia.Network.Udp
             // extract source endpoint
             var source = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
             var length = args.BytesTransferred;
-            logger?.LogTrace("Received incoming packet of {Length} from {Endpoint}.", length, source);
+            logger.LogTrace("Received incoming packet of {Length} from {Endpoint}.", length, source);
 
             try
             {
@@ -113,9 +113,9 @@ namespace Cogito.Kademlia.Network.Udp
                     }
                 });
             }
-            catch (SocketException e)
+            catch (Exception e)
             {
-                logger?.LogError(e, "Exception during UDP receive.");
+                logger.LogError(e, "Exception during UDP receive.");
             }
         }
 
@@ -133,11 +133,11 @@ namespace Cogito.Kademlia.Network.Udp
         {
             if (packet.Sequence.Value.Network != options.Value.Network)
             {
-                logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
+                logger.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
                 return new ValueTask(Task.CompletedTask);
             }
 
-            var todo = new List<Task>();
+            var todo = new List<Task>(2);
 
             // dispatch individual messages into infrastructure
             foreach (var message in packet.Sequence.Value)
@@ -259,7 +259,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         Task OnReceivePingRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "PING", request.Header.ReplyId, request.Header.Sender, source);
+            logger.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "PING", request.Header.ReplyId, request.Header.Sender, source);
             return HandleAsync(receive, respond, source, format, request, handler.OnPingAsync, cancellationToken);
         }
 
@@ -276,7 +276,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         Task OnReceiveStoreRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KStoreRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "STORE", request.Header.ReplyId, request.Header.Sender, source);
+            logger.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "STORE", request.Header.ReplyId, request.Header.Sender, source);
             return HandleAsync(receive, respond, source, format, request, handler.OnStoreAsync, cancellationToken);
         }
 
@@ -292,7 +292,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         Task OnReceiveFindNodeRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KFindNodeRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.ReplyId, request.Header.Sender, source);
+            logger.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_NODE", request.Header.ReplyId, request.Header.Sender, source);
             return HandleAsync(receive, respond, source, format, request, handler.OnFindNodeAsync, cancellationToken);
         }
 
@@ -308,7 +308,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         Task OnReceiveFindValueRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KFindValueRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.ReplyId, request.Header.Sender, source);
+            logger.LogDebug("Received {Operation}:{ReplyId} from {Sender} at {Endpoint}.", "FIND_VALUE", request.Header.ReplyId, request.Header.Sender, source);
             return HandleAsync(receive, respond, source, format, request, handler.OnFindValueAsync, cancellationToken);
         }
 
@@ -467,14 +467,14 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask<KResponse<TNodeId, TResponse>> SendAndWaitAsync<TResponse>(Socket socket, KIpEndpoint target, ulong replyId, ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
             where TResponse : struct, IKResponseBody<TNodeId>
         {
-            logger?.LogDebug("Queuing response wait for {ReplyId} to {Endpoint}.", replyId, target);
+            logger.LogDebug("Queuing response wait for {ReplyId} to {Endpoint}.", replyId, target);
 
             var c = new CancellationTokenSource();
             var t = queue.WaitAsync<TResponse>(replyId, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
 
             try
             {
-                logger?.LogTrace("Sending packet to {Endpoint} with {ReplyId}.", target, replyId);
+                logger.LogTrace("Sending packet to {Endpoint} with {ReplyId}.", target, replyId);
                 await SocketSendToAsync(socket, buffer.Span, target, cancellationToken);
             }
             catch (Exception)
@@ -484,7 +484,7 @@ namespace Cogito.Kademlia.Network.Udp
 
             // wait on response
             var r = await t;
-            logger?.LogTrace("Exited wait for {ReplyId} to {Endpoint}.", replyId, target);
+            logger.LogTrace("Exited wait for {ReplyId} to {Endpoint}.", replyId, target);
             return r;
         }
 

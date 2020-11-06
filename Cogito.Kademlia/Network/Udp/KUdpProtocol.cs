@@ -291,6 +291,9 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         void BeginReceive(Socket socket, SocketAsyncEventArgs args)
         {
+            if (socket.IsBound == false)
+                return;
+
             // allocate new buffer to receive into
             var buff = ArrayPool<byte>.Shared.Rent(8192);
 
@@ -303,9 +306,16 @@ namespace Cogito.Kademlia.Network.Udp
                 _ => throw new InvalidOperationException(),
             }, 0);
 
-            // queue wait for packet
-            if (socket.ReceiveFromAsync(args) == false)
-                SocketAsyncEventArgs_Completed(socket, args);
+            try
+            {
+                // queue wait for packet
+                if (socket.ReceiveFromAsync(args) == false)
+                    SocketAsyncEventArgs_Completed(socket, args);
+            }
+            catch (ObjectDisposedException)
+            {
+                // ignore, socket closed
+            }
         }
 
         /// <summary>
@@ -316,13 +326,8 @@ namespace Cogito.Kademlia.Network.Udp
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs args)
         {
             var socket = (Socket)sender;
-
-            // allow server to handle request
             server.OnReceive(socket, (Socket)sender, args);
-
-            // wait for next packet
-            if (socket.IsBound)
-                BeginReceive(socket, args);
+            BeginReceive(socket, args);
         }
 
         /// <summary>
