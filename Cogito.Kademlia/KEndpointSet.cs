@@ -14,11 +14,11 @@ namespace Cogito.Kademlia
     /// Tracks a set of endpoints, managing their position within the set based on their timeout or success events.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KEndpointSet<TNodeId> : IKProtocolEndpointSet<TNodeId>, IDisposable
+    public class KEndpointSet<TNodeId> : IDisposable, IEnumerable<IKProtocolEndpoint<TNodeId>>
         where TNodeId : unmanaged
     {
 
-        readonly OrderedDictionary<IKProtocolEndpoint<TNodeId>, KEndpointInfo<TNodeId>> dict;
+        readonly OrderedSet<IKProtocolEndpoint<TNodeId>> set;
         readonly ReaderWriterLockSlim sync = new ReaderWriterLockSlim();
 
         /// <summary>
@@ -26,7 +26,7 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         public KEndpointSet()
         {
-            dict = new OrderedDictionary<IKProtocolEndpoint<TNodeId>, KEndpointInfo<TNodeId>>(EqualityComparer<IKProtocolEndpoint<TNodeId>>.Default);
+            set = new OrderedSet<IKProtocolEndpoint<TNodeId>>(EqualityComparer<IKProtocolEndpoint<TNodeId>>.Default);
         }
 
         /// <summary>
@@ -48,79 +48,35 @@ namespace Cogito.Kademlia
         public IKProtocolEndpoint<TNodeId> Acquire()
         {
             using (sync.BeginReadLock())
-                return dict.Count > 0 ? dict.First.Key : null;
+                return set.Count > 0 ? set.First : null;
         }
 
-        bool AddFirst(IKProtocolEndpoint<TNodeId> endpoint, KEndpointInfo<TNodeId> info)
+        public void Insert(IKProtocolEndpoint<TNodeId> endpoint)
         {
             using (sync.BeginWriteLock())
-                return dict.AddFirst(endpoint, info);
+                set.AddLast(endpoint);
         }
 
-        bool AddLast(IKProtocolEndpoint<TNodeId> endpoint, KEndpointInfo<TNodeId> info)
+        public void Update(IKProtocolEndpoint<TNodeId> endpoint)
         {
             using (sync.BeginWriteLock())
-                return dict.AddLast(endpoint, info);
+                set.AddFirst(endpoint);
         }
 
-        public KEndpointInfo<TNodeId> Insert(IKProtocolEndpoint<TNodeId> endpoint)
+        public bool Remove(IKProtocolEndpoint<TNodeId> endpoint)
         {
             using (sync.BeginUpgradableReadLock())
-            {
-                if (dict.TryGetValue(endpoint, out var info) == false)
-                    AddLast(endpoint, info = new KEndpointInfo<TNodeId>(DateTime.MinValue));
-
-                return info;
-            }
-        }
-
-        public KEndpointInfo<TNodeId> Update(IKProtocolEndpoint<TNodeId> endpoint)
-        {
-            using (sync.BeginUpgradableReadLock())
-            {
-                if (dict.TryGetValue(endpoint, out var info))
-                    AddFirst(endpoint, info);
-                else
-                    AddFirst(endpoint, info = new KEndpointInfo<TNodeId>(DateTime.MinValue));
-
-                return info;
-            }
-        }
-
-        public KEndpointInfo<TNodeId> Demote(IKProtocolEndpoint<TNodeId> endpoint)
-        {
-            using (sync.BeginUpgradableReadLock())
-            {
-                if (dict.TryGetValue(endpoint, out var info))
-                    AddLast(endpoint, info);
-                else
-                    AddLast(endpoint, info = new KEndpointInfo<TNodeId>(DateTime.MinValue));
-
-                return info;
-            }
-        }
-
-        public KEndpointInfo<TNodeId> Select(IKProtocolEndpoint<TNodeId> endpoint)
-        {
-            using (sync.BeginReadLock())
-                return dict.TryGetValue(endpoint, out var info) ? info : null;
-        }
-
-        public KEndpointInfo<TNodeId> Remove(IKProtocolEndpoint<TNodeId> endpoint)
-        {
-            using (sync.BeginUpgradableReadLock())
-                if (dict.TryGetValue(endpoint, out var info))
+                if (set.Contains(endpoint))
                     using (sync.BeginWriteLock())
-                        if (dict.Remove(endpoint))
-                            return info;
+                        return set.Remove(endpoint);
 
-            return default;
+            return false;
         }
 
         public IEnumerator<IKProtocolEndpoint<TNodeId>> GetEnumerator()
         {
             using (sync.BeginReadLock())
-                return dict.Select(i => i.Key).ToList().GetEnumerator();
+                return set.ToList().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -134,7 +90,7 @@ namespace Cogito.Kademlia
         public void Dispose()
         {
             using (sync.BeginWriteLock())
-                dict.Clear();
+                set.Clear();
 
             GC.SuppressFinalize(this);
         }

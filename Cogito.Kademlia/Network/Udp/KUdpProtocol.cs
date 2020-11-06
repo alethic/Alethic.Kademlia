@@ -179,7 +179,7 @@ namespace Cogito.Kademlia.Network.Udp
 
                 // record relation between endpoint data and endpoint interface
                 var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
-                engine.Endpoints.Demote(endpoints[ep] = CreateEndpoint(ep, formats.Select(i => i.ContentType)));
+                engine.Endpoints.Insert(endpoints[ep] = CreateEndpoint(ep, formats.Select(i => i.ContentType)));
                 logger?.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
 
                 // following sockets will preserve port

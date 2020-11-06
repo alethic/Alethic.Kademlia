@@ -99,8 +99,7 @@ namespace Cogito.Kademlia
                         // incorporate new additional endpoints into end of set
                         if (endpoints != null)
                             foreach (var j in endpoints)
-                                if (i.Value.Endpoints.Select(j) == null)
-                                    i.Value.Endpoints.Demote(j);
+                                i.Value.Endpoints.Insert(j);
                     }
                 }
                 else if (l.Count < k)
@@ -115,8 +114,7 @@ namespace Cogito.Kademlia
                         // incorporate new additional endpoints into end of set
                         if (endpoints != null)
                             foreach (var j in endpoints)
-                                if (p.Endpoints.Select(j) == null)
-                                    p.Endpoints.Demote(j);
+                                p.Endpoints.Insert(j);
 
                         // item does not exist, but bucket has room, insert at tail
                         l.AddFirst(p);
@@ -180,8 +178,7 @@ namespace Cogito.Kademlia
                             // incorporate new additional endpoints into end of set
                             if (endpoints != null)
                                 foreach (var j in endpoints)
-                                    if (p.Endpoints.Select(j) == null)
-                                        p.Endpoints.Demote(j);
+                                    p.Endpoints.Insert(j);
 
                             l.AddFirst(p);
                         }

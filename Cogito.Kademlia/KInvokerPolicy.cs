@@ -85,20 +85,20 @@ namespace Cogito.Kademlia
                 var r = await endpoint.InvokeAsync<TRequestBody, TResponseBody>(request, cancellationToken);
                 if (r.Status == KResponseStatus.Success)
                 {
-                    logger?.LogTrace("Success contacting {Endpoint}.", endpoint);
+                    logger.LogTrace("Success contacting {Endpoint}.", endpoint);
                     endpoints.Update(endpoint);
                     return r;
                 }
                 else
                 {
-                    logger?.LogWarning("Failure from endpoint: {Endpoint}.", endpoint);
-                    endpoints.Demote(endpoint);
+                    logger.LogWarning("Failure from endpoint: {Endpoint}.", endpoint);
+                    endpoints.Insert(endpoint);
                 }
             }
             catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
             {
-                logger?.LogWarning("Endpoint not available: {Endpoint}.", endpoint);
-                endpoints.Demote(endpoint);
+                logger.LogWarning("Endpoint not available: {Endpoint}.", endpoint);
+                endpoints.Insert(endpoint);
             }
 
             return default;
