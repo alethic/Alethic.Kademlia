@@ -148,11 +148,7 @@ namespace Cogito.Kademlia.Json
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, TNodeId nodeId)
         {
-#if NET47
-            var a = new byte[KNodeId<TNodeId>.SizeOf];
-#else
             var a = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
-#endif
             nodeId.Write(a);
             writer.WriteBase64StringValue(a);
         }

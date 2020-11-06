@@ -96,15 +96,9 @@ namespace Cogito.Kademlia.Protobuf
 
         ByteString Encode(IKMessageContext<TNodeId> context, TNodeId nodeId)
         {
-#if NET47
-            var a = new byte[KNodeId<TNodeId>.SizeOf];
-            nodeId.Write(a);
-            return ByteString.CopyFrom(a);
-#else
             var a = (Span<byte>)stackalloc byte[KNodeId<TNodeId>.SizeOf];
             nodeId.Write(a);
             return ByteString.CopyFrom(a);
-#endif
         }
 
         Header Encode(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header)
