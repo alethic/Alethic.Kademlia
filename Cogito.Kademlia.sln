@@ -16,17 +16,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Tests", "Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Console", "Cogito.Kademlia.Console\Cogito.Kademlia.Console.csproj", "{A28AE7E0-C268-4FAC-9AB4-C165860B3366}"
 EndProject
-Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Cogito.Kademlia.Fabric", "Cogito.Kademlia.Fabric\Cogito.Kademlia.Fabric.sfproj", "{2C6BBCB5-824B-4BF8-B545-A4C2D89CAB37}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Fabric.Services", "Cogito.Kademlia.Fabric.Services\Cogito.Kademlia.Fabric.Services.csproj", "{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.InMemory", "Cogito.Kademlia.InMemory\Cogito.Kademlia.InMemory.csproj", "{017F47BC-A037-42F3-9203-0237021B6AC7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Protobuf", "Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj", "{F545AD9F-5652-413E-A54F-D81913566F8D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.MessagePack", "Cogito.Kademlia.MessagePack\Cogito.Kademlia.MessagePack.csproj", "{4E5B228C-6462-40E0-96FE-2B814F5A2614}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cogito.Kademlia.Json", "Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj", "{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cogito.Kademlia.Json", "Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj", "{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -46,14 +42,6 @@ Global
 		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2C6BBCB5-824B-4BF8-B545-A4C2D89CAB37}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{2C6BBCB5-824B-4BF8-B545-A4C2D89CAB37}.Debug|Any CPU.Build.0 = Debug|x64
-		{2C6BBCB5-824B-4BF8-B545-A4C2D89CAB37}.Debug|Any CPU.Deploy.0 = Debug|x64
-		{2C6BBCB5-824B-4BF8-B545-A4C2D89CAB37}.Release|Any CPU.ActiveCfg = Release|x64
-		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D6A09218-5605-44C5-9BE4-B1ED560E6DD9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{017F47BC-A037-42F3-9203-0237021B6AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
