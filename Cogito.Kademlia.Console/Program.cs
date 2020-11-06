@@ -50,6 +50,7 @@ namespace Cogito.Kademlia.Console
             builder.RegisterType<KUdpProtocol<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KUdpMulticastDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.Configure<KEngineOptions<KNodeId256>>(o => o.NodeId = KNodeId<KNodeId256>.Create());
+            builder.Configure<KFixedTableRouterOptions<KNodeId256>>(o => { });
             builder.Configure<KUdpOptions<KNodeId256>>(o => { o.Network = network; });
         }
 

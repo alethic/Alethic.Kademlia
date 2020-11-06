@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,13 +32,13 @@ namespace Cogito.Kademlia.Network.Udp
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
-        readonly IKMessageFormat<TNodeId> format;
+        readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKConnector<TNodeId> connector;
         readonly IKRequestHandler<TNodeId> handler;
         readonly ILogger logger;
 
+        readonly KUdpSerializer<TNodeId> serializer;
         readonly AsyncLock sync = new AsyncLock();
-        readonly KRequestResponseQueue<TNodeId, ulong> queue;
 
         Socket mcastSocket;
         SocketAsyncEventArgs mcastRecvArgs;
@@ -56,29 +54,20 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="options"></param>
         /// <param name="engine"></param>
-        /// <param name="format"></param>
+        /// <param name="formats"></param>
         /// <param name="connector"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKMessageFormat<TNodeId> format, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKEngine<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            this.format = format ?? throw new ArgumentNullException(nameof(format));
+            this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.connector = connector ?? throw new ArgumentNullException(nameof(connector));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            queue = new KRequestResponseQueue<TNodeId, ulong>(options.Value.Multicast.Timeout ?? options.Value.Timeout);
-        }
-
-        /// <summary>
-        /// Gets the next magic value.
-        /// </summary>
-        /// <returns></returns>
-        uint NewReplyId()
-        {
-            return (uint)random.Next(int.MinValue, int.MaxValue);
+            serializer = new KUdpSerializer<TNodeId>(formats, magic);
         }
 
         /// <summary>
@@ -243,59 +232,49 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         void RecvArgs_Completed(Socket socket, SocketAsyncEventArgs args)
         {
+            // extract source endpoint
+            var source = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
+            var length = args.BytesTransferred;
+            logger.LogTrace("Received incoming UDP packet of {Length} from {Endpoint}.", length, source);
+
             // should only be receiving packets from our message loop
             if (args.LastOperation != SocketAsyncOperation.ReceiveMessageFrom)
             {
-                logger?.LogTrace("Unexpected packet operation {Operation}.", args.LastOperation);
+                logger.LogTrace("Unexpected packet operation {Operation}.", args.LastOperation);
                 return;
             }
-
-            logger?.LogInformation("Received incoming UDP packet of {Size} from {Endpoint}.", args.BytesTransferred, (IPEndPoint)args.RemoteEndPoint);
-            var p = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-
-            // check that buffer is a valid packet
-            var input = new ReadOnlySpan<byte>(args.Buffer, args.Offset, args.BytesTransferred);
-            if (BinaryPrimitives.ReadUInt32LittleEndian(input) != magic)
+            // some error occurred?
+            if (args.SocketError != SocketError.Success)
                 return;
 
-            // advance past magic number
-            input = input.Slice(sizeof(uint));
-
-            // format ends at first NUL
-            var formatEnd = input.IndexOf((byte)0x00);
-            if (formatEnd < 0)
+            // we only care about receive from events
+            if (args.LastOperation != SocketAsyncOperation.ReceiveMessageFrom &&
+                args.LastOperation != SocketAsyncOperation.ReceiveFrom)
                 return;
 
-            // extract encoded format type
-#if NET47 || NETSTANDARD2_0
-            var format = Encoding.UTF8.GetString(input.Slice(0, formatEnd).ToArray());
-#else
-            var format = Encoding.UTF8.GetString(input.Slice(0, formatEnd));
-#endif
-            if (format == null)
+            // no data found
+            if (args.BytesTransferred == 0)
                 return;
 
-            // advance past format
-            input = input.Slice(formatEnd + 1);
+            // socket is unbound, ignore
+            if (socket.IsBound == false)
+                return;
 
-            // lease temporary memory and copy incoming buffer
-            var memown = MemoryPool<byte>.Shared.Rent(input.Length);
-            var buffer = memown.Memory.Slice(0, input.Length);
-            input.CopyTo(buffer.Span);
+            // deserialize message sequence
+            var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(engine, formats.Select(i => i.ContentType)));
+            if (packet.Format == null || packet.Sequence == null)
+                return;
 
             Task.Run(async () =>
             {
                 try
                 {
-                    await OnReceiveAsync(p, new ReadOnlySequence<byte>(buffer), CancellationToken.None);
+                    logger.LogTrace("Decoded packet as {Format} from {Endpoint}.", packet.Format, source);
+                    await OnReceiveAsync(socket, source, packet, CancellationToken.None);
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError(e, "Unhandled exception dispatching incoming packet.");
-                }
-                finally
-                {
-                    memown.Dispose();
+                    logger.LogError(e, "Unhandled exception dispatching incoming packet.");
                 }
             });
 
@@ -304,7 +283,7 @@ namespace Cogito.Kademlia.Network.Udp
             using (sync.LockAsync().Result)
             {
                 // reset remote endpoint
-                args.RemoteEndPoint = p.Protocol switch
+                args.RemoteEndPoint = source.Protocol switch
                 {
                     KIpAddressFamily.IPv4 => new IPEndPoint(IPAddress.Any, 0),
                     KIpAddressFamily.IPv6 => new IPEndPoint(IPAddress.IPv6Any, 0),
@@ -333,7 +312,7 @@ namespace Cogito.Kademlia.Network.Udp
             {
                 try
                 {
-                    logger?.LogInformation("Initiating periodic multicast bootstrap.");
+                    logger.LogInformation("Initiating periodic multicast bootstrap.");
                     await ConnectAsync(cancellationToken);
                 }
                 catch (OperationCanceledException)
@@ -342,7 +321,7 @@ namespace Cogito.Kademlia.Network.Udp
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
+                    logger.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
                 }
 
                 await Task.Delay(options.Value.Multicast.DiscoveryFrequency, cancellationToken);
@@ -353,24 +332,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// Attempts to bootstrap the Kademlia engine from the available multicast group members.
         /// </summary>
         /// <returns></returns>
-        async ValueTask ConnectAsync(CancellationToken cancellationToken = default)
+        async ValueTask ConnectAsync(CancellationToken cancellationToken)
         {
-            // cancel PING after timeout
-            cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(new CancellationTokenSource(options.Value.Multicast.Timeout ?? options.Value.Timeout).Token, cancellationToken).Token;
-
             try
             {
-                // ping the received endpoints
-                var r = await PingAsync(new KPingRequest<TNodeId>(engine.Endpoints.ToArray()), cancellationToken);
-                if (r.Status == KResponseStatus.Failure)
-                {
-                    logger?.LogError("Unable to PING multicast address");
-                    return;
-                }
-
-                // initiate connection to received endpoints
-                if (r.Body != null)
-                    await connector.ConnectAsync(new KEndpointSet<TNodeId>(r.Body.Value.Endpoints), cancellationToken);
+                await PingAsync(new KPingRequest<TNodeId>(engine.Endpoints.ToArray()), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -386,104 +352,36 @@ namespace Cogito.Kademlia.Network.Udp
         /// Invoked when a datagram is received.
         /// </summary>
         /// <param name="source"></param>
-        /// <param name="buffer"></param>
+        /// <param name="packet"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceiveAsync(in KIpEndpoint source, ReadOnlySequence<byte> buffer, CancellationToken cancellationToken)
+        ValueTask OnReceiveAsync(Socket receive, in KIpEndpoint source, in KUdpPacket<TNodeId> packet, CancellationToken cancellationToken)
         {
-            try
+            if (packet.Sequence.Value.Network != options.Value.Network)
             {
-                // check for continued connection
-                var s = mcastSocket;
-                if (s == null || s.IsBound == false)
-                    return new ValueTask(Task.CompletedTask);
-
-                // decode incoming byte sequence
-                var l = format.Decode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer);
-                if (l.Network != options.Value.Network)
-                {
-                    logger?.LogWarning("Received unexpected message sequence for network {NetworkId}.", l.Network);
-                    return new ValueTask(Task.CompletedTask);
-                }
-
-                var t = new List<Task>();
-
-                // dispatch individual messages into infrastructure
-                foreach (var m in l)
-                {
-                    // skip messages sent from ourselves
-                    if (m.Header.Sender.Equals(engine.SelfId))
-                        continue;
-
-                    t.Add(m switch
-                    {
-                        KRequest<TNodeId, KPingRequest<TNodeId>> r => OnReceivePingRequestAsync(source, r, cancellationToken).AsTask(),
-                        KResponse<TNodeId, KPingResponse<TNodeId>> r => OnReceivePingResponseAsync(source, r, cancellationToken).AsTask(),
-                        _ => Task.CompletedTask,
-                    });
-                }
-
-                // return when all complete
-                return new ValueTask(Task.WhenAll(t));
-            }
-            catch (Exception e)
-            {
-                logger?.LogError(e, "Unexpected exception receiving multicast packet.");
+                logger.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
                 return new ValueTask(Task.CompletedTask);
             }
-        }
 
-        /// <summary>
-        /// Initiates a send of the buffered data to the endpoint.
-        /// </summary>
-        /// <param name="buffer"></param>
-        /// <param name="endpoint"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        ValueTask SocketSendToAsync(ArrayBufferWriter<byte> buffer, in KIpEndpoint endpoint, CancellationToken cancellationToken)
-        {
-            var s = localSocket;
-            if (s == null)
-                throw new KProtocolException(KProtocolError.ProtocolNotAvailable, "Cannot send. Socket no longer available.");
+            var todo = new List<Task>();
 
-            var z = new byte[buffer.WrittenCount];
-            buffer.WrittenSpan.CopyTo(z);
-            return new ValueTask(s.SendToAsync(new ArraySegment<byte>(z), SocketFlags.None, endpoint.ToIPEndPoint()));
-        }
-
-        /// <summary>
-        /// Sends the given buffer to an endpoint and begins a wait on the specified reply queue.
-        /// </summary>
-        /// <typeparam name="TResponse"></typeparam>
-        /// <param name="replyId"></param>
-        /// <param name="queue"></param>
-        /// <param name="buffer"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        async ValueTask<KResponse<TNodeId, TResponse>> SendAndWaitAsync<TResponse>(ulong replyId, KRequestResponseQueue<TNodeId, ulong> queue, ArrayBufferWriter<byte> buffer, CancellationToken cancellationToken)
-            where TResponse : struct, IKResponseBody<TNodeId>
-        {
-            logger?.LogDebug("Queuing response wait for {Magic}.", replyId);
-
-            var c = new CancellationTokenSource();
-            var t = queue.WaitAsync<TResponse>(replyId, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
-
-            try
+            // dispatch individual messages into infrastructure
+            foreach (var message in packet.Sequence)
             {
-                logger?.LogDebug("Sending packet to {Endpoint} with {Magic}.", options.Value.Multicast.Endpoint, replyId);
-                await SocketSendToAsync(buffer, options.Value.Multicast.Endpoint, cancellationToken);
-            }
-            catch (Exception)
-            {
-                // cancel item in response queue
-                c.Cancel();
-                throw;
+                // skip messages sent from ourselves
+                if (message.Header.Sender.Equals(engine.SelfId))
+                    continue;
+
+                todo.Add(message switch
+                {
+                    KRequest<TNodeId, KPingRequest<TNodeId>> request => OnReceivePingRequestAsync(receive, localSocket, source, packet.Format, request, cancellationToken),
+                    KResponse<TNodeId, KPingResponse<TNodeId>> response => OnReceivePingResponseAsync(receive, localSocket, source, packet.Format, response, cancellationToken).AsTask(),
+                    _ => Task.CompletedTask,
+                });
             }
 
-            // wait on response
-            var r = await t;
-            logger?.LogDebug("Exited wait for {Magic} to {Endpoint}.", replyId, IpAny);
-            return r;
+            // return when all complete
+            return new ValueTask(Task.WhenAll(todo));
         }
 
         /// <summary>
@@ -526,87 +424,171 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
+        /// Serialize the given message sequence into memory.
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="formats"></param>
+        /// <returns></returns>
+        ReadOnlyMemory<byte> FormatMessages(KMessageSequence<TNodeId> messages, IEnumerable<string> formats)
+        {
+            if (formats is null)
+                throw new ArgumentNullException(nameof(formats));
+
+            var b = new ArrayBufferWriter<byte>();
+            serializer.Write(b, new KMessageContext<TNodeId>(engine, formats), messages);
+            return b.WrittenMemory;
+        }
+
+        /// <summary>
+        /// Sends the messages.
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="target"></param>
+        /// <param name="formats"></param>
+        /// <param name="messages"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask SendAsync(Socket socket, in KIpEndpoint target, IEnumerable<string> formats, KMessageSequence<TNodeId> messages, CancellationToken cancellationToken)
+        {
+            if (socket is null)
+                throw new ArgumentNullException(nameof(socket));
+            if (formats is null)
+                throw new ArgumentNullException(nameof(formats));
+
+            return SocketSendToAsync(socket, target, FormatMessages(messages, formats).Span, cancellationToken);
+        }
+
+        /// <summary>
+        /// Initiates a send of the buffered data to the endpoint.
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="target"></param>
+        /// <param name="buffer"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask SocketSendToAsync(Socket socket, in KIpEndpoint target, ReadOnlySpan<byte> buffer, CancellationToken cancellationToken)
+        {
+            return new ValueTask(socket.SendToAsync(new ArraySegment<byte>(buffer.ToArray()), SocketFlags.None, target.ToIPEndPoint()));
+        }
+
+        /// <summary>
         /// Initiates a PING to the multicast endpoint.
         /// </summary>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>> PingAsync(KPingRequest<TNodeId> request, CancellationToken cancellationToken)
+        ValueTask PingAsync(in KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            try
-            {
-                var buffer = new ArrayBufferWriter<byte>();
-
-                // write protocol magic
-                BinaryPrimitives.WriteUInt32LittleEndian(buffer.GetSpan(sizeof(uint)), magic);
-                buffer.Advance(sizeof(uint));
-
-                // write format type
-                buffer.Write(Encoding.UTF8.GetBytes(format.ContentType));
-                buffer.Write(new byte[] { 0x00 });
-
-                // write message sequence
-                var replyId = NewReplyId();
-                format.Encode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer, PackageMessage(replyId, request));
-
-                // send packet and return task that waits for response
-                return SendAndWaitAsync<KPingResponse<TNodeId>>(replyId, queue, buffer, cancellationToken);
-            }
-            catch (KProtocolException e) when (e.Error == KProtocolError.EndpointNotAvailable)
-            {
-                logger?.LogError("No response received attempting to ping multicast peers.");
-                return default;
-            }
+            return SendAsync(localSocket, options.Value.Multicast.Endpoint, formats.Select(i => i.ContentType), PackageMessage(0, request), cancellationToken);
         }
 
         /// <summary>
         /// Invoked when a PING request is received.
         /// </summary>
-        /// <param name="endpoint"></param>
+        /// <param name="receive"></param>
+        /// <param name="respond"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask OnReceivePingRequestAsync(KIpEndpoint endpoint, KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceivePingRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
-            if (request.Body != null)
+            logger.LogDebug("Received multicast PING:{Magic} from {Sender} at {Endpoint}.", request.Header.ReplyId, request.Header.Sender, source);
+            return HandleAsync(receive, respond, source, format, request, handler.OnPingAsync, cancellationToken);
+        }
+
+        /// <summary>
+        /// Describes a method on the handler.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="sender"></param>
+        /// <param name="source"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        delegate ValueTask<TResponse> HandleAsyncDelegate<TRequest, TResponse>(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in TRequest request, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Handles the specified request.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="receive"></param>
+        /// <param name="respond"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
+        /// <param name="replyId"></param>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <param name="handler"></param>
+        /// <returns></returns>
+        async Task HandleAsync<TRequest, TResponse>(Socket receive, Socket respond, KIpEndpoint source, string format, KRequest<TNodeId, TRequest> request, HandleAsyncDelegate<TRequest, TResponse> handler, CancellationToken cancellationToken)
+            where TRequest : struct, IKRequestBody<TNodeId>
+            where TResponse : struct, IKResponseBody<TNodeId>
+        {
+            if (request.Body == null)
+                return;
+
+            try
             {
-                logger?.LogDebug("Received multicast PING:{Magic} from {Sender} at {Endpoint}.", request.Header.ReplyId, request.Header.Sender, endpoint);
-                await SendPingReplyAsync(endpoint, request.Header.ReplyId, await handler.OnPingAsync(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
+                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Unexpected exception handling request.");
+                await ReplyAsync<TResponse>(respond, source, format, request.Header.ReplyId, e, cancellationToken);
             }
         }
 
-        ValueTask SendPingReplyAsync(in KIpEndpoint endpoint, uint replyId, in KPingResponse<TNodeId> response, CancellationToken cancellationToken)
+        /// <summary>
+        /// Sends the specified response.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="socket"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
+        /// <param name="replyId"></param>
+        /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, string format, uint replyId, in TResponse response, CancellationToken cancellationToken)
+            where TResponse : struct, IKResponseBody<TNodeId>
         {
-            logger?.LogDebug("Sending multicast PING:{Magic} reply to {Endpoint}.", replyId, endpoint);
+            return SendAsync(socket, source, format.Yield(), PackageResponse(replyId, response), cancellationToken);
+        }
 
-            var buffer = new ArrayBufferWriter<byte>();
-
-            // write protocol magic
-            BinaryPrimitives.WriteUInt32LittleEndian(buffer.GetSpan(sizeof(uint)), magic);
-            buffer.Advance(sizeof(uint));
-
-            // write message format
-            buffer.Write(Encoding.UTF8.GetBytes(format.ContentType));
-            buffer.Write(new byte[] { 0x00 });
-
-            // write message sequence
-            format.Encode(new KMessageContext<TNodeId>(engine, format.ContentType.Yield()), buffer, PackageResponse(replyId, response));
-
-            // send reply packet
-            return SocketSendToAsync(buffer, endpoint, cancellationToken);
+        /// <summary>
+        /// Sends the specified response.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="socket"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
+        /// <param name="replyId"></param>
+        /// <param name="response"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        ValueTask ReplyAsync<TResponse>(Socket socket, in KIpEndpoint source, string format, uint replyId, Exception exception, CancellationToken cancellationToken)
+            where TResponse : struct, IKResponseBody<TNodeId>
+        {
+            return SendAsync(socket, source, format.Yield(), PackageResponse<TResponse>(replyId, exception), cancellationToken);
         }
 
         /// <summary>
         /// Invoked with a PING response is received.
         /// </summary>
-        /// <param name="endpoint"></param>
+        /// <param name="receive"></param>
+        /// <param name="respond"></param>
+        /// <param name="source"></param>
+        /// <param name="format"></param>
         /// <param name="response"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask OnReceivePingResponseAsync(in KIpEndpoint endpoint, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
+        ValueTask OnReceivePingResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
-            queue.Respond(response.Header.ReplyId, response);
-            return new ValueTask(Task.CompletedTask);
+            return connector.ConnectAsync(new KEndpointSet<TNodeId>(response.Body.Value.Endpoints), cancellationToken);
         }
 
     }

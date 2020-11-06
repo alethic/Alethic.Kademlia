@@ -104,12 +104,12 @@ namespace Cogito.Kademlia.Network.Udp
                 {
                     try
                     {
-                        logger?.LogTrace("Decoded packet as {Format} from {Endpoint}.", packet.Format, source);
+                        logger.LogTrace("Decoded packet as {Format} from {Endpoint}.", packet.Format, source);
                         await OnReceiveAsync(receive, respond, source, packet, CancellationToken.None);
                     }
                     catch (Exception e)
                     {
-                        logger?.LogError(e, "Unhandled exception dispatching incoming packet.");
+                        logger.LogError(e, "Unhandled exception dispatching incoming packet.");
                     }
                 });
             }
@@ -203,6 +203,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// Serialize the given message sequence into memory.
         /// </summary>
         /// <param name="messages"></param>
+        /// <param name="formats"></param>
         /// <returns></returns>
         ReadOnlyMemory<byte> FormatMessages(KMessageSequence<TNodeId> messages, IEnumerable<string> formats)
         {

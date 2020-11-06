@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cogito.Memory;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cogito.Kademlia
 {
@@ -21,11 +22,9 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        public const int DefaultKSize = 20;
-
+        readonly IOptions<KFixedTableRouterOptions<TNodeId>> options;
         readonly IKEngine<TNodeId> engine;
         readonly IKInvoker<TNodeId> invoker;
-        readonly int k;
         readonly ILogger logger;
 
         readonly KBucket<TNodeId>[] buckets;
@@ -33,29 +32,27 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="options"></param>
         /// <param name="engine"></param>
         /// <param name="invoker"></param>
-        /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(IKEngine<TNodeId> engine, IKInvoker<TNodeId> invoker, int k = DefaultKSize, ILogger logger = null)
+        public KFixedTableRouter(IOptions<KFixedTableRouterOptions<TNodeId>> options, IKEngine<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
         {
-            if (k < 1)
-                throw new ArgumentOutOfRangeException("The value of k must be greater than or equal to 1.");
-
+            this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            this.k = k;
-            this.logger = logger;
+            this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             logger?.LogInformation("Initializing Fixed Table Router with {NodeId}.", engine.SelfId);
             buckets = new KBucket<TNodeId>[Unsafe.SizeOf<TNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
-                buckets[i] = new KBucket<TNodeId>(engine, invoker, k, logger);
+                buckets[i] = new KBucket<TNodeId>(engine, invoker, options.Value.K, logger);
         }
 
         /// <summary>
         /// Gets the fixed size of the routing table buckets.
         /// </summary>
-        public int K => k;
+        public int K => options.Value.K;
 
         /// <summary>
         /// Gets the bucket associated with the specified node ID.
