@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFrameworks>netcoreapp3.1;netcoreapp2.1;net47</TargetFrameworks>
@@ -28,6 +28,10 @@
         <ProjectReference Include="..\Cogito.Kademlia.Json\Cogito.Kademlia.Json.csproj" />
         <ProjectReference Include="..\Cogito.Kademlia.Protobuf\Cogito.Kademlia.Protobuf.csproj" />
         <ProjectReference Include="..\Cogito.Kademlia\Cogito.Kademlia.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="InMemory\" />
     </ItemGroup>
 
 </Project>
