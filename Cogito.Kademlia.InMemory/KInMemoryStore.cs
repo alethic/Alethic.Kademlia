@@ -207,8 +207,13 @@ namespace Cogito.Kademlia.InMemory
 
             // calculation derived from https://www.syncfusion.com/ebooks/kademlia_protocol_succinctly/key-value-management
             var d = new KNodeIdDistanceComparer<TNodeId>(engine.SelfId);
+#if NETSTANDARD2_0
             var l = await router.SelectAsync(key, 1024, cancellationToken);
             var c = l.Count(i => d.Compare(key, i.Id) > 0);
+#else
+            var l = router.SelectAsync(key, 1024, cancellationToken);
+            var c = await l.CountAsync(i => d.Compare(key, i.Id) > 0);
+#endif
             var t = (int)(expiration - now).TotalSeconds;
             var o = t / System.Math.Pow(2, c);
             return now.AddSeconds(o);
