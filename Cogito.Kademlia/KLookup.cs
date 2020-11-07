@@ -15,7 +15,7 @@ namespace Cogito.Kademlia
     /// Provides the node lookup operation logic against a <see cref="IKHost{TNodeId}"/>.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KNodeLookup<TNodeId> : IKLookup<TNodeId>
+    public class KLookup<TNodeId> : IKLookup<TNodeId>
         where TNodeId : unmanaged
     {
 
@@ -124,7 +124,7 @@ namespace Cogito.Kademlia
         /// <param name="logger"></param>
         /// <param name="alpha">Number of outstanding FIND_ RPC requests to keep in flight.</param>
         /// <param name="cache">Number of nodes to cache resulting values at.</param>
-        public KNodeLookup(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
+        public KLookup(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));

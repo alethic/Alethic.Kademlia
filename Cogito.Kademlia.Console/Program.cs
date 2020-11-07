@@ -42,7 +42,7 @@ namespace Cogito.Kademlia.Console
             builder.RegisterType<KInvokerPolicy<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KRequestHandler<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KFixedTableRouter<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<KNodeLookup<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KLookup<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KValueAccessor<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KInMemoryStore<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KInMemoryPublisher<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
