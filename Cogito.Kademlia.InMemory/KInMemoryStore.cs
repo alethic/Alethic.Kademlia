@@ -53,7 +53,7 @@ namespace Cogito.Kademlia.InMemory
 
         }
 
-        static readonly TimeSpan DefaultFrequency = TimeSpan.FromHours(1);
+        static readonly TimeSpan DefaultFrequency = TimeSpan.FromSeconds(5);
 
         readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
@@ -406,7 +406,7 @@ namespace Cogito.Kademlia.InMemory
 
             // publish to top K remote nodes
             var r = await lookup.LookupNodeAsync(entry.Key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, entry.Key, KStoreRequestMode.Primary, entry.Value, cancellationToken).AsTask());
+            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, entry.Key, KStoreRequestMode.Replica, entry.Value, cancellationToken).AsTask());
             await Task.WhenAll(t);
         }
 
