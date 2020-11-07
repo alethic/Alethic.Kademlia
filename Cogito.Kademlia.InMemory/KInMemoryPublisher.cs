@@ -41,9 +41,7 @@ namespace Cogito.Kademlia.InMemory
 
         static readonly TimeSpan DefaultTimeToLive = TimeSpan.FromMinutes(15);
 
-        readonly IKInvoker<TNodeId> invoker;
-        readonly IKNodeLookup<TNodeId> lookup;
-        readonly IKStore<TNodeId> store;
+        readonly IKValueAccessor<TNodeId> accessor;
         readonly TimeSpan frequency;
         readonly ILogger logger;
         readonly AsyncLock sync = new AsyncLock();
@@ -55,16 +53,12 @@ namespace Cogito.Kademlia.InMemory
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="invoker"></param>
-        /// <param name="lookup"></param>
-        /// <param name="store"></param>
+        /// <param name="accessor"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryPublisher(IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, IKStore<TNodeId> store, ILogger logger, TimeSpan? frequency = null)
+        public KInMemoryPublisher(IKValueAccessor<TNodeId> accessor, ILogger logger, TimeSpan? frequency = null)
         {
-            this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
-            this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
-            this.store = store ?? throw new ArgumentNullException(nameof(store));
+            this.accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.frequency = frequency ?? TimeSpan.FromHours(1);
         }
@@ -91,12 +85,11 @@ namespace Cogito.Kademlia.InMemory
                 // generate new entry
                 var entry = new Entry(value);
                 entries[key] = entry;
-
-                // publishes the value immediately
-                await PublishValueAsync(key, value, cancellationToken);
-
-                return true;
             }
+
+            // publishes the value immediately
+            await PublishValueAsync(key, value, cancellationToken);
+            return true;
         }
 
         /// <summary>
@@ -190,15 +183,8 @@ namespace Cogito.Kademlia.InMemory
         /// <returns></returns>
         async Task PublishValueAsync(TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
-            logger?.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, value.Expiration);
-
-            // cache in local store
-            var s = await store.SetAsync(key, KStoreValueMode.Replica, value);
-
-            // publish to top K remote nodes
-            var r = await lookup.LookupNodeAsync(key, cancellationToken);
-            var t = r.Nodes.Select(i => invoker.StoreAsync(i.Endpoints, key, KStoreRequestMode.Primary, value, cancellationToken).AsTask());
-            await Task.WhenAll(t);
+            logger.LogInformation("Publishing key {Key} with expiration of {Expiration}.", key, value.Expiration);
+            await accessor.SetAsync(key, value, cancellationToken);
         }
 
         /// <summary>
@@ -212,12 +198,12 @@ namespace Cogito.Kademlia.InMemory
             {
                 try
                 {
-                    logger?.LogInformation("Initiating periodic publish of values.");
+                    logger.LogInformation("Initiating periodic publish of values.");
                     await Task.WhenAll(entries.Select(i => PublishValueAsync(i.Key, i.Value.Value, cancellationToken)));
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError(e, "Unexpected exception occurred publishing values.");
+                    logger.LogError(e, "Unexpected exception occurred publishing values.");
                 }
 
                 await Task.Delay(frequency, cancellationToken);

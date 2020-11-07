@@ -15,7 +15,7 @@ namespace Cogito.Kademlia
     /// Provides the node lookup operation logic against a <see cref="IKHost{TNodeId}"/>.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KNodeLookup<TNodeId> : IKNodeLookup<TNodeId>
+    public class KNodeLookup<TNodeId> : IKLookup<TNodeId>
         where TNodeId : unmanaged
     {
 

@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// Provides interfaces for looking up nodes and values.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public interface IKNodeLookup<TNodeId>
+    public interface IKLookup<TNodeId>
         where TNodeId : unmanaged
     {
 

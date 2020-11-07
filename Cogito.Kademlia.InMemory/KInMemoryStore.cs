@@ -57,7 +57,7 @@ namespace Cogito.Kademlia.InMemory
         readonly IKHost<TNodeId> engine;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
-        readonly IKNodeLookup<TNodeId> lookup;
+        readonly IKLookup<TNodeId> lookup;
         readonly TimeSpan frequency;
         readonly ILogger logger;
         readonly C5.IntervalHeap<Entry> delQueue;
@@ -78,7 +78,7 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="lookup"></param>
         /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKNodeLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
+        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));

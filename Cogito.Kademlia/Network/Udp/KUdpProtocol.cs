@@ -194,7 +194,7 @@ namespace Cogito.Kademlia.Network.Udp
             // dispose of sockets not marked off in keep
             foreach (var i in recvSockets.Where(i => keepSockets.Contains(i.Value) == false).ToList())
             {
-                logger?.LogInformation("Disposing UDP socket for {Endpoint}.", i.Key);
+                logger.LogInformation("Disposing UDP socket for {Endpoint}.", i.Key);
                 recvSockets.Remove(i.Key);
 
                 // shutdown the socket as best we can
