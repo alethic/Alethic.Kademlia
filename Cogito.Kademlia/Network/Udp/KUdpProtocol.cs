@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 
-using Cogito.Threading;
+using Cogito.Collections;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -31,16 +31,15 @@ namespace Cogito.Kademlia.Network.Udp
         static readonly Random random = new Random();
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly ILogger logger;
 
-        readonly AsyncLock sync = new AsyncLock();
-        readonly Dictionary<KIpEndpoint, KIpProtocolEndpoint<TNodeId>> endpoints = new Dictionary<KIpEndpoint, KIpProtocolEndpoint<TNodeId>>();
+        readonly object sync = new object();
+        readonly Dictionary<IPEndPoint, KIpProtocolEndpoint<TNodeId>> endpoints = new Dictionary<IPEndPoint, KIpProtocolEndpoint<TNodeId>>();
         readonly KUdpServer<TNodeId> server;
 
-        Socket sendSocket;
-        Dictionary<IPAddress, Socket> recvSockets;
+        Socket socket;
 
         /// <summary>
         /// Initializes a new instance.
@@ -53,7 +52,7 @@ namespace Cogito.Kademlia.Network.Udp
         public KUdpProtocol(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -115,105 +114,59 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Scans for new IP addresses and creates receive sockets.
         /// </summary>
-        void RefreshReceiveSockets()
+        void RefreshNetwork()
         {
-            // determine port, either we already have one allocated previously, or we need to generate a new one
-            var recvPort = (ushort?)recvSockets.Select(i => i.Value.LocalEndPoint).Cast<IPEndPoint>().FirstOrDefault()?.Port ?? options.Value.Listen?.Port ?? 0;
-            var ipListen = GetLocalIpAddresses();
-
-            // the IPs we listen to are governed by the 'listen' endpoint
-            switch (options.Value.Listen?.AddressFamily)
+            lock (sync)
             {
-                case AddressFamily.InterNetwork:
+                if (socket == null)
+                {
+                    var listen = options.Value.Bind ?? new IPEndPoint(IPAddress.IPv6Any, 0);
+
+                    // establish UDP socket
+                    socket = new Socket(listen.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                    socket.DualMode = true;
+                    socket.Bind(listen);
+
+                    // begin receiving from socket
+                    var recargsArgs = new SocketAsyncEventArgs();
+                    recargsArgs.Completed += SocketAsyncEventArgs_Completed;
+                    BeginReceive(socket, recargsArgs);
+
+                    logger.LogInformation("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
+                }
+
+                // set of endpoints to keep
+                var keepEndpoints = new List<KIpProtocolEndpoint<TNodeId>>();
+
+                // generate endpoint for each local address that is listened to
+                foreach (var ip in GetLocalIpAddresses())
+                {
+                    // determine endpoint by matching IP and port
+                    var ep = ip.AddressFamily switch
                     {
-                        // listen only on V4
-                        ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetwork);
+                        AddressFamily.InterNetwork => new KIpEndpoint(new KIp4Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
+                        AddressFamily.InterNetworkV6 => new KIpEndpoint(new KIp6Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
+                        _ => throw new InvalidOperationException(),
+                    };
 
-                        // listen only on specific address
-                        if (options.Value.Listen?.Address != IPAddress.Any)
-                            ipListen = ipListen.Where(i => i == options.Value.Listen.Address);
-                        break;
-                    }
-
-                case AddressFamily.InterNetworkV6:
-                    {
-                        // listen only on V6
-                        ipListen = ipListen.Where(i => i.AddressFamily == AddressFamily.InterNetworkV6);
-
-                        // listen only on specific address
-                        if (options.Value.Listen?.Address != IPAddress.IPv6Any)
-                            ipListen = ipListen.Where(i => i == options.Value.Listen.Address);
-                        break;
-                    }
-                default:
-                    // no listen protocol specified, so allow everything
-                    break;
-            }
-
-            // set of sockets to keep
-            var keepSockets = new List<Socket>();
-
-            // generate one socket per IP
-            foreach (var ip in ipListen)
-            {
-                var socketOptionLevelIp = ip.AddressFamily switch
-                {
-                    AddressFamily.InterNetwork => SocketOptionLevel.IP,
-                    AddressFamily.InterNetworkV6 => SocketOptionLevel.IPv6,
-                    _ => throw new InvalidOperationException(),
-                };
-
-                // skip already generated sockets
-                if (recvSockets.TryGetValue(ip, out var recvSocket))
-                {
-                    keepSockets.Add(recvSocket);
-                    continue;
+                    // find or create new endpoint
+                    keepEndpoints.Add(endpoints.GetOrDefault(ep) ?? CreateEndpoint(ep, formats.Select(i => i.ContentType)));
                 }
 
-                // establish UDP socket
-                recvSocket = new Socket(ip.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                recvSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, recvPort == 0);
-                recvSocket.Bind(new IPEndPoint(ip, recvPort));
-                recvSockets[ip] = recvSocket;
-                keepSockets.Add(recvSocket);
-
-                // record relation between endpoint data and endpoint interface
-                var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
-                engine.Endpoints.Insert(endpoints[ep] = CreateEndpoint(ep, formats.Select(i => i.ContentType)));
-                logger.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
-
-                // following sockets will preserve port
-                recvPort = ep.Port;
-
-                // begin receiving
-                var recvArgs = new SocketAsyncEventArgs();
-                recvArgs.Completed += SocketAsyncEventArgs_Completed;
-                BeginReceive(recvSocket, recvArgs);
-            }
-
-            // dispose of sockets not marked off in keep
-            foreach (var i in recvSockets.Where(i => keepSockets.Contains(i.Value) == false).ToList())
-            {
-                logger.LogInformation("Disposing UDP socket for {Endpoint}.", i.Key);
-                recvSockets.Remove(i.Key);
-
-                // shutdown the socket as best we can
-                try
+                // insert added endpoints
+                foreach (var endpoint in keepEndpoints.Except(endpoints.Values))
                 {
-                    i.Value.Close();
-                    i.Value.Dispose();
-                }
-                finally
-                {
-
+                    endpoints[endpoint.Endpoint] = endpoint;
+                    host.Endpoints.Insert(endpoint);
+                    logger.LogInformation("Adding UDP endpoint {Endpoint}.", endpoint);
                 }
 
-                // find existing advertised endpoint and remove
-                var l = endpoints.FirstOrDefault(j => j.Key.ToIPEndPoint().Address == i.Key);
-                if (l.Value != null)
+                // remove stale endpoints
+                foreach (var endpoint in endpoints.Values.Except(keepEndpoints))
                 {
-                    endpoints.Remove(l.Key);
-                    engine.Endpoints.Remove(l.Value);
+                    endpoints.Remove(endpoint.Endpoint);
+                    host.Endpoints.Remove(endpoint);
+                    logger.LogInformation("Remove UDP endpoint {Endpoint}.", endpoint);
                 }
             }
         }
@@ -223,54 +176,19 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task StartAsync(CancellationToken cancellationToken = default)
+        public Task StartAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync(cancellationToken))
+            lock (sync)
             {
-                if (sendSocket != null || recvSockets != null)
+                if (socket != null)
                     throw new KException("UDP protocol is already started.");
-
-                // reset sockets
-                sendSocket = null;
-                recvSockets = new Dictionary<IPAddress, Socket>();
-
-                // remove our previous advertised endpoints; there should be none
-                foreach (var i in endpoints.Values)
-                    engine.Endpoints.Remove(i);
-
-                // listen protocol determines send socket binding
-                switch (options.Value.Listen?.AddressFamily ?? AddressFamily.Unspecified)
-                {
-                    case AddressFamily.Unspecified:
-                        // establish UDP socket for both IPv4 and IPv6 (dual mode)
-                        sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                        sendSocket.DualMode = true;
-                        sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
-                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
-                        break;
-                    case AddressFamily.InterNetwork:
-                        // establish UDP socket for IPv4
-                        sendSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-                        sendSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
-                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
-                        break;
-                    case AddressFamily.InterNetworkV6:
-                        // establish UDP socket for IPv6
-                        sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
-                        sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
-                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
-                        break;
-                }
-
-                // begin receiving from send socket
-                var sendArgs = new SocketAsyncEventArgs();
-                sendArgs.Completed += SocketAsyncEventArgs_Completed;
-                BeginReceive(sendSocket, sendArgs);
 
                 // configure receive sockets and update on IP address change
                 NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
-                RefreshReceiveSockets();
+                RefreshNetwork();
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -278,10 +196,10 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="args"></param>
-        async void NetworkChange_NetworkAddressChanged(object sender, EventArgs args)
+        void NetworkChange_NetworkAddressChanged(object sender, EventArgs args)
         {
-            using (await sync.LockAsync())
-                RefreshReceiveSockets();
+            lock (sync)
+                RefreshNetwork();
         }
 
         /// <summary>
@@ -334,41 +252,36 @@ namespace Cogito.Kademlia.Network.Udp
         /// Stops the network.
         /// </summary>
         /// <returns></returns>
-        public async Task StopAsync(CancellationToken cancellationToken = default)
+        public Task StopAsync(CancellationToken cancellationToken = default)
         {
-            using (await sync.LockAsync(cancellationToken))
+            lock (sync)
             {
+                if (socket == null)
+                    throw new InvalidOperationException("UDP protocol is already stopped.");
+
                 // stop listening for address changes
                 NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
 
                 // remove any endpoints registered by ourselves
-                foreach (var i in endpoints.Values)
-                    engine.Endpoints.Remove(i);
-
-                // zero out our endpoint list
+                host.Endpoints.RemoveRange(endpoints.Values);
                 endpoints.Clear();
 
-                // dispose of each socket
-                foreach (var socket in recvSockets.Values)
+                try
                 {
-                    // shutdown socket
-                    if (socket != null)
-                    {
-                        try
-                        {
-                            socket.Close();
-                            socket.Dispose();
-                        }
-                        catch (ObjectDisposedException)
-                        {
-
-                        }
-                    }
+                    socket.Close();
+                    socket.Dispose();
                 }
+                catch (ObjectDisposedException)
+                {
 
-                // zero out sockets
-                recvSockets.Clear();
+                }
+                finally
+                {
+                    socket = null;
+                }
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -382,7 +295,7 @@ namespace Cogito.Kademlia.Network.Udp
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
-            return server.InvokeAsync<TRequest, TResponse>(sendSocket, target, request, cancellationToken);
+            return server.InvokeAsync<TRequest, TResponse>(socket, target, request, cancellationToken);
         }
 
     }

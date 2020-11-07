@@ -21,7 +21,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Gets the set of endpoints on which to listen. If not specified, all compatible interfaces are initialized.
         /// </summary>
-        public IPEndPoint Listen { get; set; } = null;
+        public IPEndPoint Bind { get; set; } = null;
 
         /// <summary>
         /// Amount of time to wait for a response to a UDP packet.

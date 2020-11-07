@@ -26,7 +26,7 @@ namespace Cogito.Kademlia.Console
 
             public global::Serilog.LoggerConfiguration Apply(global::Serilog.LoggerConfiguration configuration)
             {
-                return configuration.MinimumLevel.Verbose();
+                return configuration.MinimumLevel.Debug();
             }
 
         }
