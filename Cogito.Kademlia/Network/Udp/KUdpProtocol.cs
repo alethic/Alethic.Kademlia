@@ -243,9 +243,12 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         void SocketAsyncEventArgs_Completed(object sender, SocketAsyncEventArgs args)
         {
-            var socket = (Socket)sender;
-            server.OnReceive(socket, (Socket)sender, args);
-            BeginReceive(socket, args);
+            if (socket != null)
+            {
+                var socket = (Socket)sender;
+                server.OnReceive(socket, (Socket)sender, args);
+                BeginReceive(socket, args);
+            }
         }
 
         /// <summary>
