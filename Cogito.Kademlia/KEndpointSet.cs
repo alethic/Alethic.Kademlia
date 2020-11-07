@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Threading;
 
 using Cogito.Collections;
@@ -13,7 +14,7 @@ namespace Cogito.Kademlia
     /// Tracks a set of endpoints, managing their position within the set based on their timeout or success events.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KEndpointSet<TNodeId> : IDisposable, ICollection<IKProtocolEndpoint<TNodeId>>
+    public class KEndpointSet<TNodeId> : IDisposable, ICollection<IKProtocolEndpoint<TNodeId>>, INotifyCollectionChanged
         where TNodeId : unmanaged
     {
 
@@ -26,6 +27,20 @@ namespace Cogito.Kademlia
         public KEndpointSet()
         {
             set = new OrderedSet<IKProtocolEndpoint<TNodeId>>(EqualityComparer<IKProtocolEndpoint<TNodeId>>.Default);
+        }
+
+        /// <summary>
+        /// Raised when an item is added or removed from the collection.
+        /// </summary>
+        public event NotifyCollectionChangedEventHandler CollectionChanged;
+
+        /// <summary>
+        /// Raises the CollectionChanged event.
+        /// </summary>
+        /// <param name="args"></param>
+        void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
+        {
+            CollectionChanged?.Invoke(this, args);
         }
 
         /// <summary>
@@ -80,29 +95,47 @@ namespace Cogito.Kademlia
 
         public void Insert(IKProtocolEndpoint<TNodeId> endpoint)
         {
+            var b = false;
             using (sync.BeginWriteLock())
-                set.AddLast(endpoint);
+                b = set.AddLast(endpoint);
+
+            if (b)
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, endpoint));
         }
 
         public void Update(IKProtocolEndpoint<TNodeId> endpoint)
         {
+            var b = false;
+
             using (sync.BeginWriteLock())
-                set.AddFirst(endpoint);
+                b = set.AddFirst(endpoint);
+
+            if (b)
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, endpoint));
         }
 
         public bool Remove(IKProtocolEndpoint<TNodeId> endpoint)
         {
+            var b = false;
+
             using (sync.BeginUpgradableReadLock())
                 if (set.Contains(endpoint))
                     using (sync.BeginWriteLock())
-                        return set.Remove(endpoint);
+                        b = set.Remove(endpoint);
 
-            return false;
+            if (b)
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, endpoint));
+
+            return b;
         }
 
         public void Clear()
         {
+            var b = set.Count > 0;
             set.Clear();
+
+            if (b)
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
         }
 
         public IEnumerator<IKProtocolEndpoint<TNodeId>> GetEnumerator()

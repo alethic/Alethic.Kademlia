@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -31,7 +32,7 @@ namespace Cogito.Kademlia.Network.Udp
         static readonly Random random = new Random();
 
         readonly IOptions<KUdpOptions<TNodeId>> options;
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKConnector<TNodeId> connector;
         readonly IKRequestHandler<TNodeId> handler;
@@ -53,15 +54,15 @@ namespace Cogito.Kademlia.Network.Udp
         /// Initializes a new instance.
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="formats"></param>
         /// <param name="connector"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.connector = connector ?? throw new ArgumentNullException(nameof(connector));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
@@ -69,16 +70,6 @@ namespace Cogito.Kademlia.Network.Udp
 
             serializer = new KUdpSerializer<TNodeId>(formats, magic);
         }
-
-        /// <summary>
-        /// Gets the wildcard endpoint.
-        /// </summary>
-        KIpEndpoint IpAny => options.Value.Multicast.Endpoint.Address.AddressFamily switch
-        {
-            AddressFamily.InterNetwork => KIpEndpoint.AnyV4,
-            AddressFamily.InterNetworkV6 => KIpEndpoint.AnyV6,
-            _ => throw new InvalidOperationException(),
-        };
 
         /// <summary>
         /// Starts listening for announcement packets.
@@ -147,6 +138,9 @@ namespace Cogito.Kademlia.Network.Udp
                 // begin new run processes
                 runCts = new CancellationTokenSource();
                 run = Task.WhenAll(Task.Run(() => ConnectRunAsync(runCts.Token)));
+
+                // also connect when endpoints come and go
+                host.Endpoints.CollectionChanged += OnEndpointsChanged;
             }
         }
 
@@ -159,6 +153,8 @@ namespace Cogito.Kademlia.Network.Udp
         {
             using (await sync.LockAsync(cancellationToken))
             {
+                host.Endpoints.CollectionChanged -= OnEndpointsChanged;
+
                 // shutdown socket
                 if (mcastSocket != null)
                 {
@@ -216,6 +212,16 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
+        /// Invoked when the host endpoints change.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        void OnEndpointsChanged(object sender, NotifyCollectionChangedEventArgs args)
+        {
+            Task.Run(() => ConnectAsync(CancellationToken.None));
+        }
+
+        /// <summary>
         /// Invoked when a receive operation completes.
         /// </summary>
         /// <param name="sender"></param>
@@ -261,7 +267,7 @@ namespace Cogito.Kademlia.Network.Udp
                 return;
 
             // deserialize message sequence
-            var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(engine, formats.Select(i => i.ContentType)));
+            var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(host, formats.Select(i => i.ContentType)));
             if (packet.Format == null || packet.Sequence == null)
                 return;
 
@@ -312,6 +318,10 @@ namespace Cogito.Kademlia.Network.Udp
             {
                 try
                 {
+                    // no reason to proceed without endpoints
+                    if (host.Endpoints.Count == 0)
+                        continue;
+
                     logger.LogInformation("Initiating periodic multicast bootstrap.");
                     await ConnectAsync(cancellationToken);
                 }
@@ -336,7 +346,7 @@ namespace Cogito.Kademlia.Network.Udp
         {
             try
             {
-                await PingAsync(new KPingRequest<TNodeId>(engine.Endpoints.ToArray()), cancellationToken);
+                await PingAsync(new KPingRequest<TNodeId>(host.Endpoints.ToArray()), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -369,7 +379,7 @@ namespace Cogito.Kademlia.Network.Udp
             foreach (var message in packet.Sequence)
             {
                 // skip messages sent from ourselves
-                if (message.Header.Sender.Equals(engine.SelfId))
+                if (message.Header.Sender.Equals(host.SelfId))
                     continue;
 
                 todo.Add(message switch
@@ -394,7 +404,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageMessage<TBody>(uint replyId, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKRequest<TNodeId>[] { new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), body) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new IKRequest<TNodeId>[] { new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), body) });
         }
 
         /// <summary>
@@ -407,7 +417,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, TBody body)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Success, body) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Success, body) });
         }
 
         /// <summary>
@@ -420,7 +430,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, Exception exception)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Failure, null) });
+            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Failure, null) });
         }
 
         /// <summary>
@@ -435,7 +445,7 @@ namespace Cogito.Kademlia.Network.Udp
                 throw new ArgumentNullException(nameof(formats));
 
             var b = new ArrayBufferWriter<byte>();
-            serializer.Write(b, new KMessageContext<TNodeId>(engine, formats), messages);
+            serializer.Write(b, new KMessageContext<TNodeId>(host, formats), messages);
             return b.WrittenMemory;
         }
 
@@ -492,7 +502,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task OnReceivePingRequestAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
+        Task OnReceivePingRequestAsync(Socket receive, Socket respond, KIpEndpoint source, string format, KRequest<TNodeId, KPingRequest<TNodeId>> request, CancellationToken cancellationToken)
         {
             logger.LogDebug("Received multicast PING:{Magic} from {Sender} at {Endpoint}.", request.Header.ReplyId, request.Header.Sender, source);
             return HandleAsync(receive, respond, source, format, request, handler.OnPingAsync, cancellationToken);
