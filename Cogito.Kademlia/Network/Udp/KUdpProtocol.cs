@@ -128,9 +128,9 @@ namespace Cogito.Kademlia.Network.Udp
                     socket.Bind(listen);
 
                     // begin receiving from socket
-                    var recargsArgs = new SocketAsyncEventArgs();
-                    recargsArgs.Completed += SocketAsyncEventArgs_Completed;
-                    BeginReceive(socket, recargsArgs);
+                    var args = new SocketAsyncEventArgs();
+                    args.Completed += SocketAsyncEventArgs_Completed;
+                    BeginReceive(socket, args);
 
                     logger.LogInformation("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
                 }
