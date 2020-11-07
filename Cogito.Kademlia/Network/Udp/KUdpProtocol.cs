@@ -245,8 +245,7 @@ namespace Cogito.Kademlia.Network.Udp
         {
             if (socket != null)
             {
-                var socket = (Socket)sender;
-                server.OnReceive(socket, (Socket)sender, args);
+                server.OnReceive(socket, socket, args);
                 BeginReceive(socket, args);
             }
         }

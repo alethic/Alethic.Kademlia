@@ -72,33 +72,37 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         public void OnReceive(Socket receive, Socket respond, SocketAsyncEventArgs args)
         {
-            // extract source endpoint
             var source = new KIpEndpoint((IPEndPoint)args.RemoteEndPoint);
-            var length = args.BytesTransferred;
-            logger.LogTrace("Received incoming packet of {Length} from {Endpoint}.", length, source);
+            logger.LogTrace("Received incoming packet of {Length} from {Endpoint}.", args.BytesTransferred, source);
 
             try
             {
-                // some error occurred?
-                if (args.SocketError != SocketError.Success)
-                    return;
-
-                // we only care about receive from events
-                if (args.LastOperation != SocketAsyncOperation.ReceiveFrom)
-                    return;
-
                 // no data found
                 if (args.BytesTransferred == 0)
                     return;
 
-                // socket is unbound, ignore
-                if (receive.IsBound == false)
+                // some error occurred?
+                if (args.SocketError != SocketError.Success)
+                {
+                    logger.LogError("Socket error while receiving UDP data: {SocketError}.", args.SocketError);
                     return;
+                }
+
+                // we only care about receive from events
+                if (args.LastOperation != SocketAsyncOperation.ReceiveFrom &&
+                    args.LastOperation != SocketAsyncOperation.ReceiveMessageFrom)
+                {
+                    logger.LogError("Unxpected operation while receiving UDP data: {LastOperation}.", args.LastOperation);
+                    return;
+                }
 
                 // deserialize message sequence
                 var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(engine, formats.Select(i => i.ContentType)));
                 if (packet.Format == null || packet.Sequence == null)
+                {
+                    logger.LogWarning("Invalid or empty packet.");
                     return;
+                }
 
                 Task.Run(async () =>
                 {
@@ -109,7 +113,7 @@ namespace Cogito.Kademlia.Network.Udp
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(e, "Unhandled exception dispatching incoming packet.");
+                        logger.LogError(e, "Unhandled exception receiving UDP packet.");
                     }
                 });
             }
@@ -351,7 +355,7 @@ namespace Cogito.Kademlia.Network.Udp
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Unexpected exception handling request.");
+                logger.LogError(e, "Unexpected exception handling request. Replying with failure.");
                 await ReplyAsync<TResponse>(respond, source, format, request.Header.ReplyId, e, cancellationToken);
             }
         }
@@ -467,7 +471,7 @@ namespace Cogito.Kademlia.Network.Udp
         async ValueTask<KResponse<TNodeId, TResponse>> SendAndWaitAsync<TResponse>(Socket socket, KIpEndpoint target, ulong replyId, ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
             where TResponse : struct, IKResponseBody<TNodeId>
         {
-            logger.LogDebug("Queuing response wait for {ReplyId} to {Endpoint}.", replyId, target);
+            logger.LogTrace("Queuing response wait for {ReplyId} to {Endpoint}.", replyId, target);
 
             var c = new CancellationTokenSource();
             var t = queue.WaitAsync<TResponse>(replyId, CancellationTokenSource.CreateLinkedTokenSource(c.Token, cancellationToken).Token);
