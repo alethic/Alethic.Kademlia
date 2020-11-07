@@ -81,7 +81,7 @@ namespace Cogito.Kademlia
         {
             try
             {
-                logger?.LogTrace("Attempting request against {Endpoint}.", endpoint);
+                logger.LogTrace("Attempting request against {Endpoint}.", endpoint);
                 var r = await endpoint.InvokeAsync<TRequestBody, TResponseBody>(request, cancellationToken);
                 if (r.Status == KResponseStatus.Success)
                 {

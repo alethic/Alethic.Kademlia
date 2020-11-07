@@ -46,7 +46,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<KPingResponse<TNodeId>> OnPingAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Processing {Operation} from {Sender}.", "PING", sender);
+            logger.LogDebug("Processing {Operation} from {Sender}.", "PING", sender);
             return OnPingAsync(sender, source, request, cancellationToken);
         }
 
@@ -75,7 +75,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<KStoreResponse<TNodeId>> OnStoreAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KStoreRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Processing {Operation} from {Sender}.", "STORE", sender);
+            logger.LogDebug("Processing {Operation} from {Sender}.", "STORE", sender);
             return OnStoreAsync(sender, source, request, cancellationToken);
         }
 
@@ -120,7 +120,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<KFindNodeResponse<TNodeId>> OnFindNodeAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KFindNodeRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_NODE", sender);
+            logger.LogDebug("Processing {Operation} from {Sender}.", "FIND_NODE", sender);
             return OnFindNodeAsync(sender, source, request, cancellationToken);
         }
 
@@ -154,7 +154,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<KFindValueResponse<TNodeId>> OnFindValueAsync(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in KFindValueRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            logger?.LogDebug("Processing {Operation} from {Sender}.", "FIND_VALUE", sender);
+            logger.LogDebug("Processing {Operation} from {Sender}.", "FIND_VALUE", sender);
             return OnFindValueAsync(sender, source, request, cancellationToken);
         }
 

@@ -180,7 +180,7 @@ namespace Cogito.Kademlia.Network.Udp
                 // record relation between endpoint data and endpoint interface
                 var ep = new KIpEndpoint((IPEndPoint)recvSocket.LocalEndPoint);
                 engine.Endpoints.Insert(endpoints[ep] = CreateEndpoint(ep, formats.Select(i => i.ContentType)));
-                logger?.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
+                logger.LogInformation("Initialized receiving UDP socket on {Endpoint}.", ep);
 
                 // following sockets will preserve port
                 recvPort = ep.Port;
@@ -246,19 +246,19 @@ namespace Cogito.Kademlia.Network.Udp
                         sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.DualMode = true;
                         sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
-                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
                         break;
                     case AddressFamily.InterNetwork:
                         // establish UDP socket for IPv4
                         sendSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.Bind(new IPEndPoint(IPAddress.Any, 0));
-                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
                         break;
                     case AddressFamily.InterNetworkV6:
                         // establish UDP socket for IPv6
                         sendSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         sendSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, 0));
-                        logger?.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
+                        logger.LogInformation("Initialized sending UDP socket on {Endpoint}.", sendSocket.LocalEndPoint);
                         break;
                 }
 

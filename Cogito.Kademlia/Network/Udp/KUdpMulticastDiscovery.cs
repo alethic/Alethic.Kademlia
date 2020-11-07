@@ -98,7 +98,7 @@ namespace Cogito.Kademlia.Network.Udp
                 switch (options.Value.Multicast.Endpoint.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:
-                        logger?.LogInformation("Initializing IPv4 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
+                        logger.LogInformation("Initializing IPv4 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
                         mcastSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
                         mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                         mcastSocket.Bind(new IPEndPoint(IPAddress.Any, options.Value.Multicast.Endpoint.Port));
@@ -115,7 +115,7 @@ namespace Cogito.Kademlia.Network.Udp
                         localRecvArgs.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
                         break;
                     case AddressFamily.InterNetworkV6:
-                        logger?.LogInformation("Initializing IPv6 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
+                        logger.LogInformation("Initializing IPv6 multicast UDP discovery on {Endpoint}.", options.Value.Multicast.Endpoint);
                         mcastSocket = new Socket(AddressFamily.InterNetworkV6, SocketType.Dgram, ProtocolType.Udp);
                         mcastSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                         mcastSocket.Bind(new IPEndPoint(IPAddress.IPv6Any, options.Value.Multicast.Endpoint.Port));
@@ -140,7 +140,7 @@ namespace Cogito.Kademlia.Network.Udp
                 localRecvArgs.SetBuffer(new byte[8192], 0, 8192);
                 localRecvArgs.Completed += RecvArgs_Completed;
 
-                logger?.LogInformation("Waiting for incoming multicast announcement packets.");
+                logger.LogInformation("Waiting for incoming multicast announcement packets.");
                 mcastSocket.ReceiveMessageFromAsync(mcastRecvArgs);
                 localSocket.ReceiveMessageFromAsync(localRecvArgs);
 

@@ -43,10 +43,10 @@ namespace Cogito.Kademlia
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            logger?.LogInformation("Initializing Fixed Table Router with {NodeId}.", engine.SelfId);
+            logger.LogInformation("Initializing Fixed Table Router with {NodeId}.", engine.SelfId);
             buckets = new KBucket<TNodeId>[Unsafe.SizeOf<TNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
-                buckets[i] = new KBucket<TNodeId>(engine, invoker, options.Value.K, logger);
+                buckets[i] = new KBucket<TNodeId>(engine, invoker, logger, options.Value.K);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace Cogito.Kademlia
         internal KBucket<TNodeId> GetBucket(in TNodeId node)
         {
             var i = GetBucketIndex(engine.SelfId, node);
-            logger?.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", node, i);
+            logger.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", node, i);
             return buckets[i];
         }
 
@@ -141,7 +141,7 @@ namespace Cogito.Kademlia
         {
             if (peer.Equals(engine.SelfId))
             {
-                logger?.LogError("Peer update request for self. Discarding.");
+                logger.LogError("Peer update request for self. Discarding.");
                 return new ValueTask(Task.CompletedTask);
             }
 

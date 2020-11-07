@@ -22,8 +22,9 @@ namespace Cogito.Kademlia
 
         readonly IKHost<TNodeId> engine;
         readonly IKInvoker<TNodeId> invoker;
-        readonly int k;
         readonly ILogger logger;
+        readonly int k;
+
         readonly ReaderWriterLockSlim rw = new ReaderWriterLockSlim();
         readonly LinkedList<KBucketItem<TNodeId>> l = new LinkedList<KBucketItem<TNodeId>>();
 
@@ -32,14 +33,14 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="engine"></param>
         /// <param name="invoker"></param>
-        /// <param name="k"></param>
         /// <param name="logger"></param>
-        public KBucket(IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, int k, ILogger logger = null)
+        /// <param name="k"></param>
+        public KBucket(IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger, int k)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.k = k;
-            this.logger = logger;
         }
 
         /// <summary>
@@ -91,7 +92,7 @@ namespace Cogito.Kademlia
                         // move to first if not already there
                         if (l.First != i)
                         {
-                            logger?.LogTrace("Peer {NodeId} exists, moving to head.", nodeId);
+                            logger.LogTrace("Peer {NodeId} exists, moving to head.", nodeId);
                             l.Remove(i);
                             l.AddFirst(i);
                         }
@@ -106,7 +107,7 @@ namespace Cogito.Kademlia
                 {
                     using (rw.BeginWriteLock())
                     {
-                        logger?.LogTrace("Peer {NodeId} does not exist, appending to tail.", nodeId);
+                        logger.LogTrace("Peer {NodeId} does not exist, appending to tail.", nodeId);
 
                         // generate new peer entry
                         var p = new KBucketItem<TNodeId>(nodeId);
@@ -122,7 +123,7 @@ namespace Cogito.Kademlia
                 }
                 else
                 {
-                    logger?.LogTrace("Peer {NodeId} not in bucket, however bucket is full. Beginning peer elimination.", nodeId);
+                    logger.LogTrace("Peer {NodeId} not in bucket, however bucket is full. Beginning peer elimination.", nodeId);
 
                     // item does not exist, but bucket does not have room, ping last entry
                     var n = l.Last;
@@ -145,7 +146,7 @@ namespace Cogito.Kademlia
                     // was able to successfully ping the node
                     if (r.Status == KResponseStatus.Success)
                     {
-                        logger?.LogTrace("PING to {ExistingNodeId} succeeded. Keeping existing peer and discarding {NodeId}.", n.Value.NodeId, nodeId);
+                        logger.LogTrace("PING to {ExistingNodeId} succeeded. Keeping existing peer and discarding {NodeId}.", n.Value.NodeId, nodeId);
 
                         // entry had response, move to tail, discard new entry
                         if (l.Count > 1)
@@ -167,7 +168,7 @@ namespace Cogito.Kademlia
                     }
                     else
                     {
-                        logger?.LogTrace("PING failed to {PingNodeId}. Replacing with {NodeId}", n, nodeId);
+                        logger.LogTrace("PING failed to {PingNodeId}. Replacing with {NodeId}", n, nodeId);
 
                         using (rw.BeginWriteLock())
                         {

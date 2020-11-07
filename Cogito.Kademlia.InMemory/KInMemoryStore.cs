@@ -76,16 +76,16 @@ namespace Cogito.Kademlia.InMemory
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
-        /// <param name="frequency"></param>
         /// <param name="logger"></param>
-        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, TimeSpan? frequency = null, ILogger logger = null)
+        /// <param name="frequency"></param>
+        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, ILogger logger, TimeSpan? frequency = null)
         {
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.frequency = frequency ?? DefaultFrequency;
-            this.logger = logger;
 
             this.delQueue = new C5.IntervalHeap<Entry>(32, new FuncComparer<Entry, DateTime>(e => e.ExpireTime, Comparer<DateTime>.Default));
             this.repQueue = new C5.IntervalHeap<Entry>(32, new FuncComparer<Entry, DateTime>(e => e.ReplicateTime.Value, Comparer<DateTime>.Default));
@@ -128,7 +128,7 @@ namespace Cogito.Kademlia.InMemory
                         // record already exists but with a greater version, we will not replace
                         if (record.Entry.Value.Version >= value.Value.Version && record.Entry.Mode <= mode)
                         {
-                            logger?.LogInformation("Ignoring value for {Key}: Verison {OldVersion} >= {NewVersion}.", key, record.Entry.Value.Version, value.Value.Version);
+                            logger.LogInformation("Ignoring value for {Key}: Verison {OldVersion} >= {NewVersion}.", key, record.Entry.Value.Version, value.Value.Version);
                             return false;
                         }
 
@@ -149,7 +149,7 @@ namespace Cogito.Kademlia.InMemory
                     {
                         var replicateTime = mode == KStoreValueMode.Primary ? now + frequency : (DateTime?)null;
 
-                        logger?.LogInformation("Storing {Key} as {Mode} in memory store with expiration at {ExpireTime}.", key, mode, expireTime);
+                        logger.LogInformation("Storing {Key} as {Mode} in memory store with expiration at {ExpireTime}.", key, mode, expireTime);
                         var entry = new Entry(key, mode, value.Value, expireTime, replicateTime);
 
                         // add to del queue
@@ -169,7 +169,7 @@ namespace Cogito.Kademlia.InMemory
                 {
                     using (slim.BeginWriteLock())
                     {
-                        logger?.LogInformation("Removing {Key} from memory store.", key);
+                        logger.LogInformation("Removing {Key} from memory store.", key);
 
                         // remove from del queue
                         if (record.DelQueueHandle != null && delQueue.Find(record.DelQueueHandle, out _))
@@ -301,7 +301,7 @@ namespace Cogito.Kademlia.InMemory
                         {
                             using (slim.BeginWriteLock())
                             {
-                                logger?.LogInformation("Removing expired key {Key}.", entry.Key);
+                                logger.LogInformation("Removing expired key {Key}.", entry.Key);
 
                                 // remove from del queue
                                 if (record.DelQueueHandle != null && delQueue.Find(record.DelQueueHandle, out _))
@@ -321,7 +321,7 @@ namespace Cogito.Kademlia.InMemory
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError(e, "Unexpected exception occurred republishing stored values.");
+                    logger.LogError(e, "Unexpected exception occurred republishing stored values.");
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
@@ -378,7 +378,7 @@ namespace Cogito.Kademlia.InMemory
                 }
                 catch (Exception e)
                 {
-                    logger?.LogError(e, "Unexpected exception occurred republishing stored values.");
+                    logger.LogError(e, "Unexpected exception occurred republishing stored values.");
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
@@ -396,7 +396,7 @@ namespace Cogito.Kademlia.InMemory
         /// <returns></returns>
         async Task ReplicateAsync(Entry entry, CancellationToken cancellationToken)
         {
-            logger?.LogInformation("Replicating key {Key} with expiration of {Expiration}.", entry.Key, entry.Value.Expiration);
+            logger.LogInformation("Replicating key {Key} with expiration of {Expiration}.", entry.Key, entry.Value.Expiration);
 
             // publish to top K remote nodes
             var r = await lookup.LookupNodeAsync(entry.Key, cancellationToken);

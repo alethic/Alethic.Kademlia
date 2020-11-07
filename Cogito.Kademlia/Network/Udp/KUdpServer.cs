@@ -52,7 +52,7 @@ namespace Cogito.Kademlia.Network.Udp
             this.serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            queue = new KRequestResponseQueue<TNodeId, ulong>(options.Value.Timeout);
+            queue = new KRequestResponseQueue<TNodeId, ulong>(logger, options.Value.Timeout);
         }
 
         /// <summary>

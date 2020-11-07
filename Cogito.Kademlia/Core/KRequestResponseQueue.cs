@@ -16,8 +16,9 @@ namespace Cogito.Kademlia.Core
         where TNodeId : unmanaged
     {
 
-        readonly TimeSpan timeout;
         readonly ILogger logger;
+        readonly TimeSpan timeout;
+
         readonly ConcurrentDictionary<TKey, TaskCompletionSource<object>> queue;
 
         /// <summary>
@@ -25,10 +26,10 @@ namespace Cogito.Kademlia.Core
         /// </summary>
         /// <param name="timeout"></param>
         /// <param name="logger"></param>
-        public KRequestResponseQueue(TimeSpan timeout, ILogger logger = null)
+        public KRequestResponseQueue(ILogger logger, TimeSpan timeout)
         {
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
             this.timeout = timeout;
-            this.logger = logger;
 
             queue = new ConcurrentDictionary<TKey, TaskCompletionSource<object>>();
         }

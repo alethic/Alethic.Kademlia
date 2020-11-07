@@ -260,7 +260,7 @@ namespace Cogito.Kademlia
                             if (find.Exception.InnerException is OperationCanceledException)
                                 continue;
 
-                            logger?.LogError(find.Exception, "Received error from lookup task.");
+                            logger.LogError(find.Exception, "Received error from lookup task.");
                             continue;
                         }
 
@@ -312,7 +312,7 @@ namespace Cogito.Kademlia
                     // clean up and capture results of outstanding
                     if (wait.Count > 0)
                     {
-                        logger?.LogDebug("Cancelling {Count} outstanding requests.", wait.Count);
+                        logger.LogDebug("Cancelling {Count} outstanding requests.", wait.Count);
                         await Task.WhenAll(wait);
                     }
                 }
