@@ -47,6 +47,7 @@ namespace Cogito.Kademlia.InMemory
                 Key = key;
                 Mode = mode;
                 Value = value;
+                ExpireTime = expireTime;
                 ReplicateTime = replicateTime;
             }
 
@@ -181,9 +182,9 @@ namespace Cogito.Kademlia.InMemory
 
                         // remove entry
                         entries.Remove(key);
-
-                        OnValueChanged(new KValueEventArgs<TNodeId>(key, null));
                     }
+
+                    OnValueChanged(new KValueEventArgs<TNodeId>(key, null));
                 }
 
                 return true;
@@ -318,9 +319,9 @@ namespace Cogito.Kademlia.InMemory
 
                                 // remove entry
                                 entries.Remove(entry.Key);
-
-                                OnValueChanged(new KValueEventArgs<TNodeId>(entry.Key, null));
                             }
+
+                            OnValueChanged(new KValueEventArgs<TNodeId>(entry.Key, null));
                         }
                     }
                 }
