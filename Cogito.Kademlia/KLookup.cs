@@ -140,15 +140,15 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KNodeLookupNodeResult<TNodeId>> LookupNodeAsync(in TNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KLookupNodeResult<TNodeId>> LookupNodeAsync(in TNodeId key, CancellationToken cancellationToken = default)
         {
             return LookupNodeAsync(key, cancellationToken);
         }
 
-        async ValueTask<KNodeLookupNodeResult<TNodeId>> LookupNodeAsync(TNodeId key, CancellationToken cancellationToken = default)
+        async ValueTask<KLookupNodeResult<TNodeId>> LookupNodeAsync(TNodeId key, CancellationToken cancellationToken = default)
         {
             var r = await LookupAsync(key, FindNodeAsync, cancellationToken);
-            return new KNodeLookupNodeResult<TNodeId>(r.Key, r.Peers);
+            return new KLookupNodeResult<TNodeId>(r.Key, r.Peers);
         }
 
         /// <summary>
@@ -157,12 +157,12 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KNodeLookupValueResult<TNodeId>> LookupValueAsync(in TNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KLookupValueResult<TNodeId>> LookupValueAsync(in TNodeId key, CancellationToken cancellationToken = default)
         {
             return LookupValueAsync(key, cancellationToken);
         }
 
-        async ValueTask<KNodeLookupValueResult<TNodeId>> LookupValueAsync(TNodeId key, CancellationToken cancellationToken = default)
+        async ValueTask<KLookupValueResult<TNodeId>> LookupValueAsync(TNodeId key, CancellationToken cancellationToken = default)
         {
             var r = await LookupAsync(key, FindValueAsync, cancellationToken);
 
@@ -170,7 +170,7 @@ namespace Cogito.Kademlia
             if (r.Value is KValueInfo value)
                 await CacheAsync(r.Peers.Take(cache), key, value, cancellationToken);
 
-            return new KNodeLookupValueResult<TNodeId>(r.Key, r.Peers, r.Source, r.Value);
+            return new KLookupValueResult<TNodeId>(r.Key, r.Peers, r.Source, r.Value);
         }
 
         /// <summary>

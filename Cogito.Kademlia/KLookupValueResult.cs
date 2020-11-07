@@ -8,7 +8,7 @@ namespace Cogito.Kademlia
     /// Represents a result from a lookup operation for a value.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public readonly struct KNodeLookupValueResult<TNodeId>
+    public readonly struct KLookupValueResult<TNodeId>
         where TNodeId : unmanaged
     {
 
@@ -24,7 +24,7 @@ namespace Cogito.Kademlia
         /// <param name="nodes"></param>
         /// <param name="source"></param>
         /// <param name="value"></param>
-        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? source, in KValueInfo? value)
+        public KLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? source, in KValueInfo? value)
         {
             this.key = key;
             this.nodes = nodes ?? throw new ArgumentNullException(nameof(nodes));
@@ -38,7 +38,7 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="nodes"></param>
         /// <param name="final"></param>
-        public KNodeLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? final) :
+        public KLookupValueResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> nodes, in KPeerInfo<TNodeId>? final) :
             this(key, nodes, final, null)
         {
 
