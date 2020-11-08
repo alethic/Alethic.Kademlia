@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -10,7 +11,6 @@ using Cogito.Kademlia.Json;
 using Cogito.Kademlia.MessagePack;
 using Cogito.Kademlia.Network.Udp;
 using Cogito.Kademlia.Protobuf;
-using Cogito.Kademlia.Stun;
 using Cogito.Serilog;
 
 using Microsoft.Extensions.Hosting;
@@ -34,8 +34,8 @@ namespace Cogito.Kademlia.Console
 
         static void RegisterKademlia(ContainerBuilder builder, ulong network)
         {
-            builder.RegisterType<KProtobufMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KJsonMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KProtobufMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KMessagePackMessageFormat<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KRefresher<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KConnector<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
@@ -50,11 +50,11 @@ namespace Cogito.Kademlia.Console
             builder.RegisterType<KHost<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KUdpProtocol<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KUdpMulticastDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<KIpStunProvider<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KStaticDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.Configure<KHostOptions<KNodeId256>>(o => o.NodeId = KNodeId<KNodeId256>.Create());
-            builder.Configure<KFixedTableRouterOptions<KNodeId256>>(o => { });
-            builder.Configure<KUdpOptions<KNodeId256>>(o => { o.Network = network; });
-            builder.Configure<KIpStunOptions>(o => { });
+            builder.Configure<KFixedTableRouterOptions>(o => { });
+            builder.Configure<KUdpOptions>(o => { o.Network = network; });
+            builder.Configure<KStaticDiscoveryOptions>(o => { });
         }
 
         /// <summary>

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Web;
 
 using Cogito.Collections;
+using Cogito.Threading;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,12 +31,12 @@ namespace Cogito.Kademlia.Network.Udp
 
         static readonly Random random = new Random();
 
-        readonly IOptions<KUdpOptions<TNodeId>> options;
+        readonly IOptions<KUdpOptions> options;
         readonly IKHost<TNodeId> host;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly ILogger logger;
 
-        readonly object sync = new object();
+        readonly AsyncLock sync = new AsyncLock();
         readonly Dictionary<IPEndPoint, KIpProtocolEndpoint<TNodeId>> endpoints = new Dictionary<IPEndPoint, KIpProtocolEndpoint<TNodeId>>();
         readonly KUdpServer<TNodeId> server;
 
@@ -49,7 +50,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="formats"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpProtocol(IOptions<KUdpOptions> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.host = engine ?? throw new ArgumentNullException(nameof(engine));
@@ -87,12 +88,50 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
-        /// Gets the next magic value.
+        /// Starts the network.
         /// </summary>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        uint NewReplyId()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-            return (uint)random.Next(int.MinValue, int.MaxValue);
+            using (await sync.LockAsync(cancellationToken))
+            {
+                if (socket != null)
+                    throw new KException("UDP protocol is already started.");
+
+                // register ourselves with the host
+                host.RegisterProtocol(this);
+
+                // configure receive sockets and update on IP address change
+                NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+                await RefreshSocket(cancellationToken);
+                await RefreshEndpoints(cancellationToken);
+            }
+        }
+
+        /// <summary>
+        /// Scans for new IP addresses and creates receive sockets.
+        /// </summary>
+        Task RefreshSocket(CancellationToken cancellationToken)
+        {
+            if (socket == null)
+            {
+                var listen = options.Value.Bind ?? new IPEndPoint(IPAddress.IPv6Any, 0);
+
+                // establish UDP socket
+                socket = new Socket(listen.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                socket.DualMode = true;
+                socket.Bind(listen);
+
+                // begin receiving from socket
+                var args = new SocketAsyncEventArgs();
+                args.Completed += SocketAsyncEventArgs_Completed;
+                BeginReceive(socket, args);
+
+                logger.LogInformation("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -112,83 +151,43 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
-        /// Scans for new IP addresses and creates receive sockets.
+        /// Refreshes the available endpoints.
         /// </summary>
-        void RefreshNetwork()
-        {
-            lock (sync)
-            {
-                if (socket == null)
-                {
-                    var listen = options.Value.Bind ?? new IPEndPoint(IPAddress.IPv6Any, 0);
-
-                    // establish UDP socket
-                    socket = new Socket(listen.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                    socket.DualMode = true;
-                    socket.Bind(listen);
-
-                    // begin receiving from socket
-                    var args = new SocketAsyncEventArgs();
-                    args.Completed += SocketAsyncEventArgs_Completed;
-                    BeginReceive(socket, args);
-
-                    logger.LogInformation("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
-                }
-
-                // set of endpoints to keep
-                var keepEndpoints = new List<KIpProtocolEndpoint<TNodeId>>();
-
-                // generate endpoint for each local address that is listened to
-                foreach (var ip in GetLocalIpAddresses())
-                {
-                    // determine endpoint by matching IP and port
-                    var ep = ip.AddressFamily switch
-                    {
-                        AddressFamily.InterNetwork => new KIpEndpoint(new KIp4Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
-                        AddressFamily.InterNetworkV6 => new KIpEndpoint(new KIp6Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
-                        _ => throw new InvalidOperationException(),
-                    };
-
-                    // find or create new endpoint
-                    keepEndpoints.Add(endpoints.GetOrDefault(ep) ?? CreateEndpoint(ep, formats.Select(i => i.ContentType)));
-                }
-
-                // insert added endpoints
-                foreach (var endpoint in keepEndpoints.Except(endpoints.Values))
-                {
-                    endpoints[endpoint.Endpoint] = endpoint;
-                    host.RegisterEndpoint(endpoint.ToUri());
-                    logger.LogInformation("Adding UDP endpoint {Endpoint}.", endpoint);
-                }
-
-                // remove stale endpoints
-                foreach (var endpoint in endpoints.Values.Except(keepEndpoints))
-                {
-                    endpoints.Remove(endpoint.Endpoint);
-                    host.UnregisterEndpoint(endpoint.ToUri());
-                    logger.LogInformation("Remove UDP endpoint {Endpoint}.", endpoint);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Starts the network.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task StartAsync(CancellationToken cancellationToken = default)
+        Task RefreshEndpoints(CancellationToken cancellationToken)
         {
-            lock (sync)
+            // set of endpoints to keep
+            var keepEndpoints = new List<KIpProtocolEndpoint<TNodeId>>();
+
+            // generate endpoint for each local address that is listened to
+            foreach (var ip in GetLocalIpAddresses())
             {
-                if (socket != null)
-                    throw new KException("UDP protocol is already started.");
+                // determine endpoint by matching IP and port
+                var ep = ip.AddressFamily switch
+                {
+                    AddressFamily.InterNetwork => new KIpEndpoint(new KIp4Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
+                    AddressFamily.InterNetworkV6 => new KIpEndpoint(new KIp6Address(ip), ((IPEndPoint)socket.LocalEndPoint).Port),
+                    _ => throw new InvalidOperationException(),
+                };
 
-                // register ourselves with the host
-                host.RegisterProtocol(this);
+                // find or create new endpoint
+                keepEndpoints.Add(endpoints.GetOrDefault(ep) ?? CreateEndpoint(ep, formats.Select(i => i.ContentType)));
+            }
 
-                // configure receive sockets and update on IP address change
-                NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
-                RefreshNetwork();
+            // insert added endpoints
+            foreach (var endpoint in keepEndpoints.Except(endpoints.Values))
+            {
+                endpoints[endpoint.Endpoint] = endpoint;
+                host.RegisterEndpoint(endpoint.ToUri());
+                logger.LogInformation("Adding UDP endpoint {Endpoint}.", endpoint);
+            }
+
+            // remove stale endpoints
+            foreach (var endpoint in endpoints.Values.Except(keepEndpoints))
+            {
+                endpoints.Remove(endpoint.Endpoint);
+                host.UnregisterEndpoint(endpoint.ToUri());
+                logger.LogInformation("Remove UDP endpoint {Endpoint}.", endpoint);
             }
 
             return Task.CompletedTask;
@@ -201,8 +200,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         void NetworkChange_NetworkAddressChanged(object sender, EventArgs args)
         {
-            lock (sync)
-                RefreshNetwork();
+            Task.Run(async () =>
+            {
+                using (sync.LockAsync(CancellationToken.None))
+                    await RefreshSocket(CancellationToken.None);
+            });
         }
 
         /// <summary>
@@ -257,9 +259,9 @@ namespace Cogito.Kademlia.Network.Udp
         /// Stops the network.
         /// </summary>
         /// <returns></returns>
-        public Task StopAsync(CancellationToken cancellationToken = default)
+        public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-            lock (sync)
+            using (await sync.LockAsync(cancellationToken))
             {
                 if (socket == null)
                     throw new InvalidOperationException("UDP protocol is already stopped.");
@@ -291,8 +293,6 @@ namespace Cogito.Kademlia.Network.Udp
                     socket = null;
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         /// <summary>

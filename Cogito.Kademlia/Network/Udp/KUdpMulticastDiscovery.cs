@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -31,7 +30,7 @@ namespace Cogito.Kademlia.Network.Udp
 
         static readonly Random random = new Random();
 
-        readonly IOptions<KUdpOptions<TNodeId>> options;
+        readonly IOptions<KUdpOptions> options;
         readonly IKHost<TNodeId> host;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKConnector<TNodeId> connector;
@@ -59,7 +58,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="connector"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpMulticastDiscovery(IOptions<KUdpOptions<TNodeId>> options, IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpMulticastDiscovery(IOptions<KUdpOptions> options, IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, IKConnector<TNodeId> connector, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.host = host ?? throw new ArgumentNullException(nameof(host));
@@ -137,7 +136,7 @@ namespace Cogito.Kademlia.Network.Udp
 
                 // begin new run processes
                 runCts = new CancellationTokenSource();
-                run = Task.WhenAll(Task.Run(() => ConnectRunAsync(runCts.Token)));
+                run = Task.WhenAll(Task.Run(() => DiscoveryRunAsync(runCts.Token)));
 
                 // also connect when endpoints come and go
                 host.EndpointsChanged += OnEndpointsChanged;
@@ -218,7 +217,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="args"></param>
         void OnEndpointsChanged(object sender, EventArgs args)
         {
-            Task.Run(() => ConnectAsync(CancellationToken.None));
+            Task.Run(() => DiscoveryAsync(CancellationToken.None));
         }
 
         /// <summary>
@@ -312,7 +311,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async Task ConnectRunAsync(CancellationToken cancellationToken)
+        async Task DiscoveryRunAsync(CancellationToken cancellationToken)
         {
             while (cancellationToken.IsCancellationRequested == false)
             {
@@ -322,8 +321,8 @@ namespace Cogito.Kademlia.Network.Udp
                     if (host.Endpoints.Count == 0)
                         continue;
 
-                    logger.LogInformation("Initiating periodic multicast bootstrap.");
-                    await ConnectAsync(cancellationToken);
+                    logger.LogInformation("Initiating periodic multicast discovery.");
+                    await DiscoveryAsync(cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -334,7 +333,8 @@ namespace Cogito.Kademlia.Network.Udp
                     logger.LogError(e, "Unexpected exception occurred during multicast bootstrapping.");
                 }
 
-                await Task.Delay(options.Value.Multicast.DiscoveryFrequency, cancellationToken);
+                if (options.Value.Multicast.Frequency != null)
+                    await Task.Delay(options.Value.Multicast.Frequency.Value, cancellationToken);
             }
         }
 
@@ -342,7 +342,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// Attempts to bootstrap the Kademlia engine from the available multicast group members.
         /// </summary>
         /// <returns></returns>
-        async ValueTask ConnectAsync(CancellationToken cancellationToken)
+        async ValueTask DiscoveryAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -598,7 +598,11 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         ValueTask OnReceivePingResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
-            return connector.ConnectAsync(new KProtocolEndpointSet<TNodeId>(response.Body.Value.Endpoints.Select(i => host.ResolveEndpoint(i))), cancellationToken);
+            var ep = response.Body.Value.Endpoints.Select(i => host.ResolveEndpoint(i)).Where(i => i != null).ToArray();
+            if (ep.Length > 0)
+                return connector.ConnectAsync(new KProtocolEndpointSet<TNodeId>(ep), cancellationToken);
+
+            return new ValueTask(Task.CompletedTask);
         }
 
     }

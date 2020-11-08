@@ -7,8 +7,7 @@ namespace Cogito.Kademlia.Network.Udp
     /// <summary>
     /// Options available to the UDP protocol.
     /// </summary>
-    public class KUdpOptions<TNodeId>
-        where TNodeId : unmanaged
+    public class KUdpOptions
     {
 
         static readonly Random random = new Random();
@@ -31,7 +30,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Options for multicast discovery.
         /// </summary>
-        public KUdpMulticastDiscoveryOptions<TNodeId> Multicast { get; set; } = new KUdpMulticastDiscoveryOptions<TNodeId>();
+        public KUdpMulticastDiscoveryOptions Multicast { get; set; } = new KUdpMulticastDiscoveryOptions();
 
     }
 

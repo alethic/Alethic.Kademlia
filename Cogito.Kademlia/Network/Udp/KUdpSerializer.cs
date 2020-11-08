@@ -39,7 +39,7 @@ namespace Cogito.Kademlia.Network.Udp
         public KUdpPacket<TNodeId> Read(ReadOnlyMemory<byte> buffer, IKMessageContext<TNodeId> context)
         {
             if (BinaryPrimitives.ReadUInt32LittleEndian(buffer.Span) != magic)
-                return new KUdpPacket<TNodeId>(null, null);
+                throw new KProtocolException(KProtocolError.Invalid, "Packet missing magic.");
 
             // advance past magic number
             buffer = buffer.Slice(sizeof(uint));
@@ -47,7 +47,7 @@ namespace Cogito.Kademlia.Network.Udp
             // format ends at first NUL
             var formatEnd = buffer.Span.IndexOf((byte)0x00);
             if (formatEnd < 0)
-                return new KUdpPacket<TNodeId>(null, null);
+                throw new KProtocolException(KProtocolError.Invalid, "Malformed packet.");
 
             // extract encoded format type
 #if NETSTANDARD2_0
@@ -56,7 +56,7 @@ namespace Cogito.Kademlia.Network.Udp
             var contentType = Encoding.UTF8.GetString(buffer.Span.Slice(0, formatEnd));
 #endif
             if (contentType == null)
-                return new KUdpPacket<TNodeId>(null, null);
+                throw new KProtocolException(KProtocolError.Invalid, "Packet missing content type.");
 
             var format = formats.FirstOrDefault(i => i.ContentType == contentType);
             if (format == null)

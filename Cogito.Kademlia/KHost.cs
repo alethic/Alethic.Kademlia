@@ -50,13 +50,16 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool RegisterEndpoint(Uri uri)
         {
-            if (endpoints.Add(uri))
+            lock (endpoints)
             {
-                OnEndpointsChanged();
-                return true;
-            }
+                if (endpoints.Add(uri))
+                {
+                    OnEndpointsChanged();
+                    return true;
+                }
 
-            return false;
+                return false;
+            }
         }
 
         /// <summary>
@@ -66,13 +69,16 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool UnregisterEndpoint(Uri uri)
         {
-            if (endpoints.Remove(uri))
+            lock (endpoints)
             {
-                OnEndpointsChanged();
-                return true;
-            }
+                if (endpoints.Remove(uri))
+                {
+                    OnEndpointsChanged();
+                    return true;
+                }
 
-            return false;
+                return false;
+            }
         }
 
         /// <summary>
@@ -95,7 +101,8 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri)
         {
-            return protocols.Select(i => i.ResolveEndpoint(uri)).FirstOrDefault(i => i != null);
+            lock (protocols)
+                return protocols.Select(i => i.ResolveEndpoint(uri)).FirstOrDefault(i => i != null);
         }
 
         /// <summary>
@@ -110,13 +117,16 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool RegisterProtocol(IKProtocol<TNodeId> protocol)
         {
-            if (protocols.Add(protocol))
+            lock (protocols)
             {
-                OnProtocolsChanged();
-                return true;
-            }
+                if (protocols.Add(protocol))
+                {
+                    OnProtocolsChanged();
+                    return true;
+                }
 
-            return false;
+                return false;
+            }
         }
 
         /// <summary>
@@ -126,13 +136,16 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public bool UnregisterProtocol(IKProtocol<TNodeId> protocol)
         {
-            if (protocols.Remove(protocol))
+            lock (protocols)
             {
-                OnProtocolsChanged();
-                return true;
-            }
+                if (protocols.Remove(protocol))
+                {
+                    OnProtocolsChanged();
+                    return true;
+                }
 
-            return false;
+                return false;
+            }
         }
 
         /// <summary>

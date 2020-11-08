@@ -22,9 +22,8 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IOptions<KFixedTableRouterOptions<TNodeId>> options;
+        readonly IOptions<KFixedTableRouterOptions> options;
         readonly IKHost<TNodeId> engine;
-        readonly IKInvoker<TNodeId> invoker;
         readonly ILogger logger;
 
         readonly KBucket<TNodeId>[] buckets;
@@ -36,11 +35,10 @@ namespace Cogito.Kademlia
         /// <param name="engine"></param>
         /// <param name="invoker"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(IOptions<KFixedTableRouterOptions<TNodeId>> options, IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
+        public KFixedTableRouter(IOptions<KFixedTableRouterOptions> options, IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             logger.LogInformation("Initializing Fixed Table Router with {NodeId}.", engine.SelfId);

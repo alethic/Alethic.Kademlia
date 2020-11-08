@@ -7,8 +7,7 @@ namespace Cogito.Kademlia.Network.Udp
     /// <summary>
     /// Options available to the UDP multicast discovery service.
     /// </summary>
-    public class KUdpMulticastDiscoveryOptions<TNodeId>
-        where TNodeId : unmanaged
+    public class KUdpMulticastDiscoveryOptions
     {
 
         /// <summary>
@@ -24,7 +23,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <summary>
         /// Amount of time between runs of the discovery process.
         /// </summary>
-        public TimeSpan DiscoveryFrequency { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan? Frequency { get; set; } = TimeSpan.FromMinutes(10);
 
     }
 
