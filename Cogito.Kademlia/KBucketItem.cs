@@ -10,7 +10,7 @@
     {
 
         readonly TNodeId nodeId;
-        readonly KEndpointSet<TNodeId> endpoints;
+        readonly KProtocolEndpointSet<TNodeId> endpoints;
 
         /// <summary>
         /// Initializes a new instance.
@@ -20,7 +20,7 @@
         public KBucketItem(in TNodeId id)
         {
             this.nodeId = id;
-            this.endpoints = new KEndpointSet<TNodeId>();
+            this.endpoints = new KProtocolEndpointSet<TNodeId>();
         }
 
         /// <summary>
@@ -31,7 +31,7 @@
         /// <summary>
         /// Gets the endpoints associated with the node.
         /// </summary>
-        public KEndpointSet<TNodeId> Endpoints => endpoints;
+        public KProtocolEndpointSet<TNodeId> Endpoints => endpoints;
 
     }
 

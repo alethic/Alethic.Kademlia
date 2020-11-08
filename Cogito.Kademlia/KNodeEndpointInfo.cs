@@ -5,19 +5,19 @@
     /// Describes a peer and its associated endpoints.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public struct KPeerInfo<TNodeId>
+    public struct KNodeEndpointInfo<TNodeId>
         where TNodeId : unmanaged
     {
 
         readonly TNodeId id;
-        readonly KEndpointSet<TNodeId> endpoints;
+        readonly KProtocolEndpointSet<TNodeId> endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KPeerInfo(in TNodeId id, KEndpointSet<TNodeId> endpoints)
+        public KNodeEndpointInfo(in TNodeId id, KProtocolEndpointSet<TNodeId> endpoints)
         {
             this.id = id;
             this.endpoints = endpoints;
@@ -31,7 +31,7 @@
         /// <summary>
         /// Gets the set of known endpoints of the peer.
         /// </summary>
-        public KEndpointSet<TNodeId> Endpoints => endpoints;
+        public KProtocolEndpointSet<TNodeId> Endpoints => endpoints;
 
     }
 

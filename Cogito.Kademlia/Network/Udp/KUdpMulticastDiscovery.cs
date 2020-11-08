@@ -140,7 +140,7 @@ namespace Cogito.Kademlia.Network.Udp
                 run = Task.WhenAll(Task.Run(() => ConnectRunAsync(runCts.Token)));
 
                 // also connect when endpoints come and go
-                host.Endpoints.CollectionChanged += OnEndpointsChanged;
+                host.EndpointsChanged += OnEndpointsChanged;
             }
         }
 
@@ -153,7 +153,7 @@ namespace Cogito.Kademlia.Network.Udp
         {
             using (await sync.LockAsync(cancellationToken))
             {
-                host.Endpoints.CollectionChanged -= OnEndpointsChanged;
+                host.EndpointsChanged -= OnEndpointsChanged;
 
                 // shutdown socket
                 if (mcastSocket != null)
@@ -216,7 +216,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="args"></param>
-        void OnEndpointsChanged(object sender, NotifyCollectionChangedEventArgs args)
+        void OnEndpointsChanged(object sender, EventArgs args)
         {
             Task.Run(() => ConnectAsync(CancellationToken.None));
         }
@@ -598,7 +598,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         ValueTask OnReceivePingResponseAsync(Socket receive, Socket respond, in KIpEndpoint source, string format, in KResponse<TNodeId, KPingResponse<TNodeId>> response, CancellationToken cancellationToken)
         {
-            return connector.ConnectAsync(new KEndpointSet<TNodeId>(response.Body.Value.Endpoints), cancellationToken);
+            return connector.ConnectAsync(new KProtocolEndpointSet<TNodeId>(response.Body.Value.Endpoints.Select(i => host.ResolveEndpoint(i))), cancellationToken);
         }
 
     }

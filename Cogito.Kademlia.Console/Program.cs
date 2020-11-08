@@ -10,6 +10,7 @@ using Cogito.Kademlia.Json;
 using Cogito.Kademlia.MessagePack;
 using Cogito.Kademlia.Network.Udp;
 using Cogito.Kademlia.Protobuf;
+using Cogito.Kademlia.Stun;
 using Cogito.Serilog;
 
 using Microsoft.Extensions.Hosting;
@@ -49,9 +50,11 @@ namespace Cogito.Kademlia.Console
             builder.RegisterType<KHost<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KUdpProtocol<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KUdpMulticastDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
+            builder.RegisterType<KIpStunProvider<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.Configure<KHostOptions<KNodeId256>>(o => o.NodeId = KNodeId<KNodeId256>.Create());
             builder.Configure<KFixedTableRouterOptions<KNodeId256>>(o => { });
             builder.Configure<KUdpOptions<KNodeId256>>(o => { o.Network = network; });
+            builder.Configure<KIpStunOptions>(o => { });
         }
 
         /// <summary>

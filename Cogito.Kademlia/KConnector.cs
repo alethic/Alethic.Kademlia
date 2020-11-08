@@ -47,7 +47,7 @@ namespace Cogito.Kademlia
         /// <param name="targets"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async ValueTask ConnectAsync(KEndpointSet<TNodeId> targets, CancellationToken cancellationToken = default)
+        public async ValueTask ConnectAsync(KProtocolEndpointSet<TNodeId> targets, CancellationToken cancellationToken = default)
         {
             logger.LogInformation("Bootstrapping network with connection to {Endpoints}.", targets);
 
@@ -68,7 +68,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask ConnectAsync(IKProtocolEndpoint<TNodeId> endpoint, CancellationToken cancellationToken = default)
         {
-            return ConnectAsync(new KEndpointSet<TNodeId>(endpoint.Yield()));
+            return ConnectAsync(new KProtocolEndpointSet<TNodeId>(endpoint.Yield()));
         }
 
         /// <summary>

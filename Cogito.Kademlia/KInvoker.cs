@@ -34,22 +34,22 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>> PingAsync(KEndpointSet<TNodeId> endpoints, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>> PingAsync(KProtocolEndpointSet<TNodeId> endpoints, CancellationToken cancellationToken = default)
         {
             return policy.InvokeAsync<KPingRequest<TNodeId>, KPingResponse<TNodeId>>(endpoints, new KPingRequest<TNodeId>(engine.Endpoints.ToArray()));
         }
 
-        public ValueTask<KResponse<TNodeId, KStoreResponse<TNodeId>>> StoreAsync(KEndpointSet<TNodeId> endpoints, in TNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TNodeId, KStoreResponse<TNodeId>>> StoreAsync(KProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)
         {
             return policy.InvokeAsync<KStoreRequest<TNodeId>, KStoreResponse<TNodeId>>(endpoints, new KStoreRequest<TNodeId>(key, mode, value));
         }
 
-        public ValueTask<KResponse<TNodeId, KFindNodeResponse<TNodeId>>> FindNodeAsync(KEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TNodeId, KFindNodeResponse<TNodeId>>> FindNodeAsync(KProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
         {
             return policy.InvokeAsync<KFindNodeRequest<TNodeId>, KFindNodeResponse<TNodeId>>(endpoints, new KFindNodeRequest<TNodeId>(key));
         }
 
-        public ValueTask<KResponse<TNodeId, KFindValueResponse<TNodeId>>> FindValueAsync(KEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
+        public ValueTask<KResponse<TNodeId, KFindValueResponse<TNodeId>>> FindValueAsync(KProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, CancellationToken cancellationToken = default)
         {
             return policy.InvokeAsync<KFindValueRequest<TNodeId>, KFindValueResponse<TNodeId>>(endpoints, new KFindValueRequest<TNodeId>(key));
         }

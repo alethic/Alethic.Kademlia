@@ -14,19 +14,19 @@ namespace Cogito.Kademlia
     /// Tracks a set of endpoints, managing their position within the set based on their timeout or success events.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KEndpointSet<TNodeId> : IDisposable, ICollection<IKProtocolEndpoint<TNodeId>>, INotifyCollectionChanged
+    public class KProtocolEndpointSet<TNodeId> : IDisposable, ICollection<IKProtocolEndpoint<TNodeId>>, INotifyCollectionChanged
         where TNodeId : unmanaged
     {
 
-        readonly OrderedSet<IKProtocolEndpoint<TNodeId>> set;
+        readonly OrderedSet<IKProtocolEndpoint<TNodeId>> set = new OrderedSet<IKProtocolEndpoint<TNodeId>>(EqualityComparer<IKProtocolEndpoint<TNodeId>>.Default);
         readonly ReaderWriterLockSlim sync = new ReaderWriterLockSlim();
 
         /// <summary>
         /// </summary>
         /// Initializes a new instance.
-        public KEndpointSet()
+        public KProtocolEndpointSet()
         {
-            set = new OrderedSet<IKProtocolEndpoint<TNodeId>>(EqualityComparer<IKProtocolEndpoint<TNodeId>>.Default);
+
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         /// </summary>
         /// <param name="source"></param>
-        public KEndpointSet(IEnumerable<IKProtocolEndpoint<TNodeId>> source) :
+        public KProtocolEndpointSet(IEnumerable<IKProtocolEndpoint<TNodeId>> source) :
             this()
         {
             // add source endpoints to set
@@ -174,7 +174,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Finalizes the instance.
         /// </summary>
-        ~KEndpointSet()
+        ~KProtocolEndpointSet()
         {
             Dispose();
         }

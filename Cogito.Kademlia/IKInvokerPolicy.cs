@@ -21,7 +21,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KEndpointSet<TNodeId> endpoints, in TRequest request, CancellationToken cancellationToken = default)
+        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KProtocolEndpointSet<TNodeId> endpoints, in TRequest request, CancellationToken cancellationToken = default)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>;
 

@@ -8,7 +8,7 @@ namespace Cogito.Kademlia.MessagePack.Structures
     {
 
         [Key(8)]
-        public Peer[] Peers { get; set; }
+        public Node[] Peers { get; set; }
 
     }
 

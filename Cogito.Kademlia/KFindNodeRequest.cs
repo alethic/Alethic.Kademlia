@@ -15,21 +15,21 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Creates a response to the given request.
         /// </summary>
-        /// <param name="peers"></param>
+        /// <param name="nodes"></param>
         /// <returns></returns>
-        public KFindNodeResponse<TNodeId> Respond(KPeerInfo<TNodeId>[] peers)
+        public KFindNodeResponse<TNodeId> Respond(KNodeInfo<TNodeId>[] nodes)
         {
-            return new KFindNodeResponse<TNodeId>(peers);
+            return new KFindNodeResponse<TNodeId>(nodes);
         }
 
         /// <summary>
         /// Creates a response to the given request.
         /// </summary>
-        /// <param name="peers"></param>
+        /// <param name="nodes"></param>
         /// <returns></returns>
-        public KFindNodeResponse<TNodeId> Respond(IEnumerable<KPeerInfo<TNodeId>> peers)
+        public KFindNodeResponse<TNodeId> Respond(IEnumerable<KNodeInfo<TNodeId>> nodes)
         {
-            return new KFindNodeResponse<TNodeId>(peers.ToArray());
+            return new KFindNodeResponse<TNodeId>(nodes.ToArray());
         }
 
         readonly TNodeId key;

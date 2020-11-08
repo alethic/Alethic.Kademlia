@@ -142,7 +142,7 @@ namespace Cogito.Kademlia.Protobuf
         /// <returns></returns>
         KPingRequest<TNodeId> Decode(IKMessageContext<TNodeId> resources, PingRequest request)
         {
-            return new KPingRequest<TNodeId>(Decode(resources, request.Endpoints).ToArray());
+            return new KPingRequest<TNodeId>(request.Endpoints.Select(i => new Uri(i)));
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace Cogito.Kademlia.Protobuf
         /// <returns></returns>
         KPingResponse<TNodeId> Decode(IKMessageContext<TNodeId> resources, PingResponse response)
         {
-            return new KPingResponse<TNodeId>(Decode(resources, response.Endpoints).ToArray());
+            return new KPingResponse<TNodeId>(response.Endpoints.Select(i => new Uri(i)));
         }
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Cogito.Kademlia.Protobuf
         /// <returns></returns>
         KFindNodeResponse<TNodeId> Decode(IKMessageContext<TNodeId> resources, FindNodeResponse response)
         {
-            return new KFindNodeResponse<TNodeId>(Decode(resources, response.Peers).ToArray());
+            return new KFindNodeResponse<TNodeId>(Decode(resources, response.Nodes).ToArray());
         }
 
         /// <summary>
@@ -260,7 +260,7 @@ namespace Cogito.Kademlia.Protobuf
         KFindValueResponse<TNodeId> Decode(IKMessageContext<TNodeId> resources, FindValueResponse response)
         {
             return new KFindValueResponse<TNodeId>(
-                Decode(resources, response.Peers).ToArray(),
+                Decode(resources, response.Nodes).ToArray(),
                 response.HasValue ?
                     new KValueInfo(
                         response.Value.Data.ToByteArray(),
@@ -273,46 +273,23 @@ namespace Cogito.Kademlia.Protobuf
         /// Decodes a list of peers.
         /// </summary>
         /// <param name="resources"></param>
-        /// <param name="peers"></param>
+        /// <param name="nodes"></param>
         /// <returns></returns>
-        IEnumerable<KPeerInfo<TNodeId>> Decode(IKMessageContext<TNodeId> resources, RepeatedField<Peer> peers)
+        IEnumerable<KNodeInfo<TNodeId>> Decode(IKMessageContext<TNodeId> resources, RepeatedField<Node> nodes)
         {
-            foreach (var peer in peers)
-                yield return Decode(resources, peer);
+            foreach (var node in nodes)
+                yield return Decode(resources, node);
         }
 
         /// <summary>
         /// Decodes a single peer.
         /// </summary>
         /// <param name="resources"></param>
-        /// <param name="peer"></param>
+        /// <param name="node"></param>
         /// <returns></returns>
-        KPeerInfo<TNodeId> Decode(IKMessageContext<TNodeId> resources, Peer peer)
+        KNodeInfo<TNodeId> Decode(IKMessageContext<TNodeId> resources, Node node)
         {
-            return new KPeerInfo<TNodeId>(DecodeNodeId(resources, peer.Id), new KEndpointSet<TNodeId>(Decode(resources, peer.Endpoints)));
-        }
-
-        /// <summary>
-        /// Decodes a list of endpoints.
-        /// </summary>
-        /// <param name="resources"></param>
-        /// <param name="endpoints"></param>
-        /// <returns></returns>
-        IEnumerable<IKProtocolEndpoint<TNodeId>> Decode(IKMessageContext<TNodeId> resources, RepeatedField<IpEndpoint> endpoints)
-        {
-            foreach (var endpoint in endpoints)
-                yield return Decode(resources, endpoint);
-        }
-
-        /// <summary>
-        /// Decodes a single endpoint.
-        /// </summary>
-        /// <param name="resources"></param>
-        /// <param name="endpoint"></param>
-        /// <returns></returns>
-        IKProtocolEndpoint<TNodeId> Decode(IKMessageContext<TNodeId> resources, IpEndpoint endpoint)
-        {
-            return resources.ResolveEndpoint(new Uri(endpoint.Uri));
+            return new KNodeInfo<TNodeId>(DecodeNodeId(resources, node.Id), node.Endpoints.Select(i => new Uri(i)));
         }
 
         /// <summary>

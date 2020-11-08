@@ -25,24 +25,24 @@ namespace Cogito.Kademlia
         readonly struct FindResult
         {
 
-            readonly IEnumerable<KPeerInfo<TNodeId>> peers;
+            readonly IEnumerable<KNodeEndpointInfo<TNodeId>> nodes;
             readonly KValueInfo? value;
 
             /// <summary>
             /// Initializes a new instance.
             /// </summary>
-            /// <param name="peers"></param>
+            /// <param name="nodes"></param>
             /// <param name="value"></param>
-            public FindResult(IEnumerable<KPeerInfo<TNodeId>> peers, KValueInfo? value)
+            public FindResult(IEnumerable<KNodeEndpointInfo<TNodeId>> nodes, KValueInfo? value)
             {
-                this.peers = peers;
+                this.nodes = nodes;
                 this.value = value;
             }
 
             /// <summary>
-            /// Gets the set of peers returned from the find method.
+            /// Gets the set of nodes returned from the find method.
             /// </summary>
-            public IEnumerable<KPeerInfo<TNodeId>> Peers => peers;
+            public IEnumerable<KNodeEndpointInfo<TNodeId>> Nodes => nodes;
 
             /// <summary>
             /// Optionally gets the value returned from the find method.
@@ -58,8 +58,8 @@ namespace Cogito.Kademlia
         {
 
             readonly TNodeId key;
-            readonly IEnumerable<KPeerInfo<TNodeId>> peers;
-            readonly KPeerInfo<TNodeId>? source;
+            readonly IEnumerable<KNodeEndpointInfo<TNodeId>> peers;
+            readonly KNodeEndpointInfo<TNodeId>? source;
             readonly KValueInfo? value;
 
             /// <summary>
@@ -69,7 +69,7 @@ namespace Cogito.Kademlia
             /// <param name="peers"></param>
             /// <param name="source"></param>
             /// <param name="value"></param>
-            public LookupResult(in TNodeId key, IEnumerable<KPeerInfo<TNodeId>> peers, in KPeerInfo<TNodeId>? source, in KValueInfo? value)
+            public LookupResult(in TNodeId key, IEnumerable<KNodeEndpointInfo<TNodeId>> peers, in KNodeEndpointInfo<TNodeId>? source, in KValueInfo? value)
             {
                 this.key = key;
                 this.peers = peers;
@@ -85,12 +85,12 @@ namespace Cogito.Kademlia
             /// <summary>
             /// Gets the set of peers returned from the find method.
             /// </summary>
-            public IEnumerable<KPeerInfo<TNodeId>> Peers => peers;
+            public IEnumerable<KNodeEndpointInfo<TNodeId>> Peers => peers;
 
             /// <summary>
             /// Gets the final node that returned the result.
             /// </summary>
-            public KPeerInfo<TNodeId>? Source => source;
+            public KNodeEndpointInfo<TNodeId>? Source => source;
 
             /// <summary>
             /// Optionally gets the value returned from the find method.
@@ -106,9 +106,9 @@ namespace Cogito.Kademlia
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        delegate ValueTask<FindResult> FindFunc(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken);
+        delegate ValueTask<FindResult> FindFunc(KNodeEndpointInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken);
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly int alpha;
@@ -126,7 +126,7 @@ namespace Cogito.Kademlia
         /// <param name="cache">Number of nodes to cache resulting values at.</param>
         public KLookup(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -181,7 +181,7 @@ namespace Cogito.Kademlia
         /// <param name="value"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task CacheAsync(IEnumerable<KPeerInfo<TNodeId>> peers, TNodeId key, KValueInfo value, CancellationToken cancellationToken)
+        Task CacheAsync(IEnumerable<KNodeEndpointInfo<TNodeId>> peers, TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
             return Task.WhenAll(peers.Select(i => invoker.StoreAsync(i.Endpoints, key, KStoreRequestMode.Replica, value, cancellationToken).AsTask()));
         }
@@ -212,7 +212,7 @@ namespace Cogito.Kademlia
 #endif
 
             // tracks the peers remaining to query sorted by distance
-            var todo = new C5.IntervalHeap<KPeerInfo<TNodeId>>(router.K, new FuncComparer<KPeerInfo<TNodeId>, TNodeId>(i => i.Id, comp));
+            var todo = new C5.IntervalHeap<KNodeEndpointInfo<TNodeId>>(router.K, new FuncComparer<KNodeEndpointInfo<TNodeId>, TNodeId>(i => i.Id, comp));
 #if NETSTANDARD2_1
             await foreach (var i in init)
                 todo.Add(i);
@@ -222,7 +222,7 @@ namespace Cogito.Kademlia
 
             // track done nodes so we don't recurse; and maintain a list of near nodes that have been traversed
             var done = new HashSet<TNodeId>(todo.Select(i => i.Id));
-            var path = new C5.IntervalHeap<KPeerInfo<TNodeId>>(router.K, new FuncComparer<KPeerInfo<TNodeId>, TNodeId>(i => i.Id, comp));
+            var path = new C5.IntervalHeap<KNodeEndpointInfo<TNodeId>>(router.K, new FuncComparer<KNodeEndpointInfo<TNodeId>, TNodeId>(i => i.Id, comp));
 
             try
             {
@@ -236,7 +236,7 @@ namespace Cogito.Kademlia
                     {
                         // schedule new node to query
                         var peer = todo.DeleteMin();
-                        if (peer.Id.Equals(engine.SelfId) == false)
+                        if (peer.Id.Equals(host.SelfId) == false)
                             wait.Add(func(peer, key, stop.Token).AsTask().ContinueWith((r, o) => r.Result, peer, TaskContinuationOptions.OnlyOnRanToCompletion));
                     }
 
@@ -265,14 +265,14 @@ namespace Cogito.Kademlia
                         }
 
                         // extract the peer this request was destined to
-                        var peer = (KPeerInfo<TNodeId>)find.AsyncState;
+                        var peer = (KNodeEndpointInfo<TNodeId>)find.AsyncState;
 
                         // method returned the value; we can stop looking and return the value and our path
                         if (find.Result.Value != null)
                             return new LookupResult(key, path, peer, find.Result.Value);
 
                         // task returned more peers, lets begin working on them
-                        if (find.Result.Peers != null)
+                        if (find.Result.Nodes != null)
                         {
                             // after we've received a successful result
                             // mark the node as one we've encountered which did not return a value
@@ -283,10 +283,10 @@ namespace Cogito.Kademlia
                                 path.DeleteMax();
 
                             // iterate over newly retrieved peers
-                            foreach (var i in find.Result.Peers)
+                            foreach (var i in find.Result.Nodes)
                             {
                                 // received node is closer than current
-                                if (i.Id.Equals(engine.SelfId) == false)
+                                if (i.Id.Equals(host.SelfId) == false)
                                 {
                                     if (done.Add(i.Id))
                                     {
@@ -348,15 +348,15 @@ namespace Cogito.Kademlia
         /// Issues a FIND_NODE request to the peer, looking for the specified key, and returns the resolved peers
         /// and their endpoints.
         /// </summary>
-        /// <param name="peer"></param>
+        /// <param name="node"></param>
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<FindResult> FindNodeAsync(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
+        async ValueTask<FindResult> FindNodeAsync(KNodeEndpointInfo<TNodeId> node, TNodeId key, CancellationToken cancellationToken)
         {
-            var r = await invoker.FindNodeAsync(peer.Endpoints, key, cancellationToken);
+            var r = await invoker.FindNodeAsync(node.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success && r.Body != null)
-                return new FindResult(r.Body.Value.Peers, null);
+                return new FindResult(r.Body.Value.Nodes.Select(i => new KNodeEndpointInfo<TNodeId>(i.Id, new KProtocolEndpointSet<TNodeId>( i.Endpoints.Select(j => host.ResolveEndpoint(j))))), null);
 
             return new FindResult(null, null);
         }
@@ -365,15 +365,15 @@ namespace Cogito.Kademlia
         /// Issues a FIND_VALUE request to the peer, looking for the specified key, and returns the resolved peers
         /// and their endpoints, and optionally a value if the value exists.
         /// </summary>
-        /// <param name="peer"></param>
+        /// <param name="node"></param>
         /// <param name="key"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<FindResult> FindValueAsync(KPeerInfo<TNodeId> peer, TNodeId key, CancellationToken cancellationToken)
+        async ValueTask<FindResult> FindValueAsync(KNodeEndpointInfo<TNodeId> node, TNodeId key, CancellationToken cancellationToken)
         {
-            var r = await invoker.FindValueAsync(peer.Endpoints, key, cancellationToken);
+            var r = await invoker.FindValueAsync(node.Endpoints, key, cancellationToken);
             if (r.Status == KResponseStatus.Success && r.Body != null)
-                return new FindResult(r.Body.Value.Peers, r.Body.Value.Value);
+                return new FindResult(r.Body.Value.Nodes.Select(i => new KNodeEndpointInfo<TNodeId>(i.Id, new KProtocolEndpointSet<TNodeId>(i.Endpoints.Select(i => host.ResolveEndpoint(i))))), r.Body.Value.Value);
 
             return new FindResult(null, null);
         }

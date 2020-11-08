@@ -6,7 +6,7 @@ namespace Cogito.Kademlia.MessagePack.Structures
 {
 
     [MessagePackObject]
-    public class Peer
+    public class Node
     {
 
         [Key(0)]

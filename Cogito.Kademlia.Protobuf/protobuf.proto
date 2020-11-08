@@ -48,28 +48,17 @@ message Response {
     }
 }
 
-message IpAddress {
-    oneof ip_address {
-        fixed32 v4 = 1;
-        bytes v6 = 2;
-    }
-}
-
-message IpEndpoint {
-    string uri = 1;
-}
-
-message Peer {
+message Node {
     bytes id = 1;
-    repeated IpEndpoint endpoints = 2;
+    repeated string endpoints = 2;
 }
 
 message PingRequest {
-    repeated IpEndpoint endpoints = 1;
+    repeated string endpoints = 1;
 }
 
 message PingResponse {
-    repeated IpEndpoint endpoints = 1;
+    repeated string endpoints = 1;
 }
 
 message StoreRequest {
@@ -98,7 +87,7 @@ message FindNodeRequest {
 }
 
 message FindNodeResponse {
-    repeated Peer peers = 1;
+    repeated Node nodes = 1;
 }
 
 message FindValueRequest {
@@ -106,7 +95,7 @@ message FindValueRequest {
 }
 
 message FindValueResponse {
-    repeated Peer peers = 1;
+    repeated Node nodes = 1;
     bool has_value = 2;
     ValueInfo value = 3;
 }

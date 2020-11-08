@@ -17,7 +17,7 @@ namespace Cogito.Kademlia
         /// <param name="targets"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask ConnectAsync(KEndpointSet<TNodeId> targets, CancellationToken cancellationToken = default);
+        ValueTask ConnectAsync(KProtocolEndpointSet<TNodeId> targets, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Initiates a bootstrap connection to the specified endpoint.

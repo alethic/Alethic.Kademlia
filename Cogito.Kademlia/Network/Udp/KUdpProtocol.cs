@@ -157,7 +157,7 @@ namespace Cogito.Kademlia.Network.Udp
                 foreach (var endpoint in keepEndpoints.Except(endpoints.Values))
                 {
                     endpoints[endpoint.Endpoint] = endpoint;
-                    host.Endpoints.Insert(endpoint);
+                    host.RegisterEndpoint(endpoint.ToUri());
                     logger.LogInformation("Adding UDP endpoint {Endpoint}.", endpoint);
                 }
 
@@ -165,7 +165,7 @@ namespace Cogito.Kademlia.Network.Udp
                 foreach (var endpoint in endpoints.Values.Except(keepEndpoints))
                 {
                     endpoints.Remove(endpoint.Endpoint);
-                    host.Endpoints.Remove(endpoint);
+                    host.UnregisterEndpoint(endpoint.ToUri());
                     logger.LogInformation("Remove UDP endpoint {Endpoint}.", endpoint);
                 }
             }
@@ -182,6 +182,9 @@ namespace Cogito.Kademlia.Network.Udp
             {
                 if (socket != null)
                     throw new KException("UDP protocol is already started.");
+
+                // register ourselves with the host
+                host.RegisterProtocol(this);
 
                 // configure receive sockets and update on IP address change
                 NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
@@ -261,11 +264,17 @@ namespace Cogito.Kademlia.Network.Udp
                 if (socket == null)
                     throw new InvalidOperationException("UDP protocol is already stopped.");
 
+                // unregister ourselves with the host
+                host.UnregisterProtocol(this);
+
                 // stop listening for address changes
                 NetworkChange.NetworkAddressChanged -= NetworkChange_NetworkAddressChanged;
 
                 // remove any endpoints registered by ourselves
-                host.Endpoints.RemoveRange(endpoints.Values);
+                foreach (var endpoint in endpoints.Values)
+                    host.UnregisterEndpoint(endpoint.ToUri());
+
+                // zero out our known endpoints
                 endpoints.Clear();
 
                 try

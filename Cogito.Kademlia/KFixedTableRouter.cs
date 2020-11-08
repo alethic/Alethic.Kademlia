@@ -75,7 +75,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<KNodeEndpointInfo<TNodeId>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
         {
             return SelectAsync(key, k, cancellationToken);
         }
@@ -87,7 +87,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(TNodeId key, int k = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        async IAsyncEnumerable<KNodeEndpointInfo<TNodeId>> SelectAsync(TNodeId key, int k = 0, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var i in await SelectAsyncIter(key, k, cancellationToken))
                 yield return i;
@@ -102,7 +102,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
+        public ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>> SelectAsync(in TNodeId key, int k = 0, CancellationToken cancellationToken = default)
         {
             return SelectAsyncIter(key, k, cancellationToken);
         }
@@ -116,7 +116,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsyncIter(in TNodeId key, int k, CancellationToken cancellationToken = default)
+        ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>> SelectAsyncIter(in TNodeId key, int k, CancellationToken cancellationToken = default)
         {
             if (k == 0)
                 return GetBucket(key).SelectAsync(key, cancellationToken);
@@ -125,8 +125,8 @@ namespace Cogito.Kademlia
             var c = new KNodeIdDistanceComparer<TNodeId>(key);
             var f = key.Equals(engine.SelfId) ? null : buckets[GetBucketIndex(engine.SelfId, key)];
             var s = f == null ? Enumerable.Empty<KBucket<TNodeId>>() : new[] { f };
-            var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.NodeId, c).Take(k).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints));
-            return new ValueTask<IEnumerable<KPeerInfo<TNodeId>>>(l);
+            var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.NodeId, c).Take(k).Select(i => new KNodeEndpointInfo<TNodeId>(i.NodeId, i.Endpoints));
+            return new ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>>(l);
         }
 
         /// <summary>
@@ -159,9 +159,9 @@ namespace Cogito.Kademlia
         /// Iterates all of the known peers.
         /// </summary>
         /// <returns></returns>
-        public IAsyncEnumerator<KPeerInfo<TNodeId>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        public IAsyncEnumerator<KNodeEndpointInfo<TNodeId>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return buckets.SelectMany(i => i).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints)).ToAsyncEnumerable().GetAsyncEnumerator();
+            return buckets.SelectMany(i => i).Select(i => new KNodeEndpointInfo<TNodeId>(i.NodeId, i.Endpoints)).ToAsyncEnumerable().GetAsyncEnumerator();
         }
 
 #endif
@@ -170,9 +170,9 @@ namespace Cogito.Kademlia
         /// Iterates all of the known peers.
         /// </summary>
         /// <returns></returns>
-        public IEnumerator<KPeerInfo<TNodeId>> GetEnumerator()
+        public IEnumerator<KNodeEndpointInfo<TNodeId>> GetEnumerator()
         {
-            return buckets.SelectMany(i => i).Select(i => new KPeerInfo<TNodeId>(i.NodeId, i.Endpoints)).GetEnumerator();
+            return buckets.SelectMany(i => i).Select(i => new KNodeEndpointInfo<TNodeId>(i.NodeId, i.Endpoints)).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

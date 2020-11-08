@@ -136,7 +136,7 @@ namespace Cogito.Kademlia.MessagePack
         /// <returns></returns>
         KPingRequest<TNodeId> Decode(IKMessageContext<TNodeId> context, PingRequest request)
         {
-            return new KPingRequest<TNodeId>(Decode(context, request.Endpoints).ToArray());
+            return new KPingRequest<TNodeId>(request.Endpoints);
         }
 
         /// <summary>
@@ -147,7 +147,7 @@ namespace Cogito.Kademlia.MessagePack
         /// <returns></returns>
         KPingResponse<TNodeId> Decode(IKMessageContext<TNodeId> context, PingResponse response)
         {
-            return new KPingResponse<TNodeId>(Decode(context, response.Endpoints).ToArray());
+            return new KPingResponse<TNodeId>(response.Endpoints);
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace Cogito.Kademlia.MessagePack
         /// <param name="context"></param>
         /// <param name="peers"></param>
         /// <returns></returns>
-        IEnumerable<KPeerInfo<TNodeId>> Decode(IKMessageContext<TNodeId> context, Peer[] peers)
+        IEnumerable<KNodeInfo<TNodeId>> Decode(IKMessageContext<TNodeId> context, Node[] peers)
         {
             foreach (var peer in peers)
                 yield return Decode(context, peer);
@@ -281,32 +281,9 @@ namespace Cogito.Kademlia.MessagePack
         /// <param name="context"></param>
         /// <param name="peer"></param>
         /// <returns></returns>
-        KPeerInfo<TNodeId> Decode(IKMessageContext<TNodeId> context, Peer peer)
+        KNodeInfo<TNodeId> Decode(IKMessageContext<TNodeId> context, Node peer)
         {
-            return new KPeerInfo<TNodeId>(DecodeNodeId(context, peer.Id), new KEndpointSet<TNodeId>(Decode(context, peer.Endpoints)));
-        }
-
-        /// <summary>
-        /// Decodes a list of endpoints.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="endpoints"></param>
-        /// <returns></returns>
-        IEnumerable<IKProtocolEndpoint<TNodeId>> Decode(IKMessageContext<TNodeId> context, Uri[] endpoints)
-        {
-            foreach (var endpoint in endpoints)
-                yield return Decode(context, endpoint);
-        }
-
-        /// <summary>
-        /// Decodes a single endpoint.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="endpoint"></param>
-        /// <returns></returns>
-        IKProtocolEndpoint<TNodeId> Decode(IKMessageContext<TNodeId> context, Uri endpoint)
-        {
-            return context.ResolveEndpoint(endpoint);
+            return new KNodeInfo<TNodeId>(DecodeNodeId(context, peer.Id), peer.Endpoints);
         }
 
         /// <summary>

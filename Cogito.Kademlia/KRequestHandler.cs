@@ -16,7 +16,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IKRouter<TNodeId> router;
         readonly IKStore<TNodeId> store;
         readonly ILogger logger;
@@ -30,7 +30,7 @@ namespace Cogito.Kademlia
         /// <param name="logger"></param>
         public KRequestHandler(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.store = store ?? throw new ArgumentNullException(nameof(store));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -60,9 +60,9 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         async ValueTask<KPingResponse<TNodeId>> OnPingAsync(TNodeId sender, IKProtocolEndpoint<TNodeId> source, KPingRequest<TNodeId> request, CancellationToken cancellationToken)
         {
-            await router.UpdateAsync(sender, request.Endpoints, cancellationToken);
+            await router.UpdateAsync(sender, request.Endpoints.Select(i => host.ResolveEndpoint(i)), cancellationToken);
 
-            return request.Respond(engine.Endpoints.ToArray());
+            return request.Respond(host.Endpoints);
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace Cogito.Kademlia
 #else
             var l = await router.SelectAsync(request.Key, router.K, cancellationToken);
 #endif
-            return request.Respond(l);
+            return request.Respond(l.Select(j => new KNodeInfo<TNodeId>(j.Id, j.Endpoints.Select(k => k.ToUri()))));
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Cogito.Kademlia
 #else
             var l = await router.SelectAsync(request.Key, router.K, cancellationToken);
 #endif
-            return request.Respond(l, r);
+            return request.Respond(l.Select(i => new KNodeInfo<TNodeId>(i.Id, i.Endpoints.Select(i => i.ToUri()))), r);
         }
 
     }

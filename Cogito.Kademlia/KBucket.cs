@@ -50,11 +50,11 @@ namespace Cogito.Kademlia
         /// <param name="endpoints"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId nodeId, CancellationToken cancellationToken)
+        public ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>> SelectAsync(in TNodeId nodeId, CancellationToken cancellationToken)
         {
             var n = GetNode(nodeId);
             if (n != null)
-                return new ValueTask<IEnumerable<KPeerInfo<TNodeId>>>(new KPeerInfo<TNodeId>(n.Value.NodeId, n.Value.Endpoints).Yield());
+                return new ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>>(new KNodeEndpointInfo<TNodeId>(n.Value.NodeId, n.Value.Endpoints).Yield());
             else
                 return default;
         }
@@ -130,7 +130,7 @@ namespace Cogito.Kademlia
 
                     // start ping, check for async completion
                     var r = (KResponse<TNodeId, KPingResponse<TNodeId>>)default;
-                    var t = invoker.PingAsync(engine.Endpoints, cancellationToken);
+                    var t = invoker.PingAsync(n.Value.Endpoints, cancellationToken);
 
                     // completed synchronously (or immediately)
                     if (t.IsCompleted)

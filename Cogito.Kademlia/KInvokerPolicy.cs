@@ -38,7 +38,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KEndpointSet<TNodeId> endpoints, in TRequest request, CancellationToken cancellationToken)
+        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KProtocolEndpointSet<TNodeId> endpoints, in TRequest request, CancellationToken cancellationToken)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
@@ -52,7 +52,7 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KEndpointSet<TNodeId> endpoints, TRequest request, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KProtocolEndpointSet<TNodeId> endpoints, TRequest request, CancellationToken cancellationToken)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
@@ -75,7 +75,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoint"></param>
         /// <returns></returns>
-        async ValueTask<KResponse<TNodeId, TResponseBody>> TryAsync<TRequestBody, TResponseBody>(KEndpointSet<TNodeId> endpoints, IKProtocolEndpoint<TNodeId> endpoint, TRequestBody request, CancellationToken cancellationToken)
+        async ValueTask<KResponse<TNodeId, TResponseBody>> TryAsync<TRequestBody, TResponseBody>(KProtocolEndpointSet<TNodeId> endpoints, IKProtocolEndpoint<TNodeId> endpoint, TRequestBody request, CancellationToken cancellationToken)
             where TRequestBody : struct, IKRequestBody<TNodeId>
             where TResponseBody : struct, IKResponseBody<TNodeId>
         {

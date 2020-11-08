@@ -18,33 +18,33 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="endpoints"></param>
         /// <returns></returns>
-        public KPingResponse<TNodeId> Respond(IKProtocolEndpoint<TNodeId>[] endpoints)
+        public KPingResponse<TNodeId> Respond(IEnumerable<Uri> endpoints)
         {
-            return new KPingResponse<TNodeId>(endpoints);
+            return new KPingResponse<TNodeId>(endpoints?.ToArray());
         }
 
-        /// <summary>
-        /// Creates a response to the given request.
-        /// </summary>
-        /// <param name="endpoints"></param>
-        /// <returns></returns>
-        public KPingResponse<TNodeId> Respond(IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints)
-        {
-            return new KPingResponse<TNodeId>(endpoints.ToArray());
-        }
-
-        readonly IKProtocolEndpoint<TNodeId>[] endpoints;
+        readonly Uri[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="endpoints"></param>
-        public KPingRequest(IKProtocolEndpoint<TNodeId>[] endpoints)
+        public KPingRequest(Uri[] endpoints)
         {
             this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
         }
 
-        public IKProtocolEndpoint<TNodeId>[] Endpoints => endpoints;
+        /// <summary>
+        /// Initializes a new instance.
+        /// </summary>
+        /// <param name="endpoints"></param>
+        public KPingRequest(IEnumerable<Uri> endpoints) :
+            this(endpoints?.ToArray())
+        {
+
+        }
+
+        public Uri[] Endpoints => endpoints;
 
         public bool Equals(KPingRequest<TNodeId> other)
         {

@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 
 using Cogito.Kademlia.MessagePack.Structures;
-using Cogito.Kademlia.Network;
 
 namespace Cogito.Kademlia.MessagePack
 {
@@ -111,14 +109,14 @@ namespace Cogito.Kademlia.MessagePack
         PingRequest Encode(IKMessageContext<TNodeId> context, in KPingRequest<TNodeId> request)
         {
             var r = new PingRequest();
-            r.Endpoints = Encode(context, request.Endpoints).ToArray();
+            r.Endpoints = request.Endpoints;
             return r;
         }
 
         PingResponse Encode(IKMessageContext<TNodeId> context, in KPingResponse<TNodeId> response)
         {
             var r = new PingResponse();
-            r.Endpoints = Encode(context, response.Endpoints).ToArray();
+            r.Endpoints = response.Endpoints;
             return r;
         }
 
@@ -175,7 +173,7 @@ namespace Cogito.Kademlia.MessagePack
         FindNodeResponse Encode(IKMessageContext<TNodeId> context, in KFindNodeResponse<TNodeId> response)
         {
             var r = new FindNodeResponse();
-            r.Peers = Encode(context, response.Peers).ToArray();
+            r.Peers = Encode(context, response.Nodes).ToArray();
             return r;
         }
 
@@ -197,48 +195,22 @@ namespace Cogito.Kademlia.MessagePack
                 r.Value.Version = value.Version;
                 r.Value.Ttl = value.Expiration - DateTime.UtcNow;
             }
-            r.Peers = Encode(context, response.Peers).ToArray();
+            r.Peers = Encode(context, response.Nodes).ToArray();
             return r;
         }
 
-        IEnumerable<Peer> Encode(IKMessageContext<TNodeId> context, KPeerInfo<TNodeId>[] peers)
+        IEnumerable<Node> Encode(IKMessageContext<TNodeId> context, KNodeInfo<TNodeId>[] nodes)
         {
-            foreach (var peer in peers)
-                yield return Encode(context, peer);
+            foreach (var node in nodes)
+                yield return Encode(context, node);
         }
 
-        Peer Encode(IKMessageContext<TNodeId> context, in KPeerInfo<TNodeId> peer)
+        Node Encode(IKMessageContext<TNodeId> context, in KNodeInfo<TNodeId> node)
         {
-            var p = new Peer();
-            p.Id = Encode(context, peer.Id);
-            p.Endpoints = Encode(context, peer.Endpoints).ToArray();
+            var p = new Node();
+            p.Id = Encode(context, node.Id);
+            p.Endpoints = node.Endpoints;
             return p;
-        }
-
-        IEnumerable<Uri> Encode(IKMessageContext<TNodeId> context, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints)
-        {
-            foreach (var endpoint in endpoints)
-                if (Encode(context, endpoint) is Uri uri)
-                    yield return uri;
-        }
-
-        Uri Encode(IKMessageContext<TNodeId> context, IKProtocolEndpoint<TNodeId> endpoint)
-        {
-            return endpoint.ToUri();
-        }
-
-        uint Encode(IKMessageContext<TNodeId> context, in KIp4Address ip)
-        {
-            var s = (Span<byte>)stackalloc byte[4];
-            ip.Write(s);
-            return BinaryPrimitives.ReadUInt32BigEndian(s);
-        }
-
-        byte[] Encode(IKMessageContext<TNodeId> context, in KIp6Address ip)
-        {
-            var s = new byte[16];
-            ip.Write(s);
-            return s;
         }
 
     }

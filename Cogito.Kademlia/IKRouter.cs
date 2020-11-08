@@ -12,9 +12,9 @@ namespace Cogito.Kademlia
     /// <typeparam name="TNodeId"></typeparam>
     public interface IKRouter<TNodeId> :
 #if NETSTANDARD2_1
-        IAsyncEnumerable<KPeerInfo<TNodeId>>,
+        IAsyncEnumerable<KNodeEndpointInfo<TNodeId>>,
 #endif
-        IEnumerable<KPeerInfo<TNodeId>>
+        IEnumerable<KNodeEndpointInfo<TNodeId>>
         where TNodeId : unmanaged
     {
 
@@ -37,7 +37,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        IAsyncEnumerable<KPeerInfo<TNodeId>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<KNodeEndpointInfo<TNodeId>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
 
 #else
 
@@ -48,7 +48,7 @@ namespace Cogito.Kademlia
         /// <param name="k"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<IEnumerable<KPeerInfo<TNodeId>>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
+        ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>> SelectAsync(in TNodeId key, int k, CancellationToken cancellationToken = default);
 
 #endif
 

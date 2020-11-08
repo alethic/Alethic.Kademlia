@@ -6,36 +6,45 @@ namespace Cogito.Kademlia
 {
 
     /// <summary>
-    /// Describes a response to a PING request.
+    /// Describes a node and its associated endpoints.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public readonly struct KPingResponse<TNodeId> : IKResponseBody<TNodeId>
+    public struct KNodeInfo<TNodeId>
         where TNodeId : unmanaged
     {
 
+        readonly TNodeId id;
         readonly Uri[] endpoints;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KPingResponse(Uri[] endpoints)
+        public KNodeInfo(in TNodeId id, IEnumerable<Uri> endpoints) :
+            this(id, endpoints?.ToArray())
         {
-            this.endpoints = endpoints ?? throw new ArgumentNullException(nameof(endpoints));
+
         }
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
+        /// <param name="id"></param>
         /// <param name="endpoints"></param>
-        public KPingResponse(IEnumerable<Uri> endpoints) :
-            this(endpoints.ToArray())
+        public KNodeInfo(in TNodeId id, Uri[] endpoints)
         {
-
+            this.id = id;
+            this.endpoints = endpoints;
         }
 
         /// <summary>
-        /// Gets the set of endpoints to return to the ping requester.
+        /// Gets the node ID of the peer.
+        /// </summary>
+        public TNodeId Id => id;
+
+        /// <summary>
+        /// Gets the set of endpoints of the node.
         /// </summary>
         public Uri[] Endpoints => endpoints;
 

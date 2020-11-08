@@ -131,7 +131,7 @@ namespace Cogito.Kademlia.Json
         /// <returns></returns>
         KPingRequest<TNodeId> DecodePingRequest(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPingRequest<TNodeId>(DecodeEndpoints(context, element.GetProperty("endpoints")).ToArray());
+            return new KPingRequest<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString())));
         }
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace Cogito.Kademlia.Json
         /// <returns></returns>
         KPingResponse<TNodeId> DecodePingResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPingResponse<TNodeId>(DecodeEndpoints(context, element.GetProperty("endpoints")).ToArray());
+            return new KPingResponse<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString())));
         }
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace Cogito.Kademlia.Json
         /// <returns></returns>
         KFindNodeResponse<TNodeId> DecodeFindNodeResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KFindNodeResponse<TNodeId>(DecodePeers(context, element.GetProperty("peers")).ToArray());
+            return new KFindNodeResponse<TNodeId>(DecodeNodes(context, element.GetProperty("peers")).ToArray());
         }
 
         /// <summary>
@@ -249,7 +249,7 @@ namespace Cogito.Kademlia.Json
         KFindValueResponse<TNodeId> DecodeFindValueResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
             return new KFindValueResponse<TNodeId>(
-                DecodePeers(context, element.GetProperty("peers")).ToArray(),
+                DecodeNodes(context, element.GetProperty("nodes")).ToArray(),
                 element.TryGetProperty("value", out var value) ?
                     new KValueInfo(
                         value.GetProperty("data").GetBytesFromBase64(),
@@ -259,15 +259,15 @@ namespace Cogito.Kademlia.Json
         }
 
         /// <summary>
-        /// Decodes a list of peers.
+        /// Decodes a list of nodes.
         /// </summary>
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        IEnumerable<KPeerInfo<TNodeId>> DecodePeers(IKMessageContext<TNodeId> context, JsonElement element)
+        IEnumerable<KNodeInfo<TNodeId>> DecodeNodes(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            foreach (var peer in element.EnumerateArray())
-                yield return DecodePeer(context, peer);
+            foreach (var node in element.EnumerateArray())
+                yield return DecodeNode(context, node);
         }
 
         /// <summary>
@@ -276,43 +276,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KPeerInfo<TNodeId> DecodePeer(IKMessageContext<TNodeId> context, JsonElement element)
+        KNodeInfo<TNodeId> DecodeNode(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPeerInfo<TNodeId>(DecodeNodeId(context, element.GetProperty("id")), new KEndpointSet<TNodeId>(DecodeEndpoints(context, element.GetProperty("endpoints"))));
-        }
-
-        /// <summary>
-        /// Decodes a list of endpoints.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        IEnumerable<IKProtocolEndpoint<TNodeId>> DecodeEndpoints(IKMessageContext<TNodeId> context, JsonElement element)
-        {
-            foreach (var endpoint in element.EnumerateArray())
-                yield return DecodeEndpoint(context, endpoint);
-        }
-
-        /// <summary>
-        /// Decodes a single endpoint.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="element"></param>
-        /// <returns></returns>
-        IKProtocolEndpoint<TNodeId> DecodeEndpoint(IKMessageContext<TNodeId> context, JsonElement element)
-        {
-            return DecodeEndpoint(context, element.GetString());
-        }
-
-        /// <summary>
-        /// Decodes a single endpoint.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        IKProtocolEndpoint<TNodeId> DecodeEndpoint(IKMessageContext<TNodeId> context, string value)
-        {
-            return context.ResolveEndpoint(new Uri(value));
+            return new KNodeInfo<TNodeId>(DecodeNodeId(context, element.GetProperty("id")), element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString())));
         }
 
     }
