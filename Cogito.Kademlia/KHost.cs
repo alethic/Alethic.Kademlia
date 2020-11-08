@@ -31,6 +31,11 @@ namespace Cogito.Kademlia
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // add static endpoints
+            if (options.Value.Endpoints != null)
+                foreach (var endpoint in options.Value.Endpoints)
+                    RegisterEndpoint(endpoint);
         }
 
         /// <summary>
@@ -54,6 +59,7 @@ namespace Cogito.Kademlia
             {
                 if (endpoints.Add(uri))
                 {
+                    logger.LogInformation("Registered endpoint: {Endpoint}", uri);
                     OnEndpointsChanged();
                     return true;
                 }
@@ -73,6 +79,7 @@ namespace Cogito.Kademlia
             {
                 if (endpoints.Remove(uri))
                 {
+                    logger.LogInformation("Unregistered endpoint: {Endpoint}", uri);
                     OnEndpointsChanged();
                     return true;
                 }
@@ -121,6 +128,7 @@ namespace Cogito.Kademlia
             {
                 if (protocols.Add(protocol))
                 {
+                    logger.LogInformation("Registered protocol: {Protocol}", protocol);
                     OnProtocolsChanged();
                     return true;
                 }
@@ -140,6 +148,7 @@ namespace Cogito.Kademlia
             {
                 if (protocols.Remove(protocol))
                 {
+                    logger.LogInformation("Unregistered protocol: {Protocol}", protocol);
                     OnProtocolsChanged();
                     return true;
                 }

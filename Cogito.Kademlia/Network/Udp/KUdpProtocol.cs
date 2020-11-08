@@ -128,7 +128,7 @@ namespace Cogito.Kademlia.Network.Udp
                 args.Completed += SocketAsyncEventArgs_Completed;
                 BeginReceive(socket, args);
 
-                logger.LogInformation("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
+                logger.LogDebug("Initialized UDP socket on {Endpoint}.", socket.LocalEndPoint);
             }
 
             return Task.CompletedTask;
@@ -177,17 +177,17 @@ namespace Cogito.Kademlia.Network.Udp
             // insert added endpoints
             foreach (var endpoint in keepEndpoints.Except(endpoints.Values))
             {
+                logger.LogDebug("Adding UDP endpoint {Endpoint}.", endpoint);
                 endpoints[endpoint.Endpoint] = endpoint;
                 host.RegisterEndpoint(endpoint.ToUri());
-                logger.LogInformation("Adding UDP endpoint {Endpoint}.", endpoint);
             }
 
             // remove stale endpoints
             foreach (var endpoint in endpoints.Values.Except(keepEndpoints))
             {
+                logger.LogDebug("Remove UDP endpoint {Endpoint}.", endpoint);
                 endpoints.Remove(endpoint.Endpoint);
                 host.UnregisterEndpoint(endpoint.ToUri());
-                logger.LogInformation("Remove UDP endpoint {Endpoint}.", endpoint);
             }
 
             return Task.CompletedTask;

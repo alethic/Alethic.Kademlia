@@ -1,4 +1,6 @@
-﻿namespace Cogito.Kademlia
+﻿using System;
+
+namespace Cogito.Kademlia
 {
 
     /// <summary>
@@ -13,6 +15,11 @@
         /// Gets or sets the ID of the Kademlia node.
         /// </summary>
         public TNodeId NodeId { get; set; }
+
+        /// <summary>
+        /// Additional static endpoint values to expose.
+        /// </summary>
+        public Uri[] Endpoints { get; set; }
 
     }
 
