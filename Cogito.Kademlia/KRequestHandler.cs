@@ -24,13 +24,13 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="router"></param>
         /// <param name="store"></param>
         /// <param name="logger"></param>
-        public KRequestHandler(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
+        public KRequestHandler(IKHost<TNodeId> host, IKRouter<TNodeId> router, IKStore<TNodeId> store, ILogger logger)
         {
-            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.store = store ?? throw new ArgumentNullException(nameof(store));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));

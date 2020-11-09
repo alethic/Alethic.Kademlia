@@ -14,17 +14,17 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IKInvokerPolicy<TNodeId> policy;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="policy"></param>
-        public KInvoker(IKHost<TNodeId> engine, IKInvokerPolicy<TNodeId> policy)
+        public KInvoker(IKHost<TNodeId> host, IKInvokerPolicy<TNodeId> policy)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.policy = policy ?? throw new ArgumentNullException(nameof(policy));
         }
 
@@ -36,7 +36,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask<KResponse<TNodeId, KPingResponse<TNodeId>>> PingAsync(KProtocolEndpointSet<TNodeId> endpoints, CancellationToken cancellationToken = default)
         {
-            return policy.InvokeAsync<KPingRequest<TNodeId>, KPingResponse<TNodeId>>(endpoints, new KPingRequest<TNodeId>(engine.Endpoints.ToArray()));
+            return policy.InvokeAsync<KPingRequest<TNodeId>, KPingResponse<TNodeId>>(endpoints, new KPingRequest<TNodeId>(host.Endpoints.ToArray()));
         }
 
         public ValueTask<KResponse<TNodeId, KStoreResponse<TNodeId>>> StoreAsync(KProtocolEndpointSet<TNodeId> endpoints, in TNodeId key, KStoreRequestMode mode, in KValueInfo? value, CancellationToken cancellationToken = default)

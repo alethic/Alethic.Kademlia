@@ -46,18 +46,18 @@ namespace Cogito.Kademlia.Network.Udp
         /// Initializes a new instance.
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="formats"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpProtocol(IOptions<KUdpOptions> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
+        public KUdpProtocol(IOptions<KUdpOptions> options, IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            server = new KUdpServer<TNodeId>(options, engine, formats, handler, new KUdpSerializer<TNodeId>(formats, magic), logger);
+            server = new KUdpServer<TNodeId>(options, host, formats, handler, new KUdpSerializer<TNodeId>(formats, magic), logger);
         }
 
         /// <summary>

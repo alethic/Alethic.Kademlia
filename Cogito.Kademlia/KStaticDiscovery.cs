@@ -53,7 +53,7 @@ namespace Cogito.Kademlia
 
                 // begin new run processes
                 runCts = new CancellationTokenSource();
-                run = Task.WhenAll(Task.Run(() => ConnectRunAsync(runCts.Token)));
+                run = Task.WhenAll(Task.Run(() => DiscoveryRunAsync(runCts.Token)));
 
                 // also connect when endpoints come and go
                 host.EndpointsChanged += OnEndpointsChanged;
@@ -93,7 +93,7 @@ namespace Cogito.Kademlia
         /// <param name="args"></param>
         void OnEndpointsChanged(object sender, EventArgs args)
         {
-            Task.Run(() => ConnectAsync(CancellationToken.None));
+            Task.Run(() => DiscoveryAsync(CancellationToken.None));
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace Cogito.Kademlia
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        async Task ConnectRunAsync(CancellationToken cancellationToken)
+        async Task DiscoveryRunAsync(CancellationToken cancellationToken)
         {
             while (cancellationToken.IsCancellationRequested == false)
             {
@@ -112,7 +112,7 @@ namespace Cogito.Kademlia
                         continue;
 
                     logger.LogInformation("Initiating periodic static discovery.");
-                    await ConnectAsync(cancellationToken);
+                    await DiscoveryAsync(cancellationToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -128,10 +128,10 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Attempts to bootstrap the Kademlia engine from the available multicast group members.
+        /// Attempts to bootstrap the Kademlia host from the available multicast group members.
         /// </summary>
         /// <returns></returns>
-        async ValueTask ConnectAsync(CancellationToken cancellationToken)
+        async ValueTask DiscoveryAsync(CancellationToken cancellationToken)
         {
             try
             {

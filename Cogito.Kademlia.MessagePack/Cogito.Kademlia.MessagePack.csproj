@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <Description>.NET implementation of a Kademlia engine. The package contains the Message Pack message encoders.</Description>
+        <Description>.NET implementation of a Kademlia host. The package contains the Message Pack message encoders.</Description>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 

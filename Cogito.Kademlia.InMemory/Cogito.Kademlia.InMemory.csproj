@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFrameworks>netstandard2.1;netstandard2.0</TargetFrameworks>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Description>.NET implementation of a Kademlia engine. This package contains in-memory implementations of various classes.</Description>
+        <Description>.NET implementation of a Kademlia host. This package contains in-memory implementations of various classes.</Description>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 

@@ -23,7 +23,7 @@ namespace Cogito.Kademlia
     {
 
         readonly IOptions<KFixedTableRouterOptions> options;
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly ILogger logger;
 
         readonly KBucket<TNodeId>[] buckets;
@@ -32,19 +32,19 @@ namespace Cogito.Kademlia
         /// Initializes a new instance.
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="invoker"></param>
         /// <param name="logger"></param>
-        public KFixedTableRouter(IOptions<KFixedTableRouterOptions> options, IKHost<TNodeId> engine, IKInvoker<TNodeId> invoker, ILogger logger)
+        public KFixedTableRouter(IOptions<KFixedTableRouterOptions> options, IKHost<TNodeId> host, IKInvoker<TNodeId> invoker, ILogger logger)
         {
             this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            logger.LogInformation("Initializing Fixed Table Router with {NodeId}.", engine.SelfId);
+            logger.LogInformation("Initializing Fixed Table Router with {NodeId}.", host.SelfId);
             buckets = new KBucket<TNodeId>[Unsafe.SizeOf<TNodeId>() * 8];
             for (var i = 0; i < buckets.Length; i++)
-                buckets[i] = new KBucket<TNodeId>(engine, invoker, logger, options.Value.K);
+                buckets[i] = new KBucket<TNodeId>(host, invoker, logger, options.Value.K);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         internal KBucket<TNodeId> GetBucket(in TNodeId node)
         {
-            var i = GetBucketIndex(engine.SelfId, node);
+            var i = GetBucketIndex(host.SelfId, node);
             logger.LogTrace("Bucket lookup for {NodeId} returned {BucketIndex}.", node, i);
             return buckets[i];
         }
@@ -121,7 +121,7 @@ namespace Cogito.Kademlia
 
             // take first bucket; then append others; pretty inefficient
             var c = new KNodeIdDistanceComparer<TNodeId>(key);
-            var f = key.Equals(engine.SelfId) ? null : buckets[GetBucketIndex(engine.SelfId, key)];
+            var f = key.Equals(host.SelfId) ? null : buckets[GetBucketIndex(host.SelfId, key)];
             var s = f == null ? Enumerable.Empty<KBucket<TNodeId>>() : new[] { f };
             var l = s.Concat(buckets.Except(s)).SelectMany(i => i).OrderBy(i => i.NodeId, c).Take(k).Select(i => new KNodeEndpointInfo<TNodeId>(i.NodeId, i.Endpoints));
             return new ValueTask<IEnumerable<KNodeEndpointInfo<TNodeId>>>(l);
@@ -137,7 +137,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask UpdateAsync(in TNodeId peer, IEnumerable<IKProtocolEndpoint<TNodeId>> endpoints, CancellationToken cancellationToken = default)
         {
-            if (peer.Equals(engine.SelfId))
+            if (peer.Equals(host.SelfId))
             {
                 logger.LogError("Peer update request for self. Discarding.");
                 return new ValueTask(Task.CompletedTask);

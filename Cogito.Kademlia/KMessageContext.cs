@@ -12,19 +12,19 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IEnumerable<string> formats;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="sender"></param>
         /// <param name="target"></param>
         /// <param name="formats"></param>
-        public KMessageContext(IKHost<TNodeId> engine, IEnumerable<string> formats)
+        public KMessageContext(IKHost<TNodeId> host, IEnumerable<string> formats)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
         }
 
@@ -35,7 +35,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri)
         {
-            return engine.ResolveEndpoint(uri);
+            return host.ResolveEndpoint(uri);
         }
 
         /// <summary>

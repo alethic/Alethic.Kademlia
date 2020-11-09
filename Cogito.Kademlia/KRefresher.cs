@@ -39,7 +39,7 @@ namespace Cogito.Kademlia
 
 
         /// <summary>
-        /// Starts the processes of the engine.
+        /// Starts the processes of the refresher.
         /// </summary>
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
@@ -58,7 +58,7 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
-        /// Stops the processes of the engine.
+        /// Stops the processes of the refresher.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>

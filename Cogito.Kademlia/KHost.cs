@@ -49,7 +49,7 @@ namespace Cogito.Kademlia
         public TNodeId SelfId => options.Value.NodeId;
 
         /// <summary>
-        /// Gets the set of endpoints available on the engine.
+        /// Gets the set of endpoints available on the host.
         /// </summary>
         public IReadOnlyCollection<Uri> Endpoints => endpoints;
 

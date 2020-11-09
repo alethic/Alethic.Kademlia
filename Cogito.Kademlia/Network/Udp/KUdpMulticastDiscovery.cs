@@ -339,7 +339,7 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
-        /// Attempts to bootstrap the Kademlia engine from the available multicast group members.
+        /// Attempts to bootstrap the Kademlia host from the available multicast group members.
         /// </summary>
         /// <returns></returns>
         async ValueTask DiscoveryAsync(CancellationToken cancellationToken)

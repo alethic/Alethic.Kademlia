@@ -144,7 +144,7 @@ namespace Cogito.Kademlia.InMemory
         }
 
         /// <summary>
-        /// Stops the processes of the engine.
+        /// Stops the processes of the publisher.
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>

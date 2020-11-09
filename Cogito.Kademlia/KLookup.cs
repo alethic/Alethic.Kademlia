@@ -118,15 +118,15 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="logger"></param>
         /// <param name="alpha">Number of outstanding FIND_ RPC requests to keep in flight.</param>
         /// <param name="cache">Number of nodes to cache resulting values at.</param>
-        public KLookup(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
+        public KLookup(IKHost<TNodeId> host, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, ILogger logger, int alpha = 3, int cache = 1)
         {
-            this.host = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));

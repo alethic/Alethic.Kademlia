@@ -18,7 +18,7 @@ namespace Cogito.Kademlia
         where TNodeId : unmanaged
     {
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly IKLookup<TNodeId> lookup;
@@ -27,14 +27,14 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
         /// <param name="logger"></param>
-        public KConnector(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, ILogger logger)
+        public KConnector(IKHost<TNodeId> host, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, ILogger logger)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
@@ -57,7 +57,7 @@ namespace Cogito.Kademlia
                 throw new KProtocolException(KProtocolError.EndpointNotAvailable, "Unable to bootstrap off of the specified endpoints. No response.");
 
             await router.UpdateAsync(r.Header.Sender, targets, cancellationToken);
-            await lookup.LookupNodeAsync(engine.SelfId, cancellationToken);
+            await lookup.LookupNodeAsync(host.SelfId, cancellationToken);
         }
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Cogito.Kademlia
         /// <returns></returns>
         public ValueTask RefreshAsync(CancellationToken cancellationToken = default)
         {
-            return new ValueTask(Task.WhenAll(Enumerable.Range(1, KNodeId<TNodeId>.SizeOf * 8 - 1).Select(i => KNodeId<TNodeId>.Randomize(engine.SelfId, i)).Select(i => lookup.LookupNodeAsync(i, cancellationToken).AsTask())));
+            return new ValueTask(Task.WhenAll(Enumerable.Range(1, KNodeId<TNodeId>.SizeOf * 8 - 1).Select(i => KNodeId<TNodeId>.Randomize(host.SelfId, i)).Select(i => lookup.LookupNodeAsync(i, cancellationToken).AsTask())));
         }
 
     }

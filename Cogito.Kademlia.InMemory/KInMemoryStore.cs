@@ -55,7 +55,7 @@ namespace Cogito.Kademlia.InMemory
 
         static readonly TimeSpan DefaultFrequency = TimeSpan.FromSeconds(5);
 
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IKRouter<TNodeId> router;
         readonly IKInvoker<TNodeId> invoker;
         readonly IKLookup<TNodeId> lookup;
@@ -73,15 +73,15 @@ namespace Cogito.Kademlia.InMemory
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
-        /// <param name="engine"></param>
+        /// <param name="host"></param>
         /// <param name="router"></param>
         /// <param name="invoker"></param>
         /// <param name="lookup"></param>
         /// <param name="logger"></param>
         /// <param name="frequency"></param>
-        public KInMemoryStore(IKHost<TNodeId> engine, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, ILogger logger, TimeSpan? frequency = null)
+        public KInMemoryStore(IKHost<TNodeId> host, IKRouter<TNodeId> router, IKInvoker<TNodeId> invoker, IKLookup<TNodeId> lookup, ILogger logger, TimeSpan? frequency = null)
         {
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.router = router ?? throw new ArgumentNullException(nameof(router));
             this.invoker = invoker ?? throw new ArgumentNullException(nameof(invoker));
             this.lookup = lookup ?? throw new ArgumentNullException(nameof(lookup));
@@ -207,7 +207,7 @@ namespace Cogito.Kademlia.InMemory
                 return expiration;
 
             // calculation derived from https://www.syncfusion.com/ebooks/kademlia_protocol_succinctly/key-value-management
-            var d = new KNodeIdDistanceComparer<TNodeId>(engine.SelfId);
+            var d = new KNodeIdDistanceComparer<TNodeId>(host.SelfId);
 #if NETSTANDARD2_0
             var l = await router.SelectAsync(key, 1024, cancellationToken);
             var c = l.Count(i => d.Compare(key, i.Id) > 0);
