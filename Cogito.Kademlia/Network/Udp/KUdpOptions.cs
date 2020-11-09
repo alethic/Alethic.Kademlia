@@ -10,13 +10,6 @@ namespace Cogito.Kademlia.Network.Udp
     public class KUdpOptions
     {
 
-        static readonly Random random = new Random();
-
-        /// <summary>
-        /// Magic number that uniquely identifies the Kademlia network within packets.
-        /// </summary>
-        public ulong Network { get; set; } = (ulong)random.NextInt64();
-
         /// <summary>
         /// Gets the set of endpoints on which to listen. If not specified, all compatible interfaces are initialized.
         /// </summary>

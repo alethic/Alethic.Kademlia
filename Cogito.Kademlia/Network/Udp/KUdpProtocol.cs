@@ -23,7 +23,7 @@ namespace Cogito.Kademlia.Network.Udp
     /// Implements a simple UDP network layer.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KUdpProtocol<TNodeId> : IKProtocol<TNodeId>, IHostedService
+    public class KUdpProtocol<TNodeId> : IKIpProtocol<TNodeId>, IHostedService
         where TNodeId : unmanaged
     {
 
@@ -296,13 +296,13 @@ namespace Cogito.Kademlia.Network.Udp
         }
 
         /// <summary>
-        /// Invoked to send a PING request.
+        /// Invoked to send a request.
         /// </summary>
         /// <param name="target"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(IKProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
+        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(KIpProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {

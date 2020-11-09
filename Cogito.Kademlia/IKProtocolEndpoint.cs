@@ -15,16 +15,6 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
-        /// Gets the protocol associated with the endpoint.
-        /// </summary>
-        IKProtocol<TNodeId> Protocol { get; }
-
-        /// <summary>
-        /// Gets the set of media types supported by the endpoint.
-        /// </summary>
-        IEnumerable<string> Formats { get; }
-
-        /// <summary>
         /// Returns a <see cref="Uri"/> representation of the endpoint suitable for transmission.
         /// </summary>
         /// <returns></returns>
@@ -36,9 +26,9 @@ namespace Cogito.Kademlia
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        ValueTask<KResponse<TNodeId, TResponseBody>> InvokeAsync<TRequestBody, TResponseBody>(in TRequestBody request, CancellationToken cancellationToken)
-            where TRequestBody : struct, IKRequestBody<TNodeId>
-            where TResponseBody : struct, IKResponseBody<TNodeId>;
+        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(in TRequest request, CancellationToken cancellationToken)
+            where TRequest : struct, IKRequestBody<TNodeId>
+            where TResponse : struct, IKResponseBody<TNodeId>;
 
     }
 

@@ -26,8 +26,7 @@ namespace Cogito.Kademlia.Network.Udp
 
         static readonly Random random = new Random();
 
-        readonly IOptions<KUdpOptions> options;
-        readonly IKHost<TNodeId> engine;
+        readonly IKHost<TNodeId> host;
         readonly IEnumerable<IKMessageFormat<TNodeId>> formats;
         readonly IKRequestHandler<TNodeId> handler;
         readonly IKUdpSerializer<TNodeId> serializer;
@@ -39,14 +38,13 @@ namespace Cogito.Kademlia.Network.Udp
         /// Initializes a new instance.
         /// </summary>
         /// <param name="options"></param>
-        /// <param name="engine"></param>
-        /// <param name="format"></param>
+        /// <param name="host"></param>
+        /// <param name="formats"></param>
         /// <param name="handler"></param>
         /// <param name="logger"></param>
-        public KUdpServer(IOptions<KUdpOptions> options, IKHost<TNodeId> engine, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, IKUdpSerializer<TNodeId> serializer, ILogger logger)
+        public KUdpServer(IOptions<KUdpOptions> options, IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, IKRequestHandler<TNodeId> handler, IKUdpSerializer<TNodeId> serializer, ILogger logger)
         {
-            this.options = options ?? throw new ArgumentNullException(nameof(options));
-            this.engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));
             this.handler = handler ?? throw new ArgumentNullException(nameof(handler));
             this.serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
@@ -97,7 +95,7 @@ namespace Cogito.Kademlia.Network.Udp
                 }
 
                 // deserialize message sequence
-                var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(engine, formats.Select(i => i.ContentType)));
+                var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(host, formats.Select(i => i.ContentType)));
                 if (packet.Format == null || packet.Sequence == null)
                 {
                     logger.LogWarning("Invalid or empty packet.");
@@ -135,7 +133,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         ValueTask OnReceiveAsync(Socket receive, Socket respond, in KIpEndpoint source, in KUdpPacket<TNodeId> packet, CancellationToken cancellationToken)
         {
-            if (packet.Sequence.Value.Network != options.Value.Network)
+            if (packet.Sequence.Value.Network != host.NetworkId)
             {
                 logger.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
                 return new ValueTask(Task.CompletedTask);
@@ -174,7 +172,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageRequest<TBody>(uint replyId, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKRequest<TNodeId>)new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), body) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new[] { (IKRequest<TNodeId>)new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), body) });
         }
 
         /// <summary>
@@ -187,7 +185,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, TBody body)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Success, body) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Success, body) });
         }
 
         /// <summary>
@@ -200,7 +198,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, Exception exception)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(engine.SelfId, replyId), KResponseStatus.Failure, null) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new[] { (IKResponse<TNodeId>)new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Failure, null) });
         }
 
         /// <summary>
@@ -215,7 +213,7 @@ namespace Cogito.Kademlia.Network.Udp
                 throw new ArgumentNullException(nameof(formats));
 
             var b = new ArrayBufferWriter<byte>();
-            serializer.Write(b, new KMessageContext<TNodeId>(engine, formats), messages);
+            serializer.Write(b, new KMessageContext<TNodeId>(host, formats), messages);
             return b.WrittenMemory;
         }
 
@@ -322,11 +320,10 @@ namespace Cogito.Kademlia.Network.Udp
         /// <typeparam name="TRequest"></typeparam>
         /// <typeparam name="TResponse"></typeparam>
         /// <param name="sender"></param>
-        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        delegate ValueTask<TResponse> HandleAsyncDelegate<TRequest, TResponse>(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in TRequest request, CancellationToken cancellationToken);
+        delegate ValueTask<TResponse> HandleAsyncDelegate<TRequest, TResponse>(in TNodeId sender, in TRequest request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Handles the specified request.
@@ -351,7 +348,7 @@ namespace Cogito.Kademlia.Network.Udp
 
             try
             {
-                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
+                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, request.Body.Value, cancellationToken), cancellationToken);
             }
             catch (Exception e)
             {
@@ -499,7 +496,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(Socket socket, IKProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
+        public ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(Socket socket, KIpProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
             where TRequest : struct, IKRequestBody<TNodeId>
             where TResponse : struct, IKResponseBody<TNodeId>
         {
@@ -510,13 +507,6 @@ namespace Cogito.Kademlia.Network.Udp
             if (target.Formats is null)
                 throw new ArgumentException($"Endpoint '{target}' has no acceptable formats.");
 
-            return target is KIpProtocolEndpoint<TNodeId> t ? InvokeAsync<TRequest, TResponse>(socket, t, request, cancellationToken) : throw new KProtocolException(KProtocolError.Invalid, "Invalid endpoint type for protocol.");
-        }
-
-        ValueTask<KResponse<TNodeId, TResponse>> InvokeAsync<TRequest, TResponse>(Socket socket, KIpProtocolEndpoint<TNodeId> target, in TRequest request, CancellationToken cancellationToken)
-            where TRequest : struct, IKRequestBody<TNodeId>
-            where TResponse : struct, IKResponseBody<TNodeId>
-        {
             var replyId = NewReplyId();
             return SendAndWaitAsync<TResponse>(socket, target.Endpoint, replyId, FormatMessages(PackageRequest(replyId, request), target.Formats), cancellationToken);
         }

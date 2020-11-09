@@ -39,6 +39,11 @@ namespace Cogito.Kademlia
         }
 
         /// <summary>
+        /// Gets the unique identifier of the network.
+        /// </summary>
+        public ulong NetworkId => options.Value.NetworkId;
+
+        /// <summary>
         /// Gets the Node ID of the node itself.
         /// </summary>
         public TNodeId SelfId => options.Value.NodeId;

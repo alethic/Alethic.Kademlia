@@ -367,7 +367,7 @@ namespace Cogito.Kademlia.Network.Udp
         /// <returns></returns>
         ValueTask OnReceiveAsync(Socket receive, in KIpEndpoint source, in KUdpPacket<TNodeId> packet, CancellationToken cancellationToken)
         {
-            if (packet.Sequence.Value.Network != options.Value.Network)
+            if (packet.Sequence.Value.Network != host.NetworkId)
             {
                 logger.LogWarning("Received unexpected message sequence for network {NetworkId}.", packet.Sequence.Value.Network);
                 return new ValueTask(Task.CompletedTask);
@@ -404,7 +404,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageMessage<TBody>(uint replyId, TBody body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKRequest<TNodeId>[] { new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), body) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new IKRequest<TNodeId>[] { new KRequest<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), body) });
         }
 
         /// <summary>
@@ -417,7 +417,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, TBody body)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Success, body) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Success, body) });
         }
 
         /// <summary>
@@ -430,7 +430,7 @@ namespace Cogito.Kademlia.Network.Udp
         KMessageSequence<TNodeId> PackageResponse<TBody>(uint replyId, Exception exception)
             where TBody : struct, IKResponseBody<TNodeId>
         {
-            return new KMessageSequence<TNodeId>(options.Value.Network, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Failure, null) });
+            return new KMessageSequence<TNodeId>(host.NetworkId, new IKResponse<TNodeId>[] { new KResponse<TNodeId, TBody>(new KMessageHeader<TNodeId>(host.SelfId, replyId), KResponseStatus.Failure, null) });
         }
 
         /// <summary>
@@ -514,11 +514,10 @@ namespace Cogito.Kademlia.Network.Udp
         /// <typeparam name="TRequest"></typeparam>
         /// <typeparam name="TResponse"></typeparam>
         /// <param name="sender"></param>
-        /// <param name="source"></param>
         /// <param name="request"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        delegate ValueTask<TResponse> HandleAsyncDelegate<TRequest, TResponse>(in TNodeId sender, IKProtocolEndpoint<TNodeId> source, in TRequest request, CancellationToken cancellationToken);
+        delegate ValueTask<TResponse> HandleAsyncDelegate<TRequest, TResponse>(in TNodeId sender, in TRequest request, CancellationToken cancellationToken);
 
         /// <summary>
         /// Handles the specified request.
@@ -543,7 +542,7 @@ namespace Cogito.Kademlia.Network.Udp
 
             try
             {
-                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, null, request.Body.Value, cancellationToken), cancellationToken);
+                await ReplyAsync(respond, source, format, request.Header.ReplyId, await handler(request.Header.Sender, request.Body.Value, cancellationToken), cancellationToken);
             }
             catch (Exception e)
             {

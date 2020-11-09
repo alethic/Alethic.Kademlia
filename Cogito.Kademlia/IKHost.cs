@@ -13,6 +13,11 @@ namespace Cogito.Kademlia
     {
 
         /// <summary>
+        /// Unique identifier of the network.
+        /// </summary>
+        ulong NetworkId { get; }
+
+        /// <summary>
         /// Gets the Node ID of the node itself.
         /// </summary>
         TNodeId SelfId { get; }

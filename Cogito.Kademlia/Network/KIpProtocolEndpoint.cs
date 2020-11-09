@@ -15,7 +15,7 @@ namespace Cogito.Kademlia.Network
         where TNodeId : unmanaged
     {
 
-        readonly IKProtocol<TNodeId> protocol;
+        readonly IKIpProtocol<TNodeId> protocol;
         readonly KIpEndpoint endpoint;
         readonly KIpProtocolType type;
         readonly IEnumerable<string> formats;
@@ -27,7 +27,7 @@ namespace Cogito.Kademlia.Network
         /// <param name="endpoint"></param>
         /// <param name="type"></param>
         /// <param name="formats"></param>
-        public KIpProtocolEndpoint(IKProtocol<TNodeId> protocol, in KIpEndpoint endpoint, KIpProtocolType type, IEnumerable<string> formats)
+        public KIpProtocolEndpoint(IKIpProtocol<TNodeId> protocol, in KIpEndpoint endpoint, KIpProtocolType type, IEnumerable<string> formats)
         {
             this.protocol = protocol ?? throw new ArgumentNullException(nameof(protocol));
             this.endpoint = endpoint;
