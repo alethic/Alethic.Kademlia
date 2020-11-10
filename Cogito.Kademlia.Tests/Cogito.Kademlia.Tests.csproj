@@ -7,11 +7,20 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <None Remove="Json\Samples\ping_request.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Json\Samples\ping_request.json" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
         <PackageReference Include="Cogito.Autofac" Version="3.0.7" />
         <PackageReference Include="Cogito.Extensions.Logging.Serilog.Autofac" Version="2.0.20" />
         <PackageReference Include="Cogito.Serilog.Autofac" Version="2.0.17" />
         <PackageReference Include="FluentAssertions" Version="5.10.3" />
+        <PackageReference Include="FluentAssertions.Json" Version="5.5.0" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.9" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="3.1.9" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />

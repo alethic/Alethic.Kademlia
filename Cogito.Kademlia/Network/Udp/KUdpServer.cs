@@ -95,7 +95,7 @@ namespace Cogito.Kademlia.Network.Udp
                 }
 
                 // deserialize message sequence
-                var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(host, formats.Select(i => i.ContentType)));
+                var packet = serializer.Read(new ReadOnlyMemory<byte>(args.Buffer, args.Offset, args.BytesTransferred), new KMessageContext<TNodeId>(formats.Select(i => i.ContentType)));
                 if (packet.Format == null || packet.Sequence == null)
                 {
                     logger.LogWarning("Invalid or empty packet.");
@@ -213,7 +213,7 @@ namespace Cogito.Kademlia.Network.Udp
                 throw new ArgumentNullException(nameof(formats));
 
             var b = new ArrayBufferWriter<byte>();
-            serializer.Write(b, new KMessageContext<TNodeId>(host, formats), messages);
+            serializer.Write(b, new KMessageContext<TNodeId>(formats), messages);
             return b.WrittenMemory;
         }
 

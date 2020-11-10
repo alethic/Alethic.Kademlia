@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Cogito.Kademlia
 {
@@ -11,13 +10,6 @@ namespace Cogito.Kademlia
     public interface IKMessageContext<TNodeId>
         where TNodeId : unmanaged
     {
-
-        /// <summary>
-        /// Obtains a <see cref="IKProtocolEndpoint{TNodeId}"/> from a URI.
-        /// </summary>
-        /// <param name="uri"></param>
-        /// <returns></returns>
-        IKProtocolEndpoint<TNodeId> ResolveEndpoint(Uri uri);
 
         /// <summary>
         /// Gets the allowable formats of the messages.

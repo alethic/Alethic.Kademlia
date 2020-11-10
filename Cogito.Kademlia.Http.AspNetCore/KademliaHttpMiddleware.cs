@@ -87,7 +87,7 @@ namespace Cogito.Kademlia.Http.AspNetCore
         async Task WriteAsync(HttpContext context, IKMessageFormat<TNodeId> format, KMessageSequence<TNodeId> responses)
         {
             var w = PipeWriter.Create(context.Response.Body);
-            format.Encode(new KMessageContext<TNodeId>(host, format.ContentType.Yield()), w, responses);
+            format.Encode(new KMessageContext<TNodeId>(format.ContentType.Yield()), w, responses);
             await w.FlushAsync(context.RequestAborted);
             w.Complete();
         }
@@ -109,7 +109,7 @@ namespace Cogito.Kademlia.Http.AspNetCore
                 throw new KProtocolException(KProtocolError.Invalid, $"Unknown format: '{contentType}'.");
 
             // decode message sequence
-            return format.Decode(new KMessageContext<TNodeId>(host, formats.Select(i => i.ContentType)), new ReadOnlySequence<byte>(await context.Request.Body.ReadAllBytesAsync()));
+            return format.Decode(new KMessageContext<TNodeId>(formats.Select(i => i.ContentType)), new ReadOnlySequence<byte>(await context.Request.Body.ReadAllBytesAsync()));
         }
 
     }

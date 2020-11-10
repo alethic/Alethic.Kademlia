@@ -1,0 +1,17 @@
+﻿{
+    "network": 1,
+    "messages": [
+        {
+            "header": {
+                "sender": "AAAAAQ==",
+                "replyId": 1
+            },
+            "type": "PING",
+            "body": {
+                "endpoints": [
+                    "http://www.google.com/"
+                ]
+            }
+        }
+    ]
+}
