@@ -211,6 +211,8 @@ namespace Cogito.Kademlia.Json
                 writer.WritePropertyName("value");
                 Write(writer, context, value);
             }
+
+            writer.WriteEndObject();
         }
 
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KStoreResponse<TNodeId> response)
