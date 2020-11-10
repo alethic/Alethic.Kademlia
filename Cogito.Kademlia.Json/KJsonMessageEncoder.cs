@@ -137,6 +137,7 @@ namespace Cogito.Kademlia.Json
                     break;
                 case KResponse<TNodeId, KFindValueResponse<TNodeId>> findValue:
                     writer.WriteStringValue("FIND_VALUE_RESPONSE");
+                    if (findValue.Body.HasValue)
                     {
                         writer.WritePropertyName("body");
                         Write(writer, context, findValue.Body.Value);
