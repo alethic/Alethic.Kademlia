@@ -59,25 +59,37 @@ namespace Cogito.Kademlia.Json
 
             switch (message)
             {
-                case KRequest<TNodeId, KPingRequest<TNodeId>> request:
+                case KRequest<TNodeId, KPingRequest<TNodeId>> ping:
                     writer.WriteStringValue("PING");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, ping.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KStoreRequest<TNodeId>> request:
+                case KRequest<TNodeId, KStoreRequest<TNodeId>> store:
                     writer.WriteStringValue("STORE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, store.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> request:
+                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> findNode:
                     writer.WriteStringValue("FIND_NODE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, findNode.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KFindValueRequest<TNodeId>> request:
+                case KRequest<TNodeId, KFindValueRequest<TNodeId>> findValue:
                     writer.WriteStringValue("FIND_VALUE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, findValue.Body.Value);
+                    }
                     break;
                 default:
                     throw new InvalidOperationException();
@@ -99,45 +111,37 @@ namespace Cogito.Kademlia.Json
 
             switch (message)
             {
-                case KRequest<TNodeId, KPingRequest<TNodeId>> request:
-                    writer.WriteStringValue("PING");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
-                    break;
-                case KResponse<TNodeId, KPingResponse<TNodeId>> response:
+                case KResponse<TNodeId, KPingResponse<TNodeId>> ping:
                     writer.WriteStringValue("PING_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response.Body.Value);
+                    if (ping.Body.HasValue)
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, ping.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KStoreRequest<TNodeId>> request:
-                    writer.WriteStringValue("STORE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
-                    break;
-                case KResponse<TNodeId, KStoreResponse<TNodeId>> response:
+                case KResponse<TNodeId, KStoreResponse<TNodeId>> store:
                     writer.WriteStringValue("STORE_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response.Body.Value);
+                    if (store.Body.HasValue)
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, store.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KFindNodeRequest<TNodeId>> request:
-                    writer.WriteStringValue("FIND_NODE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
-                    break;
-                case KResponse<TNodeId, KFindNodeResponse<TNodeId>> response:
+                case KResponse<TNodeId, KFindNodeResponse<TNodeId>> findNode:
                     writer.WriteStringValue("FIND_NODE_RESPONSE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, response.Body.Value);
+                    if (findNode.Body.HasValue)
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, findNode.Body.Value);
+                    }
                     break;
-                case KRequest<TNodeId, KFindValueRequest<TNodeId>> request:
-                    writer.WriteStringValue("FIND_VALUE");
-                    writer.WritePropertyName("body");
-                    Write(writer, context, request.Body.Value);
-                    break;
-                case KResponse<TNodeId, KFindValueResponse<TNodeId>> response:
+                case KResponse<TNodeId, KFindValueResponse<TNodeId>> findValue:
                     writer.WriteStringValue("FIND_VALUE_RESPONSE");
                     writer.WritePropertyName("body");
-                    Write(writer, context, response.Body.Value);
+                    {
+                        writer.WritePropertyName("body");
+                        Write(writer, context, findValue.Body.Value);
+                    }
                     break;
                 default:
                     throw new InvalidOperationException();

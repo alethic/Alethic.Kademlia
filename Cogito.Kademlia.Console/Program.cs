@@ -65,8 +65,6 @@ namespace Cogito.Kademlia.Console
             builder.Configure<KFixedTableRouterOptions>("Cogito.Kademlia:FixedTableRouter");
             builder.Configure<KUdpOptions>("Cogito.Kademlia:Udp");
             builder.Configure<KStaticDiscoveryOptions>("Cogito.Kademlia:StaticDiscovery");
-            builder.RegisterType<KademliaHttpMiddleware<KNodeId256>>().AsSelf();
-            builder.Populate(s => s.AddHttpClient<KHttpProtocol<KNodeId256>>());
         }
 
         /// <summary>
@@ -77,7 +75,6 @@ namespace Cogito.Kademlia.Console
         public static async Task Main(string[] args) =>
             await Host.CreateDefaultBuilder(args)
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory(b => { b.RegisterAllAssemblyModules(); RegisterKademlia(b, 40512); }))
-                .ConfigureWebHostDefaults(w => w.Configure(a => a.UseKademlia<KNodeId256>()))
                 .RunConsoleAsync();
 
     }
