@@ -61,7 +61,6 @@ namespace Cogito.Kademlia.Json
             {
                 case KRequest<TNodeId, KPingRequest<TNodeId>> ping:
                     writer.WriteStringValue("PING");
-                    writer.WritePropertyName("body");
                     {
                         writer.WritePropertyName("body");
                         Write(writer, context, ping.Body.Value);
@@ -69,7 +68,6 @@ namespace Cogito.Kademlia.Json
                     break;
                 case KRequest<TNodeId, KStoreRequest<TNodeId>> store:
                     writer.WriteStringValue("STORE");
-                    writer.WritePropertyName("body");
                     {
                         writer.WritePropertyName("body");
                         Write(writer, context, store.Body.Value);
@@ -77,7 +75,6 @@ namespace Cogito.Kademlia.Json
                     break;
                 case KRequest<TNodeId, KFindNodeRequest<TNodeId>> findNode:
                     writer.WriteStringValue("FIND_NODE");
-                    writer.WritePropertyName("body");
                     {
                         writer.WritePropertyName("body");
                         Write(writer, context, findNode.Body.Value);
@@ -85,7 +82,6 @@ namespace Cogito.Kademlia.Json
                     break;
                 case KRequest<TNodeId, KFindValueRequest<TNodeId>> findValue:
                     writer.WriteStringValue("FIND_VALUE");
-                    writer.WritePropertyName("body");
                     {
                         writer.WritePropertyName("body");
                         Write(writer, context, findValue.Body.Value);

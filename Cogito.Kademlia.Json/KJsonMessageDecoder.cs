@@ -65,7 +65,7 @@ namespace Cogito.Kademlia.Json
         /// <param name="header"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKRequest<TNodeId> CreateRequest<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody body)
+        IKRequest<TNodeId> CreateRequest<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, TBody? body)
             where TBody : struct, IKRequestBody<TNodeId>
         {
             return new KRequest<TNodeId, TBody>(header, body);
@@ -80,7 +80,7 @@ namespace Cogito.Kademlia.Json
         /// <param name="status"></param>
         /// <param name="body"></param>
         /// <returns></returns>
-        IKResponse<TNodeId> CreateResponse<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, KResponseStatus status, TBody body)
+        IKResponse<TNodeId> CreateResponse<TBody>(IKMessageContext<TNodeId> context, KMessageHeader<TNodeId> header, KResponseStatus status, TBody? body)
             where TBody : struct, IKResponseBody<TNodeId>
         {
             return new KResponse<TNodeId, TBody>(header, status, body);
@@ -129,9 +129,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KPingRequest<TNodeId> DecodePingRequest(IKMessageContext<TNodeId> context, JsonElement element)
+        KPingRequest<TNodeId>? DecodePingRequest(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPingRequest<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString())));
+            return element.ValueKind != JsonValueKind.Undefined ? new KPingRequest<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString()))) : (KPingRequest<TNodeId>?)null;
         }
 
         /// <summary>
@@ -140,9 +140,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KPingResponse<TNodeId> DecodePingResponse(IKMessageContext<TNodeId> context, JsonElement element)
+        KPingResponse<TNodeId>? DecodePingResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KPingResponse<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString())));
+            return element.ValueKind != JsonValueKind.Undefined ? new KPingResponse<TNodeId>(element.GetProperty("endpoints").EnumerateArray().Select(i => new Uri(i.GetString()))) : (KPingResponse<TNodeId>?)null;
         }
 
         /// <summary>
@@ -151,9 +151,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KStoreRequest<TNodeId> DecodeStoreRequest(IKMessageContext<TNodeId> context, JsonElement element)
+        KStoreRequest<TNodeId>? DecodeStoreRequest(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KStoreRequest<TNodeId>(
+            return element.ValueKind != JsonValueKind.Undefined ? new KStoreRequest<TNodeId>(
                 DecodeNodeId(context, element.GetProperty("key")),
                 DecodeStoreRequestMode(context, element.GetProperty("mode")),
                 element.TryGetProperty("value", out var value) ?
@@ -161,7 +161,7 @@ namespace Cogito.Kademlia.Json
                         value.GetProperty("data").GetBytesFromBase64(),
                         value.GetProperty("version").GetUInt64(),
                         DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetDouble())) :
-                    (KValueInfo?)null);
+                    (KValueInfo?)null) : (KStoreRequest<TNodeId>?)null;
         }
 
         /// <summary>
@@ -186,9 +186,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KStoreResponse<TNodeId> DecodeStoreResponse(IKMessageContext<TNodeId> context, JsonElement element)
+        KStoreResponse<TNodeId>? DecodeStoreResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KStoreResponse<TNodeId>(DecodeStoreResponseStatus(context, element.GetProperty("status")));
+            return element.ValueKind != JsonValueKind.Undefined ? new KStoreResponse<TNodeId>(DecodeStoreResponseStatus(context, element.GetProperty("status"))) : (KStoreResponse<TNodeId>?)null;
         }
 
         /// <summary>
@@ -213,9 +213,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KFindNodeRequest<TNodeId> DecodeFindNodeRequest(IKMessageContext<TNodeId> context, JsonElement element)
+        KFindNodeRequest<TNodeId>? DecodeFindNodeRequest(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KFindNodeRequest<TNodeId>(DecodeNodeId(context, element.GetProperty("key")));
+            return element.ValueKind != JsonValueKind.Undefined ? new KFindNodeRequest<TNodeId>(DecodeNodeId(context, element.GetProperty("key"))) : (KFindNodeRequest<TNodeId>?)null;
         }
 
         /// <summary>
@@ -224,9 +224,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KFindNodeResponse<TNodeId> DecodeFindNodeResponse(IKMessageContext<TNodeId> context, JsonElement element)
+        KFindNodeResponse<TNodeId>? DecodeFindNodeResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KFindNodeResponse<TNodeId>(DecodeNodes(context, element.GetProperty("peers")).ToArray());
+            return element.ValueKind != JsonValueKind.Undefined ? new KFindNodeResponse<TNodeId>(DecodeNodes(context, element.GetProperty("peers")).ToArray()) : (KFindNodeResponse<TNodeId>?)null;
         }
 
         /// <summary>
@@ -235,9 +235,9 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KFindValueRequest<TNodeId> DecodeFindValueRequest(IKMessageContext<TNodeId> context, JsonElement element)
+        KFindValueRequest<TNodeId>? DecodeFindValueRequest(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KFindValueRequest<TNodeId>(DecodeNodeId(context, element.GetProperty("key")));
+            return element.ValueKind != JsonValueKind.Undefined ? new KFindValueRequest<TNodeId>(DecodeNodeId(context, element.GetProperty("key"))) : (KFindValueRequest<TNodeId>?)null;
         }
 
         /// <summary>
@@ -246,16 +246,16 @@ namespace Cogito.Kademlia.Json
         /// <param name="context"></param>
         /// <param name="element"></param>
         /// <returns></returns>
-        KFindValueResponse<TNodeId> DecodeFindValueResponse(IKMessageContext<TNodeId> context, JsonElement element)
+        KFindValueResponse<TNodeId>? DecodeFindValueResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return new KFindValueResponse<TNodeId>(
+            return element.ValueKind != JsonValueKind.Undefined ? new KFindValueResponse<TNodeId>(
                 DecodeNodes(context, element.GetProperty("nodes")).ToArray(),
                 element.TryGetProperty("value", out var value) ?
                     new KValueInfo(
                         value.GetProperty("data").GetBytesFromBase64(),
                         value.GetProperty("version").GetUInt64(),
                         DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetDouble())) :
-                    (KValueInfo?)null);
+                    (KValueInfo?)null) : (KFindValueResponse<TNodeId>?)null;
         }
 
         /// <summary>

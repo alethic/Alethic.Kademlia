@@ -14,14 +14,14 @@ namespace Cogito.Kademlia
     {
 
         readonly KMessageHeader<TNodeId> header;
-        readonly TBody body;
+        readonly TBody? body;
 
         /// <summary>
         /// Initializes a new instance.
         /// </summary>
         /// <param name="header"></param>
         /// <param name="body"></param>
-        public KRequest(in KMessageHeader<TNodeId> header, in TBody body)
+        public KRequest(in KMessageHeader<TNodeId> header, in TBody? body)
         {
             this.header = header;
             this.body = body;
