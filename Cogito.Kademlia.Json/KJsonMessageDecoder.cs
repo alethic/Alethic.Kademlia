@@ -160,7 +160,7 @@ namespace Cogito.Kademlia.Json
                     new KValueInfo(
                         value.GetProperty("data").GetBytesFromBase64(),
                         value.GetProperty("version").GetUInt64(),
-                        DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetDouble())) :
+                        DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetInt32())) :
                     (KValueInfo?)null) : (KStoreRequest<TNodeId>?)null;
         }
 
@@ -226,7 +226,7 @@ namespace Cogito.Kademlia.Json
         /// <returns></returns>
         KFindNodeResponse<TNodeId>? DecodeFindNodeResponse(IKMessageContext<TNodeId> context, JsonElement element)
         {
-            return element.ValueKind != JsonValueKind.Undefined ? new KFindNodeResponse<TNodeId>(DecodeNodes(context, element.GetProperty("peers")).ToArray()) : (KFindNodeResponse<TNodeId>?)null;
+            return element.ValueKind != JsonValueKind.Undefined ? new KFindNodeResponse<TNodeId>(DecodeNodes(context, element.GetProperty("nodes")).ToArray()) : (KFindNodeResponse<TNodeId>?)null;
         }
 
         /// <summary>
@@ -254,7 +254,7 @@ namespace Cogito.Kademlia.Json
                     new KValueInfo(
                         value.GetProperty("data").GetBytesFromBase64(),
                         value.GetProperty("version").GetUInt64(),
-                        DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetDouble())) :
+                        DateTime.UtcNow + TimeSpan.FromSeconds(value.GetProperty("ttl").GetInt32())) :
                     (KValueInfo?)null) : (KFindValueResponse<TNodeId>?)null;
         }
 

@@ -1,0 +1,28 @@
+﻿{
+    "network": 1,
+    "messages": [
+        {
+            "header": {
+                "sender": "AAAAAQ==",
+                "replyId": 1
+            },
+            "status": "SUCCESS",
+            "type": "FIND_VALUE_RESPONSE",
+            "body": {
+                "value": {
+                    "data": "",
+                    "version": 1,
+                    "ttl": 0
+                },
+                "nodes": [
+                    {
+                        "id": "AAAAAQ==",
+                        "endpoints": [
+                            "http://www.google.com/"
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

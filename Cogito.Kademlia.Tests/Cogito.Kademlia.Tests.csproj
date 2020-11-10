@@ -7,10 +7,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <None Remove="Json\Samples\findvalue_request.json" />
+      <None Remove="Json\Samples\findvalue_response.json" />
       <None Remove="Json\Samples\ping_request.json" />
     </ItemGroup>
 
     <ItemGroup>
+      <EmbeddedResource Include="Json\Samples\findvalue_response.json" />
+      <EmbeddedResource Include="Json\Samples\findvalue_request.json" />
       <EmbeddedResource Include="Json\Samples\ping_request.json" />
     </ItemGroup>
 

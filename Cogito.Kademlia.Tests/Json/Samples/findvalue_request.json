@@ -1,0 +1,15 @@
+﻿{
+    "network": 1,
+    "messages": [
+        {
+            "header": {
+                "sender": "AAAAAQ==",
+                "replyId": 1
+            },
+            "type": "FIND_VALUE",
+            "body": {
+                "key": "AAAAAQ=="
+            }
+        }
+    ]
+}

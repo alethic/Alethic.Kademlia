@@ -45,6 +45,16 @@ namespace Cogito.Kademlia
         public ulong Network => network;
 
         /// <summary>
+        /// Gets the messag at the specified index.
+        /// </summary>
+        public IKMessage<TNodeId> this[int index] => messages[index];
+
+        /// <summary>
+        /// Gets the count of messages.
+        /// </summary>
+        public int Count => messages.Length;
+
+        /// <summary>
         /// Returns <c>true</c> if this object equals the other object.
         /// </summary>
         /// <param name="other"></param>

@@ -238,7 +238,7 @@ namespace Cogito.Kademlia.Json
         void Write(Utf8JsonWriter writer, IKMessageContext<TNodeId> context, KFindNodeResponse<TNodeId> response)
         {
             writer.WriteStartObject();
-            writer.WritePropertyName("peers");
+            writer.WritePropertyName("nodes");
             Write(writer, context, response.Nodes);
             writer.WriteEndObject();
         }
@@ -261,7 +261,7 @@ namespace Cogito.Kademlia.Json
                 Write(writer, context, value);
             }
 
-            writer.WritePropertyName("peers");
+            writer.WritePropertyName("nodes");
             Write(writer, context, response.Nodes);
             writer.WriteEndObject();
         }
@@ -271,7 +271,7 @@ namespace Cogito.Kademlia.Json
             writer.WriteStartObject();
             writer.WriteBase64String("data", value.Data);
             writer.WriteNumber("version", value.Version);
-            writer.WriteNumber("ttl", (value.Expiration - DateTime.UtcNow).TotalMilliseconds);
+            writer.WriteNumber("ttl", System.Math.Max(0, (int)(value.Expiration - DateTime.UtcNow).TotalSeconds));
             writer.WriteEndObject();
         }
 
