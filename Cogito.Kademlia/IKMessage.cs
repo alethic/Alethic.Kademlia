@@ -16,7 +16,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets the body of the message.
         /// </summary>
-        TBody? Body { get; }
+        new TBody? Body { get; }
 
     }
 
@@ -32,6 +32,11 @@ namespace Cogito.Kademlia
         /// Gets the header of the message.
         /// </summary>
         KMessageHeader<TNodeId> Header { get; }
+
+        /// <summary>
+        /// Gets the body of the message.
+        /// </summary>
+        IKMessageBody<TNodeId> Body { get; }
 
     }
 

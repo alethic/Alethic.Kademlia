@@ -44,6 +44,11 @@ namespace Cogito.Kademlia
         public TBody? Body => body;
 
         /// <summary>
+        /// Gets the message body.
+        /// </summary>
+        IKMessageBody<TNodeId> IKMessage<TNodeId>.Body => body;
+
+        /// <summary>
         /// Returns <c>true</c> if the object is equal to this object.
         /// </summary>
         /// <param name="other"></param>
