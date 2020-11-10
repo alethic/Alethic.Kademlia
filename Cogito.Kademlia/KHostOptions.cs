@@ -19,7 +19,7 @@ namespace Cogito.Kademlia
         /// <summary>
         /// Gets or sets the ID of the Kademlia node.
         /// </summary>
-        public TNodeId NodeId { get; set; }
+        public TNodeId NodeId { get; set; } = KNodeId.Create<TNodeId>();
 
         /// <summary>
         /// Additional static endpoint values to expose.
