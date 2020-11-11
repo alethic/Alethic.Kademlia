@@ -46,11 +46,7 @@ namespace Alethic.Kademlia
         {
             logger.LogInformation("Starting periodic refresher.");
 
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();

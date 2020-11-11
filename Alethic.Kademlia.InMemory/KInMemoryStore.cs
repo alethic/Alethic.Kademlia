@@ -243,11 +243,7 @@ namespace Alethic.Kademlia.InMemory
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
@@ -267,11 +263,7 @@ namespace Alethic.Kademlia.InMemory
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 if (runCts != null)
                 {

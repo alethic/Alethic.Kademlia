@@ -76,11 +76,7 @@ namespace Alethic.Kademlia.InMemory
 
         async ValueTask<bool> AddAsync(TNodeId key, KValueInfo value, CancellationToken cancellationToken)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 // must explicitly remove if required
                 if (entries.ContainsKey(key))
@@ -109,11 +105,7 @@ namespace Alethic.Kademlia.InMemory
 
         async ValueTask<bool> RemoveAsync(TNodeId key, CancellationToken cancellationToken)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
                 return entries.TryRemove(key, out var _);
         }
 
@@ -130,11 +122,7 @@ namespace Alethic.Kademlia.InMemory
 
         async ValueTask<KValueInfo?> GetAsync(TNodeId key, CancellationToken cancellationToken)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
                 return entries.TryGetValue(key, out var v) ? v.Value : (KValueInfo?)null;
         }
 
@@ -144,11 +132,7 @@ namespace Alethic.Kademlia.InMemory
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
@@ -166,11 +150,7 @@ namespace Alethic.Kademlia.InMemory
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-#if NETSTANDARD2_1
-            await using (await sync.LockAsync(cancellationToken))
-#else
             using (await sync.LockAsync(cancellationToken))
-#endif
             {
                 if (runCts != null)
                 {
