@@ -116,11 +116,7 @@ namespace Alethic.Kademlia.Protobuf
         /// <returns></returns>
         TNodeId DecodeNodeId(IKMessageContext<TNodeId> resources, ByteString bytes)
         {
-#if NET47
-            return KNodeId<TNodeId>.Read(bytes.ToByteArray());
-#else
             return KNodeId<TNodeId>.Read(bytes.Span);
-#endif
         }
 
         /// <summary>

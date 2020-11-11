@@ -105,11 +105,7 @@ namespace Alethic.Kademlia.Json
         /// <returns></returns>
         TNodeId DecodeNodeId(IKMessageContext<TNodeId> context, byte[] bytes)
         {
-#if NET47
-            return KNodeId<TNodeId>.Read(bytes);
-#else
             return KNodeId<TNodeId>.Read(bytes.AsSpan());
-#endif
         }
 
         /// <summary>
