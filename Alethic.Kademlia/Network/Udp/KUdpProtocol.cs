@@ -94,7 +94,11 @@ namespace Alethic.Kademlia.Network.Udp
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+#if NETSTANDARD2_1
+            await using (await sync.LockAsync(cancellationToken))
+#else
             using (await sync.LockAsync(cancellationToken))
+#endif
             {
                 if (socket != null)
                     throw new KException("UDP protocol is already started.");
@@ -202,7 +206,11 @@ namespace Alethic.Kademlia.Network.Udp
         {
             Task.Run(async () =>
             {
-                using (sync.LockAsync(CancellationToken.None))
+#if NETSTANDARD2_1
+                await using (await sync.LockAsync())
+#else
+                using (await sync.LockAsync())
+#endif
                     await RefreshSocket(CancellationToken.None);
             });
         }
@@ -263,7 +271,11 @@ namespace Alethic.Kademlia.Network.Udp
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
+#if NETSTANDARD2_1
+            await using (await sync.LockAsync(cancellationToken))
+#else
             using (await sync.LockAsync(cancellationToken))
+#endif
             {
                 if (socket == null)
                     throw new InvalidOperationException("UDP protocol is already stopped.");

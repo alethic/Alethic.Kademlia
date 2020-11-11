@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Alethic.Kademlia.Core;
+
 using Cogito.Linq;
 using Cogito.Threading;
 
@@ -77,7 +78,11 @@ namespace Alethic.Kademlia.Network.Udp
         /// <returns></returns>
         public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+#if NETSTANDARD2_1
+            await using (await sync.LockAsync(cancellationToken))
+#else
             using (await sync.LockAsync(cancellationToken))
+#endif
             {
                 if (run != null || runCts != null)
                     throw new InvalidOperationException();
@@ -150,7 +155,11 @@ namespace Alethic.Kademlia.Network.Udp
         /// <returns></returns>
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
+#if NETSTANDARD2_1
+            await using (await sync.LockAsync(cancellationToken))
+#else
             using (await sync.LockAsync(cancellationToken))
+#endif
             {
                 host.EndpointsChanged -= OnEndpointsChanged;
 
@@ -285,7 +294,7 @@ namespace Alethic.Kademlia.Network.Udp
 
             // continue receiving if socket still available
             // this lock is blocking, but should be okay since this event handler can stall
-            using (sync.LockAsync().Result)
+            using (sync.LockAsync().GetAwaiter().GetResult())
             {
                 // reset remote endpoint
                 args.RemoteEndPoint = source.Protocol switch
