@@ -1,0 +1,80 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29721.120
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7271F8CF-C4EC-47FE-91F3-FF3331482C4F}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+		Directory.Build.props = Directory.Build.props
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia", "Alethic.Kademlia\Alethic.Kademlia.csproj", "{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Tests", "Alethic.Kademlia.Tests\Alethic.Kademlia.Tests.csproj", "{8CA0F09B-E941-4DCA-9B76-CCA6F7661CB4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Console", "Alethic.Kademlia.Console\Alethic.Kademlia.Console.csproj", "{A28AE7E0-C268-4FAC-9AB4-C165860B3366}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.InMemory", "Alethic.Kademlia.InMemory\Alethic.Kademlia.InMemory.csproj", "{017F47BC-A037-42F3-9203-0237021B6AC7}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Protobuf", "Alethic.Kademlia.Protobuf\Alethic.Kademlia.Protobuf.csproj", "{F545AD9F-5652-413E-A54F-D81913566F8D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.MessagePack", "Alethic.Kademlia.MessagePack\Alethic.Kademlia.MessagePack.csproj", "{4E5B228C-6462-40E0-96FE-2B814F5A2614}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Json", "Alethic.Kademlia.Json\Alethic.Kademlia.Json.csproj", "{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Http", "Alethic.Kademlia.Http\Alethic.Kademlia.Http.csproj", "{89127B95-BDCC-4D0E-A449-AA3A0664E2BE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Http.AspNetCore", "Alethic.Kademlia.Http.AspNetCore\Alethic.Kademlia.Http.AspNetCore.csproj", "{3D84B550-1C66-4B6E-B12B-85F27D613C2B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6C47CE5-D5CE-40A0-9CFA-3BE0C11AB4D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CA0F09B-E941-4DCA-9B76-CCA6F7661CB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CA0F09B-E941-4DCA-9B76-CCA6F7661CB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CA0F09B-E941-4DCA-9B76-CCA6F7661CB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CA0F09B-E941-4DCA-9B76-CCA6F7661CB4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A28AE7E0-C268-4FAC-9AB4-C165860B3366}.Release|Any CPU.Build.0 = Release|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{017F47BC-A037-42F3-9203-0237021B6AC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F545AD9F-5652-413E-A54F-D81913566F8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F545AD9F-5652-413E-A54F-D81913566F8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F545AD9F-5652-413E-A54F-D81913566F8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F545AD9F-5652-413E-A54F-D81913566F8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E5B228C-6462-40E0-96FE-2B814F5A2614}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06AED9C5-6B35-41C9-8D16-FB3FFA432FD0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89127B95-BDCC-4D0E-A449-AA3A0664E2BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89127B95-BDCC-4D0E-A449-AA3A0664E2BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89127B95-BDCC-4D0E-A449-AA3A0664E2BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89127B95-BDCC-4D0E-A449-AA3A0664E2BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FF4B3820-4206-4316-82A5-DEA5792C6A71}
+	EndGlobalSection
+EndGlobal

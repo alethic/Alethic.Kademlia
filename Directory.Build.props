@@ -2,10 +2,10 @@
     <PropertyGroup>
         <Authors>Jerome Haltom</Authors>
         <Company>Alethic Solutions</Company>
-        <RepositoryUrl>https://github.com/alethic/Cogito.Kademlia</RepositoryUrl>
+        <RepositoryUrl>https://github.com/alethic/Alethic.Kademlia</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>kademlia</PackageTags>
-        <PackageProjectUrl>https://github.com/alethic/Cogito.Kademlia</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/alethic/Alethic.Kademlia</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageIcon>icon.png</PackageIcon>
         <LangVersion>8.0</LangVersion>

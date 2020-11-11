@@ -17,11 +17,11 @@ before_build:
 
 build:
   verbosity: minimal
-  project: Cogito.Kademlia.sln
+  project: Alethic.Kademlia.sln
 
 artifacts:
   - path: pkg\*.nupkg
-    name: Cogito.Kademlia
+    name: Alethic.Kademlia
 
 deploy:
   provider: NuGet

@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <Description>.NET implementation of a Kademlia host. The package contains the Message Pack message encoders.</Description>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MessagePack" Version="2.2.60" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Alethic.Kademlia\Alethic.Kademlia.csproj" />
+    </ItemGroup>
+
+</Project>
