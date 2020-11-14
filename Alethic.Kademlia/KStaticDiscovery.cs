@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 using Cogito.Threading;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +14,7 @@ namespace Alethic.Kademlia
     /// <summary>
     /// Periodically connects to a static discovery point.
     /// </summary>
-    public class KStaticDiscovery<TNodeId> : IHostedService
+    public class KStaticDiscovery<TNodeId> : IKService
         where TNodeId : unmanaged
     {
 

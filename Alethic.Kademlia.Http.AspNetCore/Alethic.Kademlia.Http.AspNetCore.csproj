@@ -1,18 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>netstandard2.0</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Description>.NET implementation of a Kademlia host. This package contains an HTTP protocol implementation.</Description>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageReference Include="System.IO.Pipelines" Version="4.7.3" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Hosting.Server.Abstractions" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+        <PackageReference Include="System.IO.Pipelines" Version="4.7.3" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Alethic.Kademlia.Http\Alethic.Kademlia.Http.csproj" />
-    <ProjectReference Include="..\Alethic.Kademlia\Alethic.Kademlia.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Alethic.Kademlia.Http\Alethic.Kademlia.Http.csproj" />
+        <ProjectReference Include="..\Alethic.Kademlia\Alethic.Kademlia.csproj" />
+    </ItemGroup>
 
 </Project>

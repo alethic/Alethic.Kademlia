@@ -7,16 +7,17 @@ namespace Alethic.Kademlia.Http.AspNetCore
     public static class ApplicationBuilderExtensions
     {
 
-        public static IApplicationBuilder UseKademlia<TNodeId>(this IApplicationBuilder app)
+        /// <summary>
+        /// Adds the Kademlia protocol to the application builder.
+        /// </summary>
+        /// <typeparam name="TNodeId"></typeparam>
+        /// <param name="app"></param>
+        /// <param name="prefix"></param>
+        /// <returns></returns>
+        public static IApplicationBuilder UseKademlia<TNodeId>(this IApplicationBuilder app, PathString prefix = default)
             where TNodeId : unmanaged
         {
-            return UseKademlia<TNodeId>(app, PathString.Empty);
-        }
-
-        public static IApplicationBuilder UseKademlia<TNodeId>(this IApplicationBuilder app, PathString prefix)
-            where TNodeId : unmanaged
-        {
-            return app.Map(prefix, b => b.UseMiddleware<KademliaHttpMiddleware<TNodeId>>());
+            return app.Map(prefix, b => b.UseMiddleware<KademliaMiddleware<TNodeId>>());
         }
 
     }

@@ -12,7 +12,6 @@ using System.Web;
 using Cogito.Collections;
 using Cogito.Threading;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -23,7 +22,7 @@ namespace Alethic.Kademlia.Network.Udp
     /// Implements a simple UDP network layer.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KUdpProtocol<TNodeId> : IKIpProtocol<TNodeId>, IHostedService
+    public class KUdpProtocol<TNodeId> : IKIpProtocol<TNodeId>, IKService
         where TNodeId : unmanaged
     {
 

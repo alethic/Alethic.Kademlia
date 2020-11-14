@@ -12,7 +12,6 @@ using Alethic.Kademlia.Core;
 using Cogito.Linq;
 using Cogito.Threading;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -23,7 +22,7 @@ namespace Alethic.Kademlia.Network.Udp
     /// Listens for multicast PING requests on a multicast group and provides Connect operations for joining a UDP Kademlia network.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KUdpMulticastDiscovery<TNodeId> : IHostedService
+    public class KUdpMulticastDiscovery<TNodeId> : IKService
         where TNodeId : unmanaged
     {
 

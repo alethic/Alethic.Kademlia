@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 using Cogito.Threading;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Alethic.Kademlia
@@ -14,7 +13,7 @@ namespace Alethic.Kademlia
     /// Periodically refreshes the engine.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KRefresher<TNodeId> : IHostedService
+    public class KRefresher<TNodeId> : IKService
         where TNodeId : unmanaged
     {
 

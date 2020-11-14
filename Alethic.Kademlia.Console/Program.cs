@@ -1,22 +1,20 @@
 ﻿using System.Threading.Tasks;
 
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
-
-using Cogito.Autofac;
-using Cogito.Autofac.DependencyInjection;
-using Cogito.Extensions.Options.Autofac;
-using Cogito.Extensions.Options.Configuration.Autofac;
 using Alethic.Kademlia.Http;
-using Alethic.Kademlia.Http.AspNetCore;
 using Alethic.Kademlia.InMemory;
 using Alethic.Kademlia.Json;
 using Alethic.Kademlia.MessagePack;
 using Alethic.Kademlia.Network.Udp;
 using Alethic.Kademlia.Protobuf;
+
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+
+using Cogito.Autofac;
+using Cogito.Extensions.Options.Autofac;
+using Cogito.Extensions.Options.Configuration.Autofac;
 using Cogito.Serilog;
 
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -58,6 +56,7 @@ namespace Alethic.Kademlia.Console
             builder.RegisterType<KUdpMulticastDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KStaticDiscovery<KNodeId256>>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<KHttpProtocol<KNodeId256>>().AsSelf().SingleInstance();
+            builder.RegisterType<KHostedService>().AsImplementedInterfaces().SingleInstance();
             builder.Configure<KHostOptions<KNodeId256>>(o => { o.NetworkId = networkId; o.NodeId = KNodeId<KNodeId256>.Create(); });
             builder.Configure<KFixedTableRouterOptions>(o => { });
             builder.Configure<KStaticDiscoveryOptions>(o => { });

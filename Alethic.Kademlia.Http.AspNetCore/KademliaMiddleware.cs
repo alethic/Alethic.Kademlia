@@ -15,7 +15,11 @@ using Microsoft.AspNetCore.Http;
 namespace Alethic.Kademlia.Http.AspNetCore
 {
 
-    public class KademliaHttpMiddleware<TNodeId> : IMiddleware
+    /// <summary>
+    /// Middleware used to expose the Kademlia HTTP protocol to ASP.Net Core.
+    /// </summary>
+    /// <typeparam name="TNodeId"></typeparam>
+    public class KademliaMiddleware<TNodeId> : IMiddleware
         where TNodeId : unmanaged
     {
 
@@ -31,7 +35,7 @@ namespace Alethic.Kademlia.Http.AspNetCore
         /// <param name="formats"></param>
         /// <param name="protocol"></param>
         /// <param name="server"></param>
-        public KademliaHttpMiddleware(IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, KHttpProtocol<TNodeId> protocol, IServer server)
+        public KademliaMiddleware(IKHost<TNodeId> host, IEnumerable<IKMessageFormat<TNodeId>> formats, KHttpProtocol<TNodeId> protocol, IServer server)
         {
             this.host = host ?? throw new ArgumentNullException(nameof(host));
             this.formats = formats ?? throw new ArgumentNullException(nameof(formats));

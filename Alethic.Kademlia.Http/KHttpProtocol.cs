@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +12,7 @@ namespace Alethic.Kademlia.Http
     /// Implements a HTTP protocol for Kademlia.
     /// </summary>
     /// <typeparam name="TNodeId"></typeparam>
-    public class KHttpProtocol<TNodeId> : IKProtocol<TNodeId>, IHostedService
+    public class KHttpProtocol<TNodeId> : IKProtocol<TNodeId>, IKService
         where TNodeId : unmanaged
     {
 
