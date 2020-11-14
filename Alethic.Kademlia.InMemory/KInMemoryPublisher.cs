@@ -39,8 +39,6 @@ namespace Alethic.Kademlia.InMemory
 
         }
 
-        static readonly TimeSpan DefaultTimeToLive = TimeSpan.FromMinutes(15);
-
         readonly IKValueAccessor<TNodeId> accessor;
         readonly TimeSpan frequency;
         readonly ILogger logger;
