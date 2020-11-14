@@ -58,7 +58,7 @@ namespace Alethic.Kademlia.InMemory
         {
             this.accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
             this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            this.frequency = frequency ?? TimeSpan.FromHours(1);
+            this.frequency = frequency ?? TimeSpan.FromMinutes(1);
         }
 
         /// <summary>

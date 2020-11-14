@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ServiceManifest
+    Name="Alethic.Kademlia.ServiceFabric.Sample.Service"
+    Version="1.0.0"
+    xmlns="http://schemas.microsoft.com/2011/01/fabric"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <ServiceTypes>
+        <StatefulServiceType ServiceTypeName="Alethic.Kademlia.ServiceFabric.Sample.Service" HasPersistedState="false" />
+    </ServiceTypes>
+
+    <CodePackage Name="Code" Version="1.0.0">
+        <EntryPoint>
+            <ExeHost>
+                <Program>Alethic.Kademlia.ServiceFabric.Sample.Service.exe</Program>
+                <WorkingFolder>CodePackage</WorkingFolder>
+                <ConsoleRedirection FileMaxSizeInKb="65536" FileRetentionCount="4" />
+            </ExeHost>
+        </EntryPoint>
+    </CodePackage>
+
+    <ConfigPackage Name="Config" Version="1.0.0" />
+
+    <Resources>
+        <Endpoints>
+            <Endpoint Name="ServiceEndpoint" UriScheme="http" Protocol="tcp" />
+        </Endpoints>
+    </Resources>
+</ServiceManifest>

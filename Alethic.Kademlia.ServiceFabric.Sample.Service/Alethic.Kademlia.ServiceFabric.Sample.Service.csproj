@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <ServerGarbageCollection>True</ServerGarbageCollection>
+        <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+        <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+        <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+        <UpdateServiceFabricManifestEnabled>False</UpdateServiceFabricManifestEnabled>
+        <ServicePackagePath>PackageRoot</ServicePackagePath>
+        <ServicePackagePrefix>$(MSBuildProjectName)</ServicePackagePrefix>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.ServiceFabric" Version="7.1.458" />
+      <PackageReference Include="Microsoft.ServiceFabric.Data" Version="4.1.458" />
+      <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.1.458" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Alethic.Kademlia.ServiceFabric\Alethic.Kademlia.ServiceFabric.csproj" />
+      <ProjectReference Include="..\Alethic.Kademlia\Alethic.Kademlia.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -28,6 +28,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Http", "Al
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.Http.AspNetCore", "Alethic.Kademlia.Http.AspNetCore\Alethic.Kademlia.Http.AspNetCore.csproj", "{3D84B550-1C66-4B6E-B12B-85F27D613C2B}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.ServiceFabric", "Alethic.Kademlia.ServiceFabric\Alethic.Kademlia.ServiceFabric.csproj", "{6053DAC9-0A4B-45CA-85F8-BFCC23A9473A}"
+EndProject
+Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "Alethic.Kademlia.ServiceFabric.Sample.Fabric", "Alethic.Kademlia.ServiceFabric.Sample\Alethic.Kademlia.ServiceFabric.Sample.Fabric.sfproj", "{4F438B61-202E-45E7-89EB-DD3C212088E2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Alethic.Kademlia.ServiceFabric.Sample.Service", "Alethic.Kademlia.ServiceFabric.Sample.Service\Alethic.Kademlia.ServiceFabric.Sample.Service.csproj", "{95EDCD79-00E8-4045-BE22-8456B771B823}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,6 +76,18 @@ Global
 		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D84B550-1C66-4B6E-B12B-85F27D613C2B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6053DAC9-0A4B-45CA-85F8-BFCC23A9473A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6053DAC9-0A4B-45CA-85F8-BFCC23A9473A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6053DAC9-0A4B-45CA-85F8-BFCC23A9473A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6053DAC9-0A4B-45CA-85F8-BFCC23A9473A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F438B61-202E-45E7-89EB-DD3C212088E2}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{4F438B61-202E-45E7-89EB-DD3C212088E2}.Debug|Any CPU.Build.0 = Debug|x64
+		{4F438B61-202E-45E7-89EB-DD3C212088E2}.Debug|Any CPU.Deploy.0 = Debug|x64
+		{4F438B61-202E-45E7-89EB-DD3C212088E2}.Release|Any CPU.ActiveCfg = Release|x64
+		{95EDCD79-00E8-4045-BE22-8456B771B823}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95EDCD79-00E8-4045-BE22-8456B771B823}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95EDCD79-00E8-4045-BE22-8456B771B823}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95EDCD79-00E8-4045-BE22-8456B771B823}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
