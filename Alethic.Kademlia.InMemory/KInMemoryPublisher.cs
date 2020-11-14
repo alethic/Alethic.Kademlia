@@ -52,8 +52,8 @@ namespace Alethic.Kademlia.InMemory
         /// Initializes a new instance.
         /// </summary>
         /// <param name="accessor"></param>
-        /// <param name="frequency"></param>
         /// <param name="logger"></param>
+        /// <param name="frequency"></param>
         public KInMemoryPublisher(IKValueAccessor<TNodeId> accessor, ILogger logger, TimeSpan? frequency = null)
         {
             this.accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
