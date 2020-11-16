@@ -73,7 +73,7 @@ namespace Alethic.Kademlia.Console
         /// <returns></returns>
         public static async Task Main(string[] args) =>
             await Host.CreateDefaultBuilder(args)
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory(b => { b.RegisterAllAssemblyModules(); RegisterKademlia(b, 40512); }))
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory(b => { b.RegisterAllAssemblyModules(); RegisterKademlia(b, 42424); }))
                 .RunConsoleAsync();
 
     }

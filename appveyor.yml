@@ -24,12 +24,10 @@ artifacts:
     name: Alethic.Kademlia
 
 deploy:
-  provider: NuGet
+- provider: NuGet
   server: https://nuget.pkg.github.com/alethic/index.json
   username: wasabii
   api_key:
     secure: u7+1z/CZGBli+CiDxHSQetMjE1dbaf1f9eJtSCb8wifl7s1+AdnhWjnsjGQaEsAw
   skip_symbols: false
-  symbol_server:
   artifact: /.*\.nupkg/
-
